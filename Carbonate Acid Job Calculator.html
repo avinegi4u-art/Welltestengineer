@@ -229,6 +229,14 @@ input[type="number"]:focus, select:focus {
 
 .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
+.btn-secondary {
+  color: var(--text);
+  background: var(--surface-3);
+  border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover { background: var(--border); }
+
 /* ═══ RESULTS TABLE ═══ */
 .results-table {
   width: 100%;
@@ -260,6 +268,7 @@ input[type="number"]:focus, select:focus {
 .val-accent { color: var(--accent); font-weight: 600; }
 .val-lime { color: var(--lime); }
 .val-blue { color: var(--dolomite); }
+.val-error { color: var(--error); }
 
 /* ═══ COMPARISON GRID ═══ */
 .compare-grid {
@@ -423,6 +432,12 @@ input[type="number"]:focus, select:focus {
 
 .check-category:first-child { margin-top: 0; }
 
+.check-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--sp-4);
+}
+
 .edit-hint {
   display: flex;
   align-items: center;
@@ -554,23 +569,24 @@ footer a:hover { color: var(--text-muted); }
     </svg>
     <div>
       <h1>Carbonate Acid Job Calculator</h1>
-      <p>HCl dilution, gal/ft estimates, limestone vs dolomite</p>
+      <p>HCl dilution, gal/ft estimates, rock chemistry, limestone vs dolomite</p>
     </div>
   </header>
 
   <!-- ═══ TABS ═══ -->
   <nav class="tabs-nav" role="tablist">
-    <button class="tab-btn active" data-tab="dilution" role="tab">HCl Dilution</button>
-    <button class="tab-btn" data-tab="galft" role="tab">Gal / Ft</button>
-    <button class="tab-btn" data-tab="compare" role="tab">CaCO₃ vs CaMg</button>
-    <button class="tab-btn" data-tab="notes" role="tab">Op. Notes</button>
-    <button class="tab-btn" data-tab="checklist" role="tab">Compatibility</button>
+    <button class="tab-btn active" id="tab-dilution" data-tab="dilution" role="tab" aria-selected="true" aria-controls="panel-dilution" tabindex="0">HCl Dilution</button>
+    <button class="tab-btn" id="tab-galft" data-tab="galft" role="tab" aria-selected="false" aria-controls="panel-galft" tabindex="-1">Gal / Ft</button>
+    <button class="tab-btn" id="tab-rockchem" data-tab="rockchem" role="tab" aria-selected="false" aria-controls="panel-rockchem" tabindex="-1">Rock Chemistry</button>
+    <button class="tab-btn" id="tab-compare" data-tab="compare" role="tab" aria-selected="false" aria-controls="panel-compare" tabindex="-1">CaCO₃ vs CaMg</button>
+    <button class="tab-btn" id="tab-notes" data-tab="notes" role="tab" aria-selected="false" aria-controls="panel-notes" tabindex="-1">Op. Notes</button>
+    <button class="tab-btn" id="tab-checklist" data-tab="checklist" role="tab" aria-selected="false" aria-controls="panel-checklist" tabindex="-1">Compatibility</button>
   </nav>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- TAB 1: HCl DILUTION -->
   <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel active" id="panel-dilution">
+  <div class="tab-panel active" id="panel-dilution" role="tabpanel" aria-labelledby="tab-dilution">
     <div class="card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3L10 3L14 19L6 19Z"/><circle cx="10" cy="15" r="2"/></svg>
@@ -594,14 +610,14 @@ footer a:hover { color: var(--text-muted); }
       <button class="btn" id="btn-calc-dilution" data-testid="btn-calc-dilution">Calculate All Dilutions</button>
 
       <div class="formula">
-        V<sub>stock</sub> = V<sub>target</sub> × (<span class="highlight">C<sub>target</sub></span> / C<sub>stock</sub>) &nbsp;|&nbsp; V<sub>water</sub> = V<sub>target</sub> − V<sub>stock</sub>
+        Weight-% mass balance with density correction: V<sub>stock</sub> = (V<sub>target</sub> × SG<sub>target</sub> × <span class="highlight">C<sub>target</sub></span>) ÷ (SG<sub>stock</sub> × C<sub>stock</sub>); water is the remaining blend mass at SG 1.000.
       </div>
 
       <table class="results-table" id="dilution-results">
         <thead>
           <tr>
             <th>Target %</th>
-            <th>33% Stock (gal)</th>
+            <th id="stock-volume-heading">Stock (gal)</th>
             <th>Fresh Water (gal)</th>
             <th>Mix Ratio</th>
           </tr>
@@ -616,7 +632,7 @@ footer a:hover { color: var(--text-muted); }
   <!-- ════════════════════════════════════════════ -->
   <!-- TAB 2: GAL/FT ESTIMATOR -->
   <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-galft">
+  <div class="tab-panel" id="panel-galft" role="tabpanel" aria-labelledby="tab-galft" hidden>
     <div class="card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
@@ -680,9 +696,105 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 3: LIMESTONE vs DOLOMITE -->
+  <!-- TAB 3: ROCK CHEMISTRY -->
   <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-compare">
+  <div class="tab-panel" id="panel-rockchem" role="tabpanel" aria-labelledby="tab-rockchem" hidden>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 5l4 9 2-4 4 9"/><path d="M3 19h18"/></svg>
+        Rock Chemistry &amp; Mineralogy Acid Response
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Enter mineralogy from core, lab work, or open-hole log interpretation. The calculator estimates theoretical HCl capacity by reactive carbonate mineral and shows the dominant acid reaction.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mineralogy Source</label>
+          <select id="rock-source">
+            <option value="Core / lab mineralogy">Core / lab mineralogy</option>
+            <option value="Open-hole log interpretation">Open-hole log interpretation</option>
+            <option value="Cuttings / offset estimate">Cuttings / offset estimate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>HCl Concentration (%)</label>
+          <select id="rock-acid-conc">
+            <option value="15">15%</option>
+            <option value="23">23%</option>
+            <option value="28" selected>28%</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Total Acid Volume (gal)</label>
+          <input type="number" id="rock-acid-vol" value="3000" step="50" min="1">
+        </div>
+        <div class="form-group">
+          <label>Calcite / Limestone (%)</label>
+          <input type="number" id="min-calcite" value="70" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dolomite (%)</label>
+          <input type="number" id="min-dolomite" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Other Carbonate (%)</label>
+          <input type="number" id="min-other-carb" value="0" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Non-carbonate / Insoluble (%)</label>
+          <input type="number" id="min-insoluble" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Mineralogy Total</label>
+          <input type="number" id="min-total" value="100" readonly>
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-rockchem" data-testid="btn-calc-rockchem">Calculate Rock Chemistry</button>
+
+      <div class="summary-bar" id="rockchem-summary">
+        <!-- Filled by JS -->
+      </div>
+
+      <table class="results-table" id="rockchem-results" style="margin-top:var(--sp-5);">
+        <thead>
+          <tr>
+            <th>Mineral / Result</th>
+            <th>Input %</th>
+            <th>Reaction / Behavior</th>
+            <th>Theoretical Dissolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+
+      <div class="note-block info" style="margin-top:var(--sp-5);">
+        <h4>How to read this section</h4>
+        <ul>
+          <li>Values are theoretical acid capacity, assuming HCl fully spends on the entered reactive carbonate fraction.</li>
+          <li>Non-carbonate minerals are treated as insoluble for HCl capacity here; HF or specialty systems require a separate design.</li>
+          <li>Dissolved volume is mineral solid volume removed, not created pore volume after fines, wormholing efficiency, diversion, or spent-acid placement effects.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 4: LIMESTONE vs DOLOMITE -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
     <div class="card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20"/><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/></svg>
@@ -723,16 +835,16 @@ footer a:hover { color: var(--text-muted); }
           <li>For dolomite, higher HCl concentrations (23–28%) are often preferred since the slower reaction gives more penetration depth before spending.</li>
           <li>In mixed lithology zones, design for the faster-reacting component (limestone) to avoid face dissolution and ensure deeper penetration.</li>
           <li>Bottomhole temperature is the strongest control on reaction rate. Above 250°F, consider retarded acid systems or organic acids for both lithologies.</li>
-          <li>CO₂ evolution: dolomite produces 2 mol CO₂ per mol acid spent vs. 1 for limestone — plan for higher gas volumes during flowback.</li>
+          <li>CO₂ evolution: dolomite produces 2 mol CO₂ per mol mineral dissolved vs. 1 for limestone; both shown reactions produce 0.5 mol CO₂ per mol HCl spent.</li>
         </ul>
       </div>
     </div>
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 4: OPERATIONAL NOTES -->
+  <!-- TAB 5: OPERATIONAL NOTES -->
   <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-notes">
+  <div class="tab-panel" id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
     <div class="card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -777,9 +889,9 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 5: COMPATIBILITY CHECKLIST -->
+  <!-- TAB 6: COMPATIBILITY CHECKLIST -->
   <!-- ════════════════════════════════════════════ -->
-  <div class="tab-panel" id="panel-checklist">
+  <div class="tab-panel" id="panel-checklist" role="tabpanel" aria-labelledby="tab-checklist" hidden>
     <div class="card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -788,7 +900,11 @@ footer a:hover { color: var(--text-muted); }
 
       <div class="edit-hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Check items as you verify. Add custom items at the bottom.
+        Check items as you verify. Custom items and checked states are saved locally in this browser.
+      </div>
+
+      <div class="check-actions">
+        <button class="btn btn-sm btn-secondary" id="btn-reset-checklist" data-testid="btn-reset-checklist">Reset checklist</button>
       </div>
 
       <div class="checklist" id="checklist-container">
@@ -819,46 +935,139 @@ footer a:hover { color: var(--text-muted); }
 
 <script>
 // ═══ TABS ═══
-const tabBtns = document.querySelectorAll('.tab-btn');
-const panels = document.querySelectorAll('.tab-panel');
+const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
 
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+function activateTab(btn, focusTab = false) {
+  tabBtns.forEach(b => {
+    const isActive = b === btn;
+    const panel = document.getElementById('panel-' + b.dataset.tab);
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', String(isActive));
+    b.tabIndex = isActive ? 0 : -1;
+    if (panel) {
+      panel.classList.toggle('active', isActive);
+      panel.hidden = !isActive;
+    }
+  });
+  if (focusTab) btn.focus();
+}
+
+tabBtns.forEach((btn, index) => {
+  btn.addEventListener('click', () => activateTab(btn));
+  btn.addEventListener('keydown', (e) => {
+    const lastIndex = tabBtns.length - 1;
+    let nextIndex = index;
+    if (e.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    else if (e.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = lastIndex;
+    else return;
+    e.preventDefault();
+    activateTab(tabBtns[nextIndex], true);
   });
 });
 
 // ═══ TAB 1: HCl DILUTION ═══
+const HCL_DENSITY_TABLE = [
+  { conc: 0, sg: 1.000 },
+  { conc: 5, sg: 1.023 },
+  { conc: 10, sg: 1.049 },
+  { conc: 15, sg: 1.073 },
+  { conc: 20, sg: 1.098 },
+  { conc: 23, sg: 1.113 },
+  { conc: 28, sg: 1.139 },
+  { conc: 33, sg: 1.164 },
+  { conc: 37, sg: 1.190 },
+  { conc: 40, sg: 1.203 }
+];
+
+function estimateHclSg(conc) {
+  if (!Number.isFinite(conc) || conc < 0) return NaN;
+  for (let i = 0; i < HCL_DENSITY_TABLE.length - 1; i++) {
+    const lower = HCL_DENSITY_TABLE[i];
+    const upper = HCL_DENSITY_TABLE[i + 1];
+    if (conc >= lower.conc && conc <= upper.conc) {
+      const fraction = (conc - lower.conc) / (upper.conc - lower.conc);
+      return lower.sg + ((upper.sg - lower.sg) * fraction);
+    }
+  }
+  return HCL_DENSITY_TABLE[HCL_DENSITY_TABLE.length - 1].sg;
+}
+
+function appendTableMessage(tbody, message, colSpan) {
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = colSpan;
+  cell.className = 'val-error';
+  cell.textContent = message;
+  row.appendChild(cell);
+  tbody.appendChild(row);
+}
+
+function appendRow(tbody, cells) {
+  const row = document.createElement('tr');
+  cells.forEach(cellConfig => {
+    const cell = document.createElement('td');
+    cell.textContent = cellConfig.text;
+    if (cellConfig.className) cell.className = cellConfig.className;
+    if (cellConfig.colSpan) cell.colSpan = cellConfig.colSpan;
+    row.appendChild(cell);
+  });
+  tbody.appendChild(row);
+}
+
 function calcDilution() {
   const stockConc = parseFloat(document.getElementById('stock-conc').value);
   const totalVol = parseFloat(document.getElementById('total-vol').value);
   const targets = [28, 23, 15];
   const tbody = document.querySelector('#dilution-results tbody');
-  tbody.innerHTML = '';
+  const stockHeading = document.getElementById('stock-volume-heading');
+  tbody.textContent = '';
+  stockHeading.textContent = Number.isFinite(stockConc) ? `${stockConc}% Stock (gal)` : 'Stock (gal)';
+
+  if (!Number.isFinite(stockConc) || stockConc < 1 || stockConc > 40 || !Number.isFinite(totalVol) || totalVol <= 0) {
+    appendTableMessage(tbody, 'Enter a stock concentration from 1% to 40% and a target volume greater than zero.', 4);
+    return;
+  }
+
+  const stockSg = estimateHclSg(stockConc);
 
   targets.forEach(target => {
     if (target >= stockConc) {
-      tbody.innerHTML += `<tr><td>${target}%</td><td colspan="3" style="color:var(--error)">Target ≥ stock concentration</td></tr>`;
+      appendRow(tbody, [
+        { text: `${target}%` },
+        { text: 'Target must be lower than stock concentration.', colSpan: 3, className: 'val-error' }
+      ]);
       return;
     }
-    const vStock = totalVol * (target / stockConc);
-    const vWater = totalVol - vStock;
-    const ratio = (vStock / vWater).toFixed(2);
+    const targetSg = estimateHclSg(target);
+    const targetMass = totalVol * targetSg;
+    const hclMass = targetMass * (target / 100);
+    const vStock = hclMass / (stockSg * (stockConc / 100));
+    const vWater = targetMass - (vStock * stockSg);
+    const ratio = vWater > 0 ? (vStock / vWater).toFixed(2) : '—';
 
-    tbody.innerHTML += `<tr>
-      <td class="val-accent">${target}%</td>
-      <td>${vStock.toFixed(1)}</td>
-      <td>${vWater.toFixed(1)}</td>
-      <td>${ratio} : 1 (acid : water)</td>
-    </tr>`;
+    appendRow(tbody, [
+      { text: `${target}%`, className: 'val-accent' },
+      { text: vStock.toFixed(1) },
+      { text: vWater.toFixed(1) },
+      { text: `${ratio} : 1 (acid : water)` }
+    ]);
   });
 }
 
 document.getElementById('btn-calc-dilution').addEventListener('click', calcDilution);
 calcDilution(); // initial
+
+const DISSOLVING_POWER = {
+  limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
+  dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 },
+  otherCarbonate: { 15: 1.32, 23: 2.02, 28: 2.46 }
+};
+
+function formatNumber(value, maxFractionDigits = 0) {
+  return value.toLocaleString(undefined, { maximumFractionDigits: maxFractionDigits });
+}
 
 // ═══ TAB 2: GAL/FT ═══
 function calcGalFt() {
@@ -866,6 +1075,10 @@ function calcGalFt() {
   const conc = parseInt(document.getElementById('galft-conc').value);
   const formation = document.getElementById('formation-type').value;
   const intensity = document.getElementById('intensity').value;
+  const summary = document.getElementById('galft-summary');
+  const tbody = document.querySelector('#galft-results tbody');
+  summary.textContent = '';
+  tbody.textContent = '';
 
   // Gal/ft ranges based on intensity
   const ranges = {
@@ -873,6 +1086,12 @@ function calcGalFt() {
     moderate: [100, 200],
     aggressive: [200, 300]
   };
+  const allowedFormations = new Set(['limestone', 'dolomite']);
+
+  if (!Number.isFinite(interval) || interval <= 0 || !ranges[intensity] || !allowedFormations.has(formation)) {
+    appendTableMessage(tbody, 'Enter a valid interval, formation, and treatment intensity.', 2);
+    return;
+  }
 
   // Dolomite typically needs more acid
   let [low, high] = ranges[intensity];
@@ -887,15 +1106,11 @@ function calcGalFt() {
   const totalMid = midGalFt * interval;
 
   // Dissolving power (lbs rock / gal acid) — simplified values
-  const dpMap = {
-    limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
-    dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 }
-  };
-  const dp = dpMap[formation][conc] || 1.37;
+  const dp = DISSOLVING_POWER[formation][conc] || DISSOLVING_POWER.limestone[15];
   const rockDissolved = (totalMid * dp).toFixed(0);
 
   // Summary bar
-  document.getElementById('galft-summary').innerHTML = `
+  summary.innerHTML = `
     <div class="summary-item">
       <div class="label">Gal/Ft Range</div>
       <div class="value">${low}–${high}</div>
@@ -912,14 +1127,13 @@ function calcGalFt() {
       <div class="unit">bbl</div>
     </div>
     <div class="summary-item">
-      <div class="label">Rock Dissolved</div>
+      <div class="label">Theoretical Rock Dissolved</div>
       <div class="value">${parseInt(rockDissolved).toLocaleString()}</div>
       <div class="unit">lbs</div>
     </div>
   `;
 
   // Detail table
-  const tbody = document.querySelector('#galft-results tbody');
   tbody.innerHTML = `
     <tr><td>Perforated Interval</td><td class="val-accent">${interval} ft</td></tr>
     <tr><td>HCl Concentration</td><td>${conc}%</td></tr>
@@ -930,14 +1144,179 @@ function calcGalFt() {
     <tr><td>Total Volume (mid)</td><td class="val-accent">${totalMid.toLocaleString()} gal (${(totalMid/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Total Volume (high)</td><td>${totalHigh.toLocaleString()} gal (${(totalHigh/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Dissolving Power (${conc}% HCl)</td><td>${dp} lbm ${formation === 'limestone' ? 'CaCO₃' : 'dolomite'} / gal</td></tr>
-    <tr><td>Est. Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
+    <tr><td>Theoretical Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
   `;
 }
 
 document.getElementById('btn-calc-galft').addEventListener('click', calcGalFt);
 calcGalFt();
 
-// ═══ TAB 5: COMPATIBILITY CHECKLIST ═══
+// ═══ TAB 3: ROCK CHEMISTRY ═══
+const ROCK_MINERALS = [
+  {
+    key: 'calcite',
+    label: 'Calcite / Limestone',
+    inputId: 'min-calcite',
+    dpKey: 'limestone',
+    densitySg: 2.71,
+    reaction: '2HCl + CaCO3 -> CaCl2 + H2O + CO2',
+    behavior: 'Fast CaCO3 reaction; high face-dissolution risk without rate/diversion control.'
+  },
+  {
+    key: 'dolomite',
+    label: 'Dolomite',
+    inputId: 'min-dolomite',
+    dpKey: 'dolomite',
+    densitySg: 2.85,
+    reaction: '4HCl + CaMg(CO3)2 -> CaCl2 + MgCl2 + 2H2O + 2CO2',
+    behavior: 'Slower reaction; higher concentration or contact time can improve penetration.'
+  },
+  {
+    key: 'otherCarbonate',
+    label: 'Other carbonate',
+    inputId: 'min-other-carb',
+    dpKey: 'otherCarbonate',
+    densitySg: 2.75,
+    reaction: 'HCl + carbonate minerals -> chloride salts + H2O + CO2',
+    behavior: 'Generic carbonate response; confirm mineral-specific acid solubility from lab data.'
+  }
+];
+
+function getMineralValue(inputId) {
+  return parseFloat(document.getElementById(inputId).value);
+}
+
+function getDominantReaction(minerals, reactivePct) {
+  if (reactivePct < 20) {
+    return {
+      label: 'Low carbonate response',
+      detail: 'HCl-reactive carbonate is low; confirm solubility before relying on HCl-only stimulation.'
+    };
+  }
+
+  const ranked = [...minerals].sort((a, b) => b.pct - a.pct);
+  const dominant = ranked[0];
+  if (dominant.pct / reactivePct >= 0.65) {
+    return {
+      label: dominant.label,
+      detail: dominant.behavior
+    };
+  }
+
+  return {
+    label: 'Mixed carbonate response',
+    detail: 'Mixed calcite/dolomite behavior; design for the faster calcite reaction while tracking total carbonate capacity.'
+  };
+}
+
+function calcRockChem() {
+  const conc = parseInt(document.getElementById('rock-acid-conc').value);
+  const acidVol = parseFloat(document.getElementById('rock-acid-vol').value);
+  const insoluble = getMineralValue('min-insoluble');
+  const minerals = ROCK_MINERALS.map(mineral => ({
+    ...mineral,
+    pct: getMineralValue(mineral.inputId)
+  }));
+  const summary = document.getElementById('rockchem-summary');
+  const tbody = document.querySelector('#rockchem-results tbody');
+  const totalInput = minerals.reduce((sum, mineral) => sum + mineral.pct, 0) + insoluble;
+  const reactivePct = minerals.reduce((sum, mineral) => sum + mineral.pct, 0);
+  const unassignedPct = Math.max(0, 100 - totalInput);
+
+  document.getElementById('min-total').value = Number.isFinite(totalInput) ? totalInput.toFixed(1) : '';
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  const allValues = [acidVol, insoluble, ...minerals.map(mineral => mineral.pct)];
+  if (
+    !Number.isFinite(acidVol)
+    || acidVol <= 0
+    || !DISSOLVING_POWER.limestone[conc]
+    || allValues.some(value => !Number.isFinite(value) || value < 0)
+    || totalInput <= 0
+    || totalInput > 100
+  ) {
+    appendTableMessage(tbody, 'Enter positive acid volume and mineral percentages totaling 100% or less.', 4);
+    return;
+  }
+
+  if (reactivePct <= 0) {
+    appendTableMessage(tbody, 'No HCl-reactive carbonate entered. Add calcite, dolomite, or other carbonate percentage.', 4);
+    return;
+  }
+
+  const dominant = getDominantReaction(minerals, reactivePct);
+  const rows = minerals.map(mineral => {
+    const acidAllocated = acidVol * (mineral.pct / reactivePct);
+    const dissolvedMass = acidAllocated * DISSOLVING_POWER[mineral.dpKey][conc];
+    const dissolvedFt3 = dissolvedMass / (mineral.densitySg * 62.4);
+    return {
+      ...mineral,
+      acidAllocated,
+      dissolvedMass,
+      dissolvedFt3
+    };
+  });
+  const totalMass = rows.reduce((sum, row) => sum + row.dissolvedMass, 0);
+  const totalFt3 = rows.reduce((sum, row) => sum + row.dissolvedFt3, 0);
+  const effectiveDp = totalMass / acidVol;
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">Dominant Reaction</div>
+      <div class="value" style="font-size:16px">${dominant.label}</div>
+      <div class="unit">${document.getElementById('rock-source').value}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Reactive Carbonate</div>
+      <div class="value">${reactivePct.toFixed(1)}</div>
+      <div class="unit">% of entered rock</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Theoretical Dissolved</div>
+      <div class="value">${formatNumber(totalMass)}</div>
+      <div class="unit">lbs mineral</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Dissolved Solid Volume</div>
+      <div class="value">${formatNumber(totalFt3, 1)}</div>
+      <div class="unit">ft3 (${formatNumber(totalFt3 / 5.615, 2)} bbl)</div>
+    </div>
+  `;
+
+  rows.forEach(row => {
+    appendRow(tbody, [
+      { text: row.label, className: row.key === 'dolomite' ? 'val-blue' : 'val-accent' },
+      { text: `${row.pct.toFixed(1)}%` },
+      { text: row.reaction },
+      { text: `${formatNumber(row.dissolvedMass)} lb; ${formatNumber(row.dissolvedFt3, 1)} ft3; ${formatNumber(row.acidAllocated)} gal acid capacity` }
+    ]);
+  });
+
+  appendRow(tbody, [
+    { text: 'Effective acid capacity' },
+    { text: `${reactivePct.toFixed(1)}% reactive` },
+    { text: dominant.detail },
+    { text: `${effectiveDp.toFixed(2)} lb reactive carbonate / gal ${conc}% HCl` }
+  ]);
+
+  appendRow(tbody, [
+    { text: 'Non-carbonate / unassigned' },
+    { text: `${(insoluble + unassignedPct).toFixed(1)}%` },
+    { text: 'No HCl carbonate reaction in this model.' },
+    { text: 'Not included in dissolved volume.' }
+  ]);
+}
+
+document.getElementById('btn-calc-rockchem').addEventListener('click', calcRockChem);
+['rock-acid-vol', 'min-calcite', 'min-dolomite', 'min-other-carb', 'min-insoluble'].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('input', calcRockChem);
+});
+document.getElementById('rock-acid-conc').addEventListener('change', calcRockChem);
+document.getElementById('rock-source').addEventListener('change', calcRockChem);
+calcRockChem();
+
+// ═══ TAB 6: COMPATIBILITY CHECKLIST ═══
 const defaultChecklist = [
   // Brine compatibility
   { cat: 'brine', text: 'Formation brine composition analyzed (Cl⁻, Ca²⁺, Mg²⁺, Ba²⁺, Sr²⁺, SO₄²⁻, Fe²⁺/Fe³⁺)', sub: 'Critical for predicting precipitation risks' },
@@ -970,30 +1349,134 @@ const defaultChecklist = [
   { cat: 'safety', text: 'Flowback plan established — neutralization / disposal of spent acid', sub: 'Spent acid pH, chloride content, and heavy metals must meet disposal criteria' },
 ];
 
-let checklistState = [...defaultChecklist];
+const CHECKLIST_CATEGORIES = {
+  brine: 'Reservoir Brine Compatibility',
+  metallurgy: 'Tubular Metallurgy',
+  additives: 'Acid Additives & Chemicals',
+  safety: 'Safety & Procedural'
+};
+
+const CHECKLIST_STORAGE_KEY = 'carbonate-acid-checklist-v1';
+
+function buildDefaultChecklist() {
+  return defaultChecklist.map((item, index) => ({
+    ...item,
+    id: `default-${index}`,
+    checked: false,
+    custom: false
+  }));
+}
+
+function isValidChecklistItem(item) {
+  return item
+    && CHECKLIST_CATEGORIES[item.cat]
+    && typeof item.text === 'string'
+    && item.text.trim().length > 0;
+}
+
+function loadChecklistState() {
+  const state = buildDefaultChecklist();
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHECKLIST_STORAGE_KEY) || 'null');
+    if (!saved || typeof saved !== 'object') return state;
+
+    const checkedDefaultIds = new Set(Array.isArray(saved.checkedDefaultIds) ? saved.checkedDefaultIds : []);
+    state.forEach(item => {
+      item.checked = checkedDefaultIds.has(item.id);
+    });
+
+    const customItems = Array.isArray(saved.customItems) ? saved.customItems : [];
+    customItems.filter(isValidChecklistItem).forEach((item, index) => {
+      state.push({
+        id: `custom-${index}`,
+        cat: item.cat,
+        text: item.text.trim(),
+        sub: '',
+        checked: Boolean(item.checked),
+        custom: true
+      });
+    });
+  } catch (_) {
+    return state;
+  }
+
+  return state;
+}
+
+function saveChecklistState() {
+  const payload = {
+    checkedDefaultIds: checklistState
+      .filter(item => !item.custom && item.checked)
+      .map(item => item.id),
+    customItems: checklistState
+      .filter(item => item.custom)
+      .map(item => ({
+        cat: item.cat,
+        text: item.text,
+        checked: Boolean(item.checked)
+      }))
+  };
+
+  try {
+    localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(payload));
+  } catch (_) {
+    // Ignore storage failures so checklist interaction still works in private or locked-down browsers.
+  }
+}
+
+function resetChecklistState() {
+  try {
+    localStorage.removeItem(CHECKLIST_STORAGE_KEY);
+  } catch (_) {
+    // Keep reset functional even when storage removal is blocked.
+  }
+  checklistState = buildDefaultChecklist();
+  renderChecklist();
+}
+
+let checklistState = loadChecklistState();
 
 function renderChecklist() {
   const container = document.getElementById('checklist-container');
-  container.innerHTML = '';
+  container.textContent = '';
 
-  const categories = { brine: 'Reservoir Brine Compatibility', metallurgy: 'Tubular Metallurgy', additives: 'Acid Additives & Chemicals', safety: 'Safety & Procedural' };
-
-  Object.keys(categories).forEach(cat => {
+  Object.keys(CHECKLIST_CATEGORIES).forEach(cat => {
     const items = checklistState.filter(item => item.cat === cat);
     if (items.length === 0) return;
 
-    container.innerHTML += `<div class="check-category">${categories[cat]}</div>`;
-    items.forEach((item, i) => {
+    const category = document.createElement('div');
+    category.className = 'check-category';
+    category.textContent = CHECKLIST_CATEGORIES[cat];
+    container.appendChild(category);
+
+    items.forEach(item => {
       const globalIdx = checklistState.indexOf(item);
-      container.innerHTML += `
-        <div class="check-item">
-          <input type="checkbox" id="chk-${globalIdx}" ${item.checked ? 'checked' : ''} data-idx="${globalIdx}" data-testid="chk-${globalIdx}">
-          <label class="check-label" for="chk-${globalIdx}">
-            ${item.text}
-            ${item.sub ? `<span class="sub">${item.sub}</span>` : ''}
-          </label>
-        </div>
-      `;
+      const row = document.createElement('div');
+      row.className = 'check-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `chk-${globalIdx}`;
+      checkbox.checked = Boolean(item.checked);
+      checkbox.dataset.idx = String(globalIdx);
+      checkbox.dataset.testid = `chk-${globalIdx}`;
+
+      const label = document.createElement('label');
+      label.className = 'check-label';
+      label.htmlFor = checkbox.id;
+      label.appendChild(document.createTextNode(item.text));
+
+      if (item.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'sub';
+        sub.textContent = item.sub;
+        label.appendChild(sub);
+      }
+
+      row.appendChild(checkbox);
+      row.appendChild(label);
+      container.appendChild(row);
     });
   });
 
@@ -1001,6 +1484,7 @@ function renderChecklist() {
   container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', (e) => {
       checklistState[parseInt(e.target.dataset.idx)].checked = e.target.checked;
+      saveChecklistState();
     });
   });
 }
@@ -1010,11 +1494,14 @@ renderChecklist();
 document.getElementById('btn-add-item').addEventListener('click', () => {
   const text = document.getElementById('new-item-text').value.trim();
   const cat = document.getElementById('new-item-cat').value;
-  if (!text) return;
-  checklistState.push({ cat, text, sub: '', checked: false });
+  if (!text || !CHECKLIST_CATEGORIES[cat]) return;
+  checklistState.push({ id: `custom-${Date.now()}`, cat, text, sub: '', checked: false, custom: true });
   document.getElementById('new-item-text').value = '';
+  saveChecklistState();
   renderChecklist();
 });
+
+document.getElementById('btn-reset-checklist').addEventListener('click', resetChecklistState);
 
 // Also allow Enter key
 document.getElementById('new-item-text').addEventListener('keydown', (e) => {
