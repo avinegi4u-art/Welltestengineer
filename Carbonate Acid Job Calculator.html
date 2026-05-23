@@ -573,7 +573,7 @@ footer a:hover { color: var(--text-muted); }
     </svg>
     <div>
       <h1>Carbonate Acid Job Calculator</h1>
-      <p>HCl dilution, gal/ft estimates, rock chemistry, limestone vs dolomite</p>
+      <p>HCl dilution, job design, rock chemistry, limestone vs dolomite</p>
     </div>
   </header>
 
@@ -581,6 +581,7 @@ footer a:hover { color: var(--text-muted); }
   <nav class="tabs-nav" role="tablist">
     <button class="tab-btn active" id="tab-dilution" data-tab="dilution" role="tab" aria-selected="true" aria-controls="panel-dilution" tabindex="0">HCl Dilution</button>
     <button class="tab-btn" id="tab-galft" data-tab="galft" role="tab" aria-selected="false" aria-controls="panel-galft" tabindex="-1">Gal / Ft</button>
+    <button class="tab-btn" id="tab-jobdesign" data-tab="jobdesign" role="tab" aria-selected="false" aria-controls="panel-jobdesign" tabindex="-1">Job Design</button>
     <button class="tab-btn" id="tab-rockchem" data-tab="rockchem" role="tab" aria-selected="false" aria-controls="panel-rockchem" tabindex="-1">Rock Chemistry</button>
     <button class="tab-btn" id="tab-compare" data-tab="compare" role="tab" aria-selected="false" aria-controls="panel-compare" tabindex="-1">CaCO₃ vs CaMg</button>
     <button class="tab-btn" id="tab-notes" data-tab="notes" role="tab" aria-selected="false" aria-controls="panel-notes" tabindex="-1">Op. Notes</button>
@@ -700,7 +701,122 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 3: ROCK CHEMISTRY -->
+  <!-- TAB 3: JOB DESIGN -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-jobdesign" role="tabpanel" aria-labelledby="tab-jobdesign" hidden>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V6a2 2 0 0 1 2-2h12"/><path d="M8 8h10M8 12h8M8 16h6"/><path d="M17 15l2 2 4-5"/></svg>
+        Acid Job Design Recommendation
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Combine objective, mineralogy, interval, BHT, selected acid system, and pressure limit into a screening-level treatment recommendation. Use lab compatibility and service-company design checks before pumping.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Job Objective</label>
+          <select id="jd-objective">
+            <option value="matrix" selected>Matrix acidizing / wormhole stimulation</option>
+            <option value="wash">Acid wash / perforation cleanup</option>
+            <option value="damage">Near-wellbore damage cleanup</option>
+            <option value="scale">Carbonate scale removal</option>
+            <option value="bullhead">Bullhead stimulation</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Selected Acid Type</label>
+          <select id="jd-acid-type">
+            <option value="hcl" selected>Inhibited HCl</option>
+            <option value="retarded">Retarded HCl</option>
+            <option value="emulsified">Emulsified HCl</option>
+            <option value="self-diverting">Self-diverting acid</option>
+            <option value="organic">Organic acid blend</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>HCl Strength / Equivalent (%)</label>
+          <select id="jd-acid-conc">
+            <option value="15">15%</option>
+            <option value="23">23%</option>
+            <option value="28" selected>28%</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Perforated Interval (ft)</label>
+          <input type="number" id="jd-interval" value="20" step="1" min="1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Bottomhole Temp. (°F)</label>
+          <input type="number" id="jd-bht" value="200" step="5" min="40">
+        </div>
+        <div class="form-group">
+          <label>Planned Treating Pressure (psi)</label>
+          <input type="number" id="jd-pressure" value="3500" step="50" min="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fracture / Max Limit (psi)</label>
+          <input type="number" id="jd-frac-limit" value="5000" step="50" min="1">
+        </div>
+        <div class="form-group">
+          <label>Calcite / Limestone (%)</label>
+          <input type="number" id="jd-calcite" value="70" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dolomite (%)</label>
+          <input type="number" id="jd-dolomite" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Other Carbonate (%)</label>
+          <input type="number" id="jd-other-carb" value="0" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Non-carbonate / Insoluble (%)</label>
+          <input type="number" id="jd-insoluble" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Mineralogy Total</label>
+          <input type="number" id="jd-min-total" value="100" readonly>
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-jobdesign" data-testid="btn-calc-jobdesign">Generate Job Recommendation</button>
+
+      <div class="summary-bar" id="jobdesign-summary">
+        <!-- Filled by JS -->
+      </div>
+
+      <table class="results-table" id="jobdesign-results" style="margin-top:var(--sp-5);">
+        <thead>
+          <tr>
+            <th>Design Area</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 4: ROCK CHEMISTRY -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-rockchem" role="tabpanel" aria-labelledby="tab-rockchem" hidden>
     <div class="card">
@@ -796,7 +912,7 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 4: LIMESTONE vs DOLOMITE -->
+  <!-- TAB 5: LIMESTONE vs DOLOMITE -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
     <div class="card">
@@ -846,7 +962,7 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 5: OPERATIONAL NOTES -->
+  <!-- TAB 6: OPERATIONAL NOTES -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
     <div class="card">
@@ -893,7 +1009,7 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 6: COMPATIBILITY CHECKLIST -->
+  <!-- TAB 7: COMPATIBILITY CHECKLIST -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-checklist" role="tabpanel" aria-labelledby="tab-checklist" hidden>
     <div class="card">
@@ -1154,7 +1270,314 @@ function calcGalFt() {
 document.getElementById('btn-calc-galft').addEventListener('click', calcGalFt);
 calcGalFt();
 
-// ═══ TAB 3: ROCK CHEMISTRY ═══
+// ═══ TAB 3: JOB DESIGN ═══
+const JOB_OBJECTIVES = {
+  matrix: {
+    label: 'Matrix acidizing / wormhole stimulation',
+    range: [100, 200],
+    placement: 'Controlled injection below fracture pressure; use diversion if the interval has strong permeability contrast.',
+    rate: 'Start with 0.25-0.5 BPM/ft in limestone or 0.5-1.0 BPM/ft in dolomite, then adjust from pressure response.'
+  },
+  wash: {
+    label: 'Acid wash / perforation cleanup',
+    range: [25, 75],
+    placement: 'Spot or circulate acid across the interval; deep penetration is not the primary objective.',
+    rate: 'Use low circulation/spotting rates, commonly 0.5-2 BPM total, followed by a controlled soak and circulate-out.'
+  },
+  damage: {
+    label: 'Near-wellbore damage cleanup',
+    range: [50, 125],
+    placement: 'Place acid across damaged perforations and avoid over-treating clean high-permeability streaks.',
+    rate: 'Pump below fracture pressure at low-to-moderate rate; watch for falling pressure as damage dissolves.'
+  },
+  scale: {
+    label: 'Carbonate scale removal',
+    range: [20, 80],
+    placement: 'Target scale contact time and flowback; confirm scale type before choosing additives.',
+    rate: 'Use controlled contact/soak rather than high-rate stimulation unless scale extends into the near-wellbore matrix.'
+  },
+  bullhead: {
+    label: 'Bullhead stimulation',
+    range: [75, 200],
+    placement: 'All fluid enters the easiest flow path; diversion is usually required for multi-zone coverage.',
+    rate: 'Keep surface treating pressure below the fracture limit unless a fracture treatment is intentionally planned.'
+  }
+};
+
+const ACID_TYPE_LABELS = {
+  hcl: 'Inhibited HCl',
+  retarded: 'Retarded HCl',
+  emulsified: 'Emulsified HCl',
+  'self-diverting': 'Self-diverting acid',
+  organic: 'Organic acid blend'
+};
+
+const ACID_CAPACITY_FACTOR = {
+  hcl: 1,
+  retarded: 1,
+  emulsified: 0.95,
+  'self-diverting': 0.95,
+  organic: 0.45
+};
+
+function roundToNearest(value, step) {
+  return Math.round(value / step) * step;
+}
+
+function getJobMineralogy() {
+  const calcite = parseFloat(document.getElementById('jd-calcite').value);
+  const dolomite = parseFloat(document.getElementById('jd-dolomite').value);
+  const otherCarbonate = parseFloat(document.getElementById('jd-other-carb').value);
+  const insoluble = parseFloat(document.getElementById('jd-insoluble').value);
+  return {
+    calcite,
+    dolomite,
+    otherCarbonate,
+    insoluble,
+    total: calcite + dolomite + otherCarbonate + insoluble,
+    reactive: calcite + dolomite + otherCarbonate
+  };
+}
+
+function getMineralogyRecommendation(mineralogy) {
+  if (mineralogy.reactive < 20) {
+    return {
+      label: 'Low carbonate response',
+      detail: 'HCl-only stimulation is high risk because carbonate content is low; confirm acid solubility and consider specialty systems.'
+    };
+  }
+  if (mineralogy.dolomite > mineralogy.calcite && mineralogy.dolomite >= 40) {
+    return {
+      label: 'Dolomite-dominant carbonate',
+      detail: 'Expect slower acid spending and deeper penetration; higher concentration or retarded acid can be useful.'
+    };
+  }
+  if (mineralogy.calcite >= 65) {
+    return {
+      label: 'Calcite / limestone-dominant',
+      detail: 'Fast HCl reaction; rate control and diversion matter to avoid face dissolution.'
+    };
+  }
+  return {
+    label: 'Mixed carbonate response',
+    detail: 'Design for fast calcite reaction while allowing enough contact time for dolomite.'
+  };
+}
+
+function getAcidSystemRecommendation(acidType, bht, mineralogy, objective) {
+  let system = 'Inhibited HCl';
+  let note = 'Suitable for carbonate acidizing after brine, crude, metallurgy, and additive compatibility testing.';
+  const warnings = [];
+
+  if (mineralogy.insoluble >= 50) {
+    system = 'Lab-directed specialty acid system';
+    note = 'Non-carbonate content is high; HCl-only treatment may spend without creating useful conductivity.';
+    warnings.push('High insoluble fraction: request core/log solubility and fines/clay compatibility before final acid selection.');
+  } else if (bht >= 275) {
+    system = 'Organic acid or retarded/emulsified HCl';
+    note = 'High BHT shortens HCl spending time and increases corrosion risk; use high-temperature inhibitor and retarder package.';
+  } else if (bht >= 225) {
+    system = 'Retarded/inhibited HCl';
+    note = 'Elevated BHT needs stronger corrosion control and slower spending for useful penetration.';
+  } else if (mineralogy.dolomite > mineralogy.calcite) {
+    system = '23-28% HCl or retarded HCl';
+    note = 'Dolomite reacts slower than limestone; stronger or retarded acid can improve contact depth.';
+  } else if (objective === 'scale' || objective === 'wash') {
+    system = '15% inhibited HCl with job-specific additives';
+    note = 'Lower-strength acid is often enough for contact/cleanup work and reduces corrosion exposure.';
+  }
+
+  if (acidType === 'hcl' && bht >= 225) {
+    warnings.push('Selected straight inhibited HCl may spend too fast at this BHT; consider retarded, emulsified, or organic acid.');
+  }
+  if (acidType === 'organic' && bht < 225 && mineralogy.reactive >= 70) {
+    warnings.push('Organic acid is conservative for this temperature/mineralogy; verify it still meets dissolution and cost objectives.');
+  }
+  if (objective === 'bullhead') {
+    warnings.push('Bullheading can over-treat thief zones; use diversion or zonal isolation when coverage matters.');
+  }
+
+  return { system, note, warnings };
+}
+
+function calcJobDesign() {
+  const objective = document.getElementById('jd-objective').value;
+  const acidType = document.getElementById('jd-acid-type').value;
+  const conc = parseInt(document.getElementById('jd-acid-conc').value);
+  const interval = parseFloat(document.getElementById('jd-interval').value);
+  const bht = parseFloat(document.getElementById('jd-bht').value);
+  const pressure = parseFloat(document.getElementById('jd-pressure').value);
+  const fracLimit = parseFloat(document.getElementById('jd-frac-limit').value);
+  const mineralogy = getJobMineralogy();
+  const summary = document.getElementById('jobdesign-summary');
+  const tbody = document.querySelector('#jobdesign-results tbody');
+  const values = [interval, bht, pressure, fracLimit, mineralogy.calcite, mineralogy.dolomite, mineralogy.otherCarbonate, mineralogy.insoluble];
+
+  document.getElementById('jd-min-total').value = Number.isFinite(mineralogy.total) ? mineralogy.total.toFixed(1) : '';
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  if (
+    !JOB_OBJECTIVES[objective]
+    || !ACID_TYPE_LABELS[acidType]
+    || !DISSOLVING_POWER.limestone[conc]
+    || values.some(value => !Number.isFinite(value) || value < 0)
+    || interval <= 0
+    || bht <= 0
+    || fracLimit <= 0
+    || mineralogy.total <= 0
+    || mineralogy.total > 100
+  ) {
+    appendTableMessage(tbody, 'Enter positive design inputs and mineral percentages totaling 100% or less.', 2);
+    return;
+  }
+
+  if (mineralogy.reactive <= 0) {
+    appendTableMessage(tbody, 'No HCl-reactive carbonate entered. Use lab solubility before designing an HCl carbonate job.', 2);
+    return;
+  }
+
+  const objectiveConfig = JOB_OBJECTIVES[objective];
+  const mineralogyRec = getMineralogyRecommendation(mineralogy);
+  const acidRec = getAcidSystemRecommendation(acidType, bht, mineralogy, objective);
+  let [lowGalFt, highGalFt] = objectiveConfig.range;
+
+  if (mineralogy.dolomite > mineralogy.calcite && mineralogy.reactive >= 50) {
+    lowGalFt *= 1.25;
+    highGalFt *= 1.25;
+  }
+  if (mineralogy.reactive < 50) {
+    lowGalFt *= 0.75;
+    highGalFt *= 0.75;
+  } else if (mineralogy.reactive > 90) {
+    lowGalFt *= 1.1;
+    highGalFt *= 1.1;
+  }
+
+  lowGalFt = roundToNearest(lowGalFt, 5);
+  highGalFt = roundToNearest(highGalFt, 5);
+  const midGalFt = (lowGalFt + highGalFt) / 2;
+  const totalLow = lowGalFt * interval;
+  const totalHigh = highGalFt * interval;
+  const totalMid = midGalFt * interval;
+  const capacityFactor = ACID_CAPACITY_FACTOR[acidType];
+  const effectiveDp = (
+    (mineralogy.calcite / mineralogy.reactive) * DISSOLVING_POWER.limestone[conc]
+    + (mineralogy.dolomite / mineralogy.reactive) * DISSOLVING_POWER.dolomite[conc]
+    + (mineralogy.otherCarbonate / mineralogy.reactive) * DISSOLVING_POWER.otherCarbonate[conc]
+  ) * capacityFactor;
+  const weightedSg = (
+    (mineralogy.calcite / mineralogy.reactive) * 2.71
+    + (mineralogy.dolomite / mineralogy.reactive) * 2.85
+    + (mineralogy.otherCarbonate / mineralogy.reactive) * 2.75
+  );
+  const theoreticalMass = totalMid * effectiveDp;
+  const theoreticalFt3 = theoreticalMass / (weightedSg * 62.4);
+  const pressureMargin = fracLimit - pressure;
+  const pressureMarginPct = pressureMargin / fracLimit;
+  let pressureStatus = `OK: ${formatNumber(pressureMargin)} psi below limit`;
+  let pressureRecommendation = 'Proceed only if real-time treating pressure stays below the approved fracture/max limit.';
+  const warnings = [...acidRec.warnings];
+
+  if (pressure >= fracLimit) {
+    pressureStatus = 'Exceeds fracture/max limit';
+    pressureRecommendation = 'Do not pump this schedule as planned; reduce rate/pressure or revise the fracture-limit model.';
+    warnings.push('Planned treating pressure is at or above the fracture/max limit.');
+  } else if (pressureMarginPct < 0.1) {
+    pressureStatus = `Tight margin: ${formatNumber(pressureMargin)} psi`;
+    pressureRecommendation = 'Keep a larger pressure safety margin or prepare an immediate rate reduction plan.';
+    warnings.push('Pressure margin is under 10% of the fracture/max limit.');
+  }
+
+  const keyAction = warnings[0] || (objective === 'matrix' ? 'Hold matrix rate below fracture pressure and monitor for declining pressure response.' : 'Confirm compatibility and pressure limits before pumping.');
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">Recommended System</div>
+      <div class="value" style="font-size:16px">${acidRec.system}</div>
+      <div class="unit">selected: ${ACID_TYPE_LABELS[acidType]}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Volume Design</div>
+      <div class="value">${lowGalFt}-${highGalFt}</div>
+      <div class="unit">gal/ft (${formatNumber(totalMid)} gal mid)</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Pressure Status</div>
+      <div class="value" style="font-size:16px">${pressureStatus}</div>
+      <div class="unit">${formatNumber(pressure)} / ${formatNumber(fracLimit)} psi</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Theoretical Dissolved</div>
+      <div class="value">${formatNumber(theoreticalMass)}</div>
+      <div class="unit">lb (${formatNumber(theoreticalFt3, 1)} ft3)</div>
+    </div>
+  `;
+
+  appendRow(tbody, [
+    { text: 'Objective & placement' },
+    { text: `${objectiveConfig.label}. ${objectiveConfig.placement}` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Mineralogy response' },
+    { text: `${mineralogyRec.label}: ${mineralogy.reactive.toFixed(1)}% HCl-reactive carbonate. ${mineralogyRec.detail}` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Acid system' },
+    { text: `${acidRec.system}. ${acidRec.note}` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Volume schedule' },
+    { text: `${lowGalFt}-${highGalFt} gal/ft; total range ${formatNumber(totalLow)}-${formatNumber(totalHigh)} gal (${formatNumber(totalLow / 42, 1)}-${formatNumber(totalHigh / 42, 1)} bbl). Midpoint: ${formatNumber(totalMid)} gal.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Pump-rate guidance' },
+    { text: objectiveConfig.rate }
+  ]);
+  appendRow(tbody, [
+    { text: 'Pressure / fracture check' },
+    { text: `${pressureStatus}. ${pressureRecommendation}` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Dissolution capacity' },
+    { text: `${formatNumber(theoreticalMass)} lb theoretical reactive carbonate; ${formatNumber(theoreticalFt3, 1)} ft3 solid volume (${formatNumber(theoreticalFt3 / 5.615, 2)} bbl). Effective capacity: ${effectiveDp.toFixed(2)} lb/gal ${conc}% HCl-equivalent.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Required checks' },
+    { text: 'Run acid-brine/crude compatibility, corrosion inhibitor qualification at BHT, iron control review, and pressure-test surface equipment before execution.' }
+  ]);
+  if (warnings.length > 0) {
+    appendRow(tbody, [
+      { text: 'Warnings' },
+      { text: warnings.join(' ') }
+    ]);
+  }
+  appendRow(tbody, [
+    { text: 'Key action' },
+    { text: keyAction }
+  ]);
+}
+
+document.getElementById('btn-calc-jobdesign').addEventListener('click', calcJobDesign);
+[
+  'jd-objective',
+  'jd-acid-type',
+  'jd-acid-conc',
+  'jd-interval',
+  'jd-bht',
+  'jd-pressure',
+  'jd-frac-limit',
+  'jd-calcite',
+  'jd-dolomite',
+  'jd-other-carb',
+  'jd-insoluble'
+].forEach(inputId => {
+  const input = document.getElementById(inputId);
+  input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', calcJobDesign);
+});
+calcJobDesign();
+
+// ═══ TAB 4: ROCK CHEMISTRY ═══
 const ROCK_MINERALS = [
   {
     key: 'calcite',
