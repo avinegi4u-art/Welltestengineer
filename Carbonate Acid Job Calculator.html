@@ -569,7 +569,7 @@ footer a:hover { color: var(--text-muted); }
     </svg>
     <div>
       <h1>Carbonate Acid Job Calculator</h1>
-      <p>HCl dilution, gal/ft estimates, limestone vs dolomite</p>
+      <p>HCl dilution, gal/ft estimates, rock chemistry, limestone vs dolomite</p>
     </div>
   </header>
 
@@ -577,6 +577,7 @@ footer a:hover { color: var(--text-muted); }
   <nav class="tabs-nav" role="tablist">
     <button class="tab-btn active" id="tab-dilution" data-tab="dilution" role="tab" aria-selected="true" aria-controls="panel-dilution" tabindex="0">HCl Dilution</button>
     <button class="tab-btn" id="tab-galft" data-tab="galft" role="tab" aria-selected="false" aria-controls="panel-galft" tabindex="-1">Gal / Ft</button>
+    <button class="tab-btn" id="tab-rockchem" data-tab="rockchem" role="tab" aria-selected="false" aria-controls="panel-rockchem" tabindex="-1">Rock Chemistry</button>
     <button class="tab-btn" id="tab-compare" data-tab="compare" role="tab" aria-selected="false" aria-controls="panel-compare" tabindex="-1">CaCO₃ vs CaMg</button>
     <button class="tab-btn" id="tab-notes" data-tab="notes" role="tab" aria-selected="false" aria-controls="panel-notes" tabindex="-1">Op. Notes</button>
     <button class="tab-btn" id="tab-checklist" data-tab="checklist" role="tab" aria-selected="false" aria-controls="panel-checklist" tabindex="-1">Compatibility</button>
@@ -695,7 +696,103 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 3: LIMESTONE vs DOLOMITE -->
+  <!-- TAB 3: ROCK CHEMISTRY -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-rockchem" role="tabpanel" aria-labelledby="tab-rockchem" hidden>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 5l4 9 2-4 4 9"/><path d="M3 19h18"/></svg>
+        Rock Chemistry &amp; Mineralogy Acid Response
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Enter mineralogy from core, lab work, or open-hole log interpretation. The calculator estimates theoretical HCl capacity by reactive carbonate mineral and shows the dominant acid reaction.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mineralogy Source</label>
+          <select id="rock-source">
+            <option value="Core / lab mineralogy">Core / lab mineralogy</option>
+            <option value="Open-hole log interpretation">Open-hole log interpretation</option>
+            <option value="Cuttings / offset estimate">Cuttings / offset estimate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>HCl Concentration (%)</label>
+          <select id="rock-acid-conc">
+            <option value="15">15%</option>
+            <option value="23">23%</option>
+            <option value="28" selected>28%</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Total Acid Volume (gal)</label>
+          <input type="number" id="rock-acid-vol" value="3000" step="50" min="1">
+        </div>
+        <div class="form-group">
+          <label>Calcite / Limestone (%)</label>
+          <input type="number" id="min-calcite" value="70" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dolomite (%)</label>
+          <input type="number" id="min-dolomite" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Other Carbonate (%)</label>
+          <input type="number" id="min-other-carb" value="0" step="1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Non-carbonate / Insoluble (%)</label>
+          <input type="number" id="min-insoluble" value="15" step="1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Mineralogy Total</label>
+          <input type="number" id="min-total" value="100" readonly>
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-rockchem" data-testid="btn-calc-rockchem">Calculate Rock Chemistry</button>
+
+      <div class="summary-bar" id="rockchem-summary">
+        <!-- Filled by JS -->
+      </div>
+
+      <table class="results-table" id="rockchem-results" style="margin-top:var(--sp-5);">
+        <thead>
+          <tr>
+            <th>Mineral / Result</th>
+            <th>Input %</th>
+            <th>Reaction / Behavior</th>
+            <th>Theoretical Dissolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+
+      <div class="note-block info" style="margin-top:var(--sp-5);">
+        <h4>How to read this section</h4>
+        <ul>
+          <li>Values are theoretical acid capacity, assuming HCl fully spends on the entered reactive carbonate fraction.</li>
+          <li>Non-carbonate minerals are treated as insoluble for HCl capacity here; HF or specialty systems require a separate design.</li>
+          <li>Dissolved volume is mineral solid volume removed, not created pore volume after fines, wormholing efficiency, diversion, or spent-acid placement effects.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 4: LIMESTONE vs DOLOMITE -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
     <div class="card">
@@ -745,7 +842,7 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 4: OPERATIONAL NOTES -->
+  <!-- TAB 5: OPERATIONAL NOTES -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
     <div class="card">
@@ -792,7 +889,7 @@ footer a:hover { color: var(--text-muted); }
   </div>
 
   <!-- ════════════════════════════════════════════ -->
-  <!-- TAB 5: COMPATIBILITY CHECKLIST -->
+  <!-- TAB 6: COMPATIBILITY CHECKLIST -->
   <!-- ════════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-checklist" role="tabpanel" aria-labelledby="tab-checklist" hidden>
     <div class="card">
@@ -962,6 +1059,16 @@ function calcDilution() {
 document.getElementById('btn-calc-dilution').addEventListener('click', calcDilution);
 calcDilution(); // initial
 
+const DISSOLVING_POWER = {
+  limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
+  dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 },
+  otherCarbonate: { 15: 1.32, 23: 2.02, 28: 2.46 }
+};
+
+function formatNumber(value, maxFractionDigits = 0) {
+  return value.toLocaleString(undefined, { maximumFractionDigits: maxFractionDigits });
+}
+
 // ═══ TAB 2: GAL/FT ═══
 function calcGalFt() {
   const interval = parseFloat(document.getElementById('perf-interval').value);
@@ -999,11 +1106,7 @@ function calcGalFt() {
   const totalMid = midGalFt * interval;
 
   // Dissolving power (lbs rock / gal acid) — simplified values
-  const dpMap = {
-    limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
-    dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 }
-  };
-  const dp = dpMap[formation][conc] || 1.37;
+  const dp = DISSOLVING_POWER[formation][conc] || DISSOLVING_POWER.limestone[15];
   const rockDissolved = (totalMid * dp).toFixed(0);
 
   // Summary bar
@@ -1024,7 +1127,7 @@ function calcGalFt() {
       <div class="unit">bbl</div>
     </div>
     <div class="summary-item">
-      <div class="label">Rock Dissolved</div>
+      <div class="label">Theoretical Rock Dissolved</div>
       <div class="value">${parseInt(rockDissolved).toLocaleString()}</div>
       <div class="unit">lbs</div>
     </div>
@@ -1041,14 +1144,179 @@ function calcGalFt() {
     <tr><td>Total Volume (mid)</td><td class="val-accent">${totalMid.toLocaleString()} gal (${(totalMid/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Total Volume (high)</td><td>${totalHigh.toLocaleString()} gal (${(totalHigh/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Dissolving Power (${conc}% HCl)</td><td>${dp} lbm ${formation === 'limestone' ? 'CaCO₃' : 'dolomite'} / gal</td></tr>
-    <tr><td>Est. Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
+    <tr><td>Theoretical Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
   `;
 }
 
 document.getElementById('btn-calc-galft').addEventListener('click', calcGalFt);
 calcGalFt();
 
-// ═══ TAB 5: COMPATIBILITY CHECKLIST ═══
+// ═══ TAB 3: ROCK CHEMISTRY ═══
+const ROCK_MINERALS = [
+  {
+    key: 'calcite',
+    label: 'Calcite / Limestone',
+    inputId: 'min-calcite',
+    dpKey: 'limestone',
+    densitySg: 2.71,
+    reaction: '2HCl + CaCO3 -> CaCl2 + H2O + CO2',
+    behavior: 'Fast CaCO3 reaction; high face-dissolution risk without rate/diversion control.'
+  },
+  {
+    key: 'dolomite',
+    label: 'Dolomite',
+    inputId: 'min-dolomite',
+    dpKey: 'dolomite',
+    densitySg: 2.85,
+    reaction: '4HCl + CaMg(CO3)2 -> CaCl2 + MgCl2 + 2H2O + 2CO2',
+    behavior: 'Slower reaction; higher concentration or contact time can improve penetration.'
+  },
+  {
+    key: 'otherCarbonate',
+    label: 'Other carbonate',
+    inputId: 'min-other-carb',
+    dpKey: 'otherCarbonate',
+    densitySg: 2.75,
+    reaction: 'HCl + carbonate minerals -> chloride salts + H2O + CO2',
+    behavior: 'Generic carbonate response; confirm mineral-specific acid solubility from lab data.'
+  }
+];
+
+function getMineralValue(inputId) {
+  return parseFloat(document.getElementById(inputId).value);
+}
+
+function getDominantReaction(minerals, reactivePct) {
+  if (reactivePct < 20) {
+    return {
+      label: 'Low carbonate response',
+      detail: 'HCl-reactive carbonate is low; confirm solubility before relying on HCl-only stimulation.'
+    };
+  }
+
+  const ranked = [...minerals].sort((a, b) => b.pct - a.pct);
+  const dominant = ranked[0];
+  if (dominant.pct / reactivePct >= 0.65) {
+    return {
+      label: dominant.label,
+      detail: dominant.behavior
+    };
+  }
+
+  return {
+    label: 'Mixed carbonate response',
+    detail: 'Mixed calcite/dolomite behavior; design for the faster calcite reaction while tracking total carbonate capacity.'
+  };
+}
+
+function calcRockChem() {
+  const conc = parseInt(document.getElementById('rock-acid-conc').value);
+  const acidVol = parseFloat(document.getElementById('rock-acid-vol').value);
+  const insoluble = getMineralValue('min-insoluble');
+  const minerals = ROCK_MINERALS.map(mineral => ({
+    ...mineral,
+    pct: getMineralValue(mineral.inputId)
+  }));
+  const summary = document.getElementById('rockchem-summary');
+  const tbody = document.querySelector('#rockchem-results tbody');
+  const totalInput = minerals.reduce((sum, mineral) => sum + mineral.pct, 0) + insoluble;
+  const reactivePct = minerals.reduce((sum, mineral) => sum + mineral.pct, 0);
+  const unassignedPct = Math.max(0, 100 - totalInput);
+
+  document.getElementById('min-total').value = Number.isFinite(totalInput) ? totalInput.toFixed(1) : '';
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  const allValues = [acidVol, insoluble, ...minerals.map(mineral => mineral.pct)];
+  if (
+    !Number.isFinite(acidVol)
+    || acidVol <= 0
+    || !DISSOLVING_POWER.limestone[conc]
+    || allValues.some(value => !Number.isFinite(value) || value < 0)
+    || totalInput <= 0
+    || totalInput > 100
+  ) {
+    appendTableMessage(tbody, 'Enter positive acid volume and mineral percentages totaling 100% or less.', 4);
+    return;
+  }
+
+  if (reactivePct <= 0) {
+    appendTableMessage(tbody, 'No HCl-reactive carbonate entered. Add calcite, dolomite, or other carbonate percentage.', 4);
+    return;
+  }
+
+  const dominant = getDominantReaction(minerals, reactivePct);
+  const rows = minerals.map(mineral => {
+    const acidAllocated = acidVol * (mineral.pct / reactivePct);
+    const dissolvedMass = acidAllocated * DISSOLVING_POWER[mineral.dpKey][conc];
+    const dissolvedFt3 = dissolvedMass / (mineral.densitySg * 62.4);
+    return {
+      ...mineral,
+      acidAllocated,
+      dissolvedMass,
+      dissolvedFt3
+    };
+  });
+  const totalMass = rows.reduce((sum, row) => sum + row.dissolvedMass, 0);
+  const totalFt3 = rows.reduce((sum, row) => sum + row.dissolvedFt3, 0);
+  const effectiveDp = totalMass / acidVol;
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">Dominant Reaction</div>
+      <div class="value" style="font-size:16px">${dominant.label}</div>
+      <div class="unit">${document.getElementById('rock-source').value}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Reactive Carbonate</div>
+      <div class="value">${reactivePct.toFixed(1)}</div>
+      <div class="unit">% of entered rock</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Theoretical Dissolved</div>
+      <div class="value">${formatNumber(totalMass)}</div>
+      <div class="unit">lbs mineral</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Dissolved Solid Volume</div>
+      <div class="value">${formatNumber(totalFt3, 1)}</div>
+      <div class="unit">ft3 (${formatNumber(totalFt3 / 5.615, 2)} bbl)</div>
+    </div>
+  `;
+
+  rows.forEach(row => {
+    appendRow(tbody, [
+      { text: row.label, className: row.key === 'dolomite' ? 'val-blue' : 'val-accent' },
+      { text: `${row.pct.toFixed(1)}%` },
+      { text: row.reaction },
+      { text: `${formatNumber(row.dissolvedMass)} lb; ${formatNumber(row.dissolvedFt3, 1)} ft3; ${formatNumber(row.acidAllocated)} gal acid capacity` }
+    ]);
+  });
+
+  appendRow(tbody, [
+    { text: 'Effective acid capacity' },
+    { text: `${reactivePct.toFixed(1)}% reactive` },
+    { text: dominant.detail },
+    { text: `${effectiveDp.toFixed(2)} lb reactive carbonate / gal ${conc}% HCl` }
+  ]);
+
+  appendRow(tbody, [
+    { text: 'Non-carbonate / unassigned' },
+    { text: `${(insoluble + unassignedPct).toFixed(1)}%` },
+    { text: 'No HCl carbonate reaction in this model.' },
+    { text: 'Not included in dissolved volume.' }
+  ]);
+}
+
+document.getElementById('btn-calc-rockchem').addEventListener('click', calcRockChem);
+['rock-acid-vol', 'min-calcite', 'min-dolomite', 'min-other-carb', 'min-insoluble'].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('input', calcRockChem);
+});
+document.getElementById('rock-acid-conc').addEventListener('change', calcRockChem);
+document.getElementById('rock-source').addEventListener('change', calcRockChem);
+calcRockChem();
+
+// ═══ TAB 6: COMPATIBILITY CHECKLIST ═══
 const defaultChecklist = [
   // Brine compatibility
   { cat: 'brine', text: 'Formation brine composition analyzed (Cl⁻, Ca²⁺, Mg²⁺, Ba²⁺, Sr²⁺, SO₄²⁻, Fe²⁺/Fe³⁺)', sub: 'Critical for predicting precipitation risks' },
