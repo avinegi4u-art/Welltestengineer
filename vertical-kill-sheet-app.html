@@ -69,6 +69,7 @@
     .kpi .value{font-size:1.7rem;font-weight:700;margin-top:.35rem}
     .formula{margin-top:var(--space-3);padding:var(--space-3);background:var(--color-bg);border:1px dashed var(--color-border);border-radius:var(--radius-md);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--text-sm);overflow:auto}
     .row-note{margin-top:var(--space-3);padding:var(--space-3);border-left:3px solid var(--color-primary);background:var(--color-primary-highlight);border-radius:0 var(--radius-md) var(--radius-md) 0;font-size:var(--text-sm)}
+    .grid>.row-note{grid-column:span 12}
     table{width:100%;border-collapse:collapse;margin-top:var(--space-3);font-size:var(--text-sm)}
     th,td{padding:.7rem;border-bottom:1px solid var(--color-divider);text-align:left;vertical-align:top}
     th{color:var(--color-text-muted);font-weight:600}
@@ -473,15 +474,29 @@
       updateSummary(c);
     }
 
-    function bindLinear(a,b,factor) {
+    function bindLinear(a, b, factor) {
+      const from = $(a);
+      const to = $(b);
+      if (!from || !to) return;
+
       let lock = false;
-      $(a).addEventListener('input', () => { if(lock) return; lock=true; $(b).value = fmt(num(a)*factor,6); lock=false; });
-      $(b).addEventListener('input', () => { if(lock) return; lock=true; $(a).value = fmt(num(b)/factor,6); lock=false; });
+      from.addEventListener('input', () => {
+        if (lock) return;
+        lock = true;
+        to.value = fmt(num(a) * factor, 6);
+        lock = false;
+      });
+      to.addEventListener('input', () => {
+        if (lock) return;
+        lock = true;
+        from.value = fmt(num(b) / factor, 6);
+        lock = false;
+      });
     }
-   bindLinear(psiVal,kpaVal,6.894757);
-bindLinear(ppgVal,sgVal,0.119826);
-bindLinear(ftVal,mVal,0.3048);
-bindLinear(bblVal,m3Val,0.1589873);
+    bindLinear('psiVal', 'kpaVal', 6.894757);
+    bindLinear('ppgVal', 'sgVal', 0.119826);
+    bindLinear('ftVal', 'mVal', 0.3048);
+    bindLinear('bblVal', 'm3Val', 0.1589873);
 
 // --- Casing / hole size converter (fractional ↔ decimal inches) ---
 
