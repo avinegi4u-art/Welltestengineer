@@ -229,6 +229,14 @@ input[type="number"]:focus, select:focus {
 
 .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
+.btn-secondary {
+  color: var(--text);
+  background: var(--surface-3);
+  border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover { background: var(--border); }
+
 /* ═══ RESULTS TABLE ═══ */
 .results-table {
   width: 100%;
@@ -423,6 +431,12 @@ input[type="number"]:focus, select:focus {
 }
 
 .check-category:first-child { margin-top: 0; }
+
+.check-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--sp-4);
+}
 
 .edit-hint {
   display: flex;
@@ -789,7 +803,11 @@ footer a:hover { color: var(--text-muted); }
 
       <div class="edit-hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Check items as you verify. Add custom items at the bottom.
+        Check items as you verify. Custom items and checked states are saved locally in this browser.
+      </div>
+
+      <div class="check-actions">
+        <button class="btn btn-sm btn-secondary" id="btn-reset-checklist" data-testid="btn-reset-checklist">Reset checklist</button>
       </div>
 
       <div class="checklist" id="checklist-container">
@@ -1070,7 +1088,86 @@ const CHECKLIST_CATEGORIES = {
   safety: 'Safety & Procedural'
 };
 
-let checklistState = [...defaultChecklist];
+const CHECKLIST_STORAGE_KEY = 'carbonate-acid-checklist-v1';
+
+function buildDefaultChecklist() {
+  return defaultChecklist.map((item, index) => ({
+    ...item,
+    id: `default-${index}`,
+    checked: false,
+    custom: false
+  }));
+}
+
+function isValidChecklistItem(item) {
+  return item
+    && CHECKLIST_CATEGORIES[item.cat]
+    && typeof item.text === 'string'
+    && item.text.trim().length > 0;
+}
+
+function loadChecklistState() {
+  const state = buildDefaultChecklist();
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHECKLIST_STORAGE_KEY) || 'null');
+    if (!saved || typeof saved !== 'object') return state;
+
+    const checkedDefaultIds = new Set(Array.isArray(saved.checkedDefaultIds) ? saved.checkedDefaultIds : []);
+    state.forEach(item => {
+      item.checked = checkedDefaultIds.has(item.id);
+    });
+
+    const customItems = Array.isArray(saved.customItems) ? saved.customItems : [];
+    customItems.filter(isValidChecklistItem).forEach((item, index) => {
+      state.push({
+        id: `custom-${index}`,
+        cat: item.cat,
+        text: item.text.trim(),
+        sub: '',
+        checked: Boolean(item.checked),
+        custom: true
+      });
+    });
+  } catch (_) {
+    return state;
+  }
+
+  return state;
+}
+
+function saveChecklistState() {
+  const payload = {
+    checkedDefaultIds: checklistState
+      .filter(item => !item.custom && item.checked)
+      .map(item => item.id),
+    customItems: checklistState
+      .filter(item => item.custom)
+      .map(item => ({
+        cat: item.cat,
+        text: item.text,
+        checked: Boolean(item.checked)
+      }))
+  };
+
+  try {
+    localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(payload));
+  } catch (_) {
+    // Ignore storage failures so checklist interaction still works in private or locked-down browsers.
+  }
+}
+
+function resetChecklistState() {
+  try {
+    localStorage.removeItem(CHECKLIST_STORAGE_KEY);
+  } catch (_) {
+    // Keep reset functional even when storage removal is blocked.
+  }
+  checklistState = buildDefaultChecklist();
+  renderChecklist();
+}
+
+let checklistState = loadChecklistState();
 
 function renderChecklist() {
   const container = document.getElementById('checklist-container');
@@ -1119,6 +1216,7 @@ function renderChecklist() {
   container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', (e) => {
       checklistState[parseInt(e.target.dataset.idx)].checked = e.target.checked;
+      saveChecklistState();
     });
   });
 }
@@ -1129,10 +1227,13 @@ document.getElementById('btn-add-item').addEventListener('click', () => {
   const text = document.getElementById('new-item-text').value.trim();
   const cat = document.getElementById('new-item-cat').value;
   if (!text || !CHECKLIST_CATEGORIES[cat]) return;
-  checklistState.push({ cat, text, sub: '', checked: false });
+  checklistState.push({ id: `custom-${Date.now()}`, cat, text, sub: '', checked: false, custom: true });
   document.getElementById('new-item-text').value = '';
+  saveChecklistState();
   renderChecklist();
 });
+
+document.getElementById('btn-reset-checklist').addEventListener('click', resetChecklistState);
 
 // Also allow Enter key
 document.getElementById('new-item-text').addEventListener('keydown', (e) => {
