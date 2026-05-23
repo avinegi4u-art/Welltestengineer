@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vertical Kill Sheet App</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=general-sans@500,600,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem;
+      --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --color-bg:#f7f6f2; --color-surface:#f9f8f5; --color-surface-2:#fbfbf9; --color-surface-offset:#edeae5;
+      --color-border:#d4d1ca; --color-divider:#dcd9d5; --color-text:#28251d; --color-text-muted:#6f6d67;
+      --color-primary:#01696f; --color-primary-hover:#0c4e54; --color-primary-highlight:#dcebea;
+      --color-warning:#964219; --color-error:#a12c7b; --color-success:#437a22;
+      --radius-sm:0.375rem; --radius-md:0.5rem; --radius-lg:0.75rem; --radius-xl:1rem; --radius-full:9999px;
+      --shadow-sm:0 1px 2px rgba(40,37,29,.06); --shadow-md:0 8px 24px rgba(40,37,29,.08);
+      --font-body:'Satoshi', sans-serif; --font-display:'General Sans', sans-serif;
+    }
+    [data-theme="dark"] {
+      --color-bg:#171614; --color-surface:#1c1b19; --color-surface-2:#201f1d; --color-surface-offset:#22211f;
+      --color-border:#393836; --color-divider:#262523; --color-text:#cdccca; --color-text-muted:#9a9892;
+      --color-primary:#4f98a3; --color-primary-hover:#227f8b; --color-primary-highlight:#2c383a;
+      --color-warning:#bb653b; --color-error:#d163a7; --color-success:#6daa45;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.2); --shadow-md:0 10px 30px rgba(0,0,0,.28);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth}
+    body{min-height:100dvh;font-family:var(--font-body);font-size:var(--text-base);line-height:1.55;background:var(--color-bg);color:var(--color-text)}
+    button,input,select{font:inherit;color:inherit}
+    button{cursor:pointer}
+    .app{max-width:1400px;margin:0 auto;padding:var(--space-4)}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);margin-bottom:var(--space-4);flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:var(--space-3)}
+    .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),transparent),var(--color-surface-offset);display:grid;place-items:center;border:1px solid var(--color-border);box-shadow:var(--shadow-sm)}
+    .logo svg{width:24px;height:24px}
+    h1{font-family:var(--font-display);font-size:var(--text-xl);line-height:1.1}
+    .sub{color:var(--color-text-muted);font-size:var(--text-sm);max-width:70ch}
+    .actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+    .btn{border:1px solid var(--color-border);background:var(--color-surface);padding:.8rem 1rem;border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}
+    .btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+    .btn.primary:hover{background:var(--color-primary-hover)}
+    .panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-md)}
+    .tabs{display:flex;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--color-divider);flex-wrap:wrap}
+    .tab{padding:.7rem 1rem;border-radius:var(--radius-full);background:transparent;border:1px solid transparent;color:var(--color-text-muted)}
+    .tab.active{background:var(--color-primary-highlight);border-color:var(--color-border);color:var(--color-text)}
+    .content{padding:var(--space-4)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-4)}
+    .card{grid-column:span 12;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)}
+    .card h2{font-size:var(--text-lg);font-family:var(--font-display);margin-bottom:.25rem}
+    .card h3{font-size:1rem;margin-bottom:.5rem}
+    .muted{color:var(--color-text-muted);font-size:var(--text-sm)}
+    .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-3);margin-top:var(--space-3)}
+    .field{display:flex;flex-direction:column;gap:.35rem}
+    .field label{font-size:var(--text-sm);font-weight:600}
+    .field input,.field select{width:100%;padding:.8rem .9rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg)}
+    .field small{color:var(--color-text-muted);font-size:var(--text-xs)}
+    .kpi-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);margin-top:var(--space-4)}
+    .kpi{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-bg);border:1px solid var(--color-border)}
+    .kpi .label{font-size:var(--text-xs);letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted)}
+    .kpi .value{font-size:1.7rem;font-weight:700;margin-top:.35rem}
+    .formula{margin-top:var(--space-3);padding:var(--space-3);background:var(--color-bg);border:1px dashed var(--color-border);border-radius:var(--radius-md);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--text-sm);overflow:auto}
+    .row-note{margin-top:var(--space-3);padding:var(--space-3);border-left:3px solid var(--color-primary);background:var(--color-primary-highlight);border-radius:0 var(--radius-md) var(--radius-md) 0;font-size:var(--text-sm)}
+    table{width:100%;border-collapse:collapse;margin-top:var(--space-3);font-size:var(--text-sm)}
+    th,td{padding:.7rem;border-bottom:1px solid var(--color-divider);text-align:left;vertical-align:top}
+    th{color:var(--color-text-muted);font-weight:600}
+    .danger{color:var(--color-error)} .warn{color:var(--color-warning)} .ok{color:var(--color-success)}
+    .footer-note{margin-top:var(--space-4);font-size:var(--text-sm);color:var(--color-text-muted)}
+    @media(min-width:900px){.span-6{grid-column:span 6}.span-4{grid-column:span 4}.span-8{grid-column:span 8}}
+    @media(max-width:720px){.app{padding:var(--space-3)} .content{padding:var(--space-3)}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M6 19h12M9 19V6l3-2 3 2v13M12 11v8" />
+          </svg>
+        </div>
+        <div>
+          <h1>Vertical Kill Sheet App</h1>
+          <p class="sub">Interactive API field-units kill sheet with live formulas, tabbed data entry, pump schedule support, and built-in unit conversions.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="themeToggle" aria-label="Toggle theme">Dark mode</button>
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn primary" id="printBtn">Print / Save PDF</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <nav class="tabs" aria-label="Kill sheet sections">
+        <button class="tab active" data-tab="well">Well data</button>
+        <button class="tab" data-tab="volume">Volumes</button>
+        <button class="tab" data-tab="kick">Kick / pressures</button>
+        <button class="tab" data-tab="convert">Converters</button>
+        <button class="tab" data-tab="summary">Summary</button>
+      </nav>
+
+      <div class="content">
+        <section class="tab-panel active" id="tab-well">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Formation strength</h2>
+              <p class="muted">Inputs used for maximum allowable mud weight and initial MAASP.</p>
+              <div class="fields">
+                <div class="field"><label for="lop">Leak-off pressure A</label><input id="lop" type="number" step="any" value="0"><small>psi</small></div>
+                <div class="field"><label for="mwTest">Mud weight at test B</label><input id="mwTest" type="number" step="any" value="0"><small>ppg</small></div>
+                <div class="field"><label for="currMud">Current mud weight</label><input id="currMud" type="number" step="any" value="9.5"><small>ppg</small></div>
+                <div class="field"><label for="shoeTvd">Shoe TVD</label><input id="shoeTvd" type="number" step="any" value="0"><small>ft</small></div>
+              </div>
+              <div class="formula">C = B + A / (Shoe TVD × 0.052)</div>
+              <div class="formula">Initial MAASP = (C − Current MW) × Shoe TVD × 0.052</div>
+            </article>
+
+            <article class="card span-6">
+              <h2>Current well data</h2>
+              <p class="muted">Basic casing, hole, and pumping inputs.</p>
+              <div class="fields">
+                <div class="field"><label for="casingSize">Casing size</label><input id="casingSize" type="number" step="any" value="0"><small>inch</small></div>
+                <div class="field"><label for="casingMd">Casing MD</label><input id="casingMd" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="casingTvd">Casing TVD</label><input id="casingTvd" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="holeSize">Hole size</label><input id="holeSize" type="number" step="any" value="0"><small>inch</small></div>
+                <div class="field"><label for="holeMd">Hole MD</label><input id="holeMd" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="holeTvd">Hole TVD</label><input id="holeTvd" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="pump1Disp">Pump 1 displacement</label><input id="pump1Disp" type="number" step="any" value="0.1"><small>bbl/stk</small></div>
+                <div class="field"><label for="pump2Disp">Pump 2 displacement</label><input id="pump2Disp" type="number" step="any" value="0.1"><small>bbl/stk</small></div>
+                <div class="field"><label for="spr1">Pump 1 slow rate</label><input id="spr1" type="number" step="any" value="30"><small>spm</small></div>
+                <div class="field"><label for="spr2">Pump 2 slow rate</label><input id="spr2" type="number" step="any" value="30"><small>spm</small></div>
+                <div class="field"><label for="pl1">Pump 1 PL</label><input id="pl1" type="number" step="any" value="0"><small>psi</small></div>
+                <div class="field"><label for="pl2">Pump 2 PL</label><input id="pl2" type="number" step="any" value="0"><small>psi</small></div>
+              </div>
+            </article>
+
+            <article class="card span-12">
+              <h2>Computed values</h2>
+              <div class="kpi-wrap">
+                <div class="kpi"><div class="label">Max allowable mud weight (C)</div><div class="value" id="kmC">0.00 ppg</div></div>
+                <div class="kpi"><div class="label">Initial MAASP</div><div class="value" id="maasp">0.00 psi</div></div>
+                <div class="kpi"><div class="label">Selected pump displacement</div><div class="value" id="selDisp">0.10 bbl/stk</div></div>
+                <div class="kpi"><div class="label">Selected slow pump rate</div><div class="value" id="selRate">30.00 spm</div></div>
+                <div class="kpi"><div class="label">Selected PL</div><div class="value" id="selPl">0.00 psi</div></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-volume">
+          <div class="grid">
+            <article class="card span-8">
+              <h2>Pre-recorded volume data</h2>
+              <p class="muted">Enter measured lengths and capacities. The app calculates D through J, strokes, and minutes.</p>
+              <div class="fields">
+                <div class="field"><label for="dpLen">Drill pipe length</label><input id="dpLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="dpCap">Drill pipe capacity</label><input id="dpCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="hwdpLen">HWDP length</label><input id="hwdpLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="hwdpCap">HWDP capacity</label><input id="hwdpCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="dcLen">Drill collar length</label><input id="dcLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="dcCap">Drill collar capacity</label><input id="dcCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="dcOhLen">DC in open hole length</label><input id="dcOhLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="dcOhCap">DC x open hole annulus cap</label><input id="dcOhCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="dpOhLen">DP/HWDP in open hole length</label><input id="dpOhLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="dpOhCap">DP/HWDP x open hole annulus cap</label><input id="dpOhCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="dpCsgLen">DP x casing length</label><input id="dpCsgLen" type="number" step="any" value="0"><small>ft</small></div>
+                <div class="field"><label for="dpCsgCap">DP x casing annulus cap</label><input id="dpCsgCap" type="number" step="any" value="0"><small>bbl/ft</small></div>
+                <div class="field"><label for="activeSurface">Active surface volume J</label><input id="activeSurface" type="number" step="any" value="0"><small>bbl</small></div>
+                <div class="field"><label for="activePump">Working pump</label><select id="activePump"><option value="1">Pump 1</option><option value="2">Pump 2</option></select><small>Drives strokes/time</small></div>
+              </div>
+            </article>
+
+            <article class="card span-4">
+              <h2>Volume equations</h2>
+              <div class="formula">DP volume = DP length × DP capacity</div>
+              <div class="formula">HWDP volume = HWDP length × HWDP capacity</div>
+              <div class="formula">DC volume = DC length × DC capacity</div>
+              <div class="formula">D = DP + HWDP + DC</div>
+              <div class="formula">F = (DC × OH) + (DP/HWDP × OH)</div>
+              <div class="formula">G = DP × casing</div>
+              <div class="formula">H = F + G; I = D + H; Total active = I + J</div>
+              <div class="formula">Strokes = Volume / Pump displacement; Time = Strokes / Slow pump rate</div>
+            </article>
+
+            <article class="card span-12">
+              <h2>Volume results</h2>
+              <table>
+                <thead><tr><th>Section</th><th>Volume</th><th>Strokes</th><th>Time</th></tr></thead>
+                <tbody id="volumeTable"></tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-kick">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Kick data</h2>
+              <div class="fields">
+                <div class="field"><label for="sidpp">SIDPP</label><input id="sidpp" type="number" step="any" value="0"><small>psi</small></div>
+                <div class="field"><label for="sicp">SICP</label><input id="sicp" type="number" step="any" value="0"><small>psi</small></div>
+                <div class="field"><label for="pitGain">Pit gain</label><input id="pitGain" type="number" step="any" value="0"><small>bbl</small></div>
+              </div>
+              <div class="formula">KMW = Current MW + SIDPP / (TVD × 0.052)</div>
+              <div class="formula">ICP = Dynamic pressure loss + SIDPP</div>
+              <div class="formula">FCP = (KMW / Current MW) × Dynamic pressure loss</div>
+            </article>
+
+            <article class="card span-6">
+              <h2>Pressure schedule</h2>
+              <p class="muted">The app uses the selected pump and drill string strokes E to generate a linear 100-stroke pressure reduction schedule from ICP to FCP.</p>
+              <div class="row-note">If current mud weight is zero or drill string strokes are unavailable, the schedule stays blank to avoid false values.</div>
+              <div class="kpi-wrap">
+                <div class="kpi"><div class="label">Kill mud weight</div><div class="value" id="kmw">0.00 ppg</div></div>
+                <div class="kpi"><div class="label">Initial circulating pressure</div><div class="value" id="icp">0.00 psi</div></div>
+                <div class="kpi"><div class="label">Final circulating pressure</div><div class="value" id="fcp">0.00 psi</div></div>
+                <div class="kpi"><div class="label">Pressure drop K</div><div class="value" id="kDrop">0.00 psi</div></div>
+              </div>
+            </article>
+
+            <article class="card span-12">
+              <h2>100-stroke schedule</h2>
+              <table>
+                <thead><tr><th>Strokes</th><th>Target pressure</th><th>Reference</th></tr></thead>
+                <tbody id="scheduleTable"></tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+     <section class="tab-panel" id="tab-convert">
+  <div class="grid">
+
+    <article class="card span-6">
+      <h2>Pressure and density</h2>
+      <div class="fields">
+        <div class="field">
+          <label for="psiVal">Pressure</label>
+          <input id="psiVal" type="number" step="any" value="1000" />
+          <small>psi</small>
+        </div>
+        <div class="field">
+          <label for="kpaVal">Pressure</label>
+          <input id="kpaVal" type="number" step="any" value="6894.757" />
+          <small>kPa</small>
+        </div>
+        <div class="field">
+          <label for="ppgVal">Mud weight</label>
+          <input id="ppgVal" type="number" step="any" value="10" />
+          <small>ppg</small>
+        </div>
+        <div class="field">
+          <label for="sgVal">Density</label>
+          <input id="sgVal" type="number" step="any" value="1.198" />
+          <small>sg</small>
+        </div>
+      </div>
+    </article>
+
+    <article class="card span-6">
+      <h2>Length and volume</h2>
+      <div class="fields">
+        <div class="field">
+          <label for="ftVal">Length</label>
+          <input id="ftVal" type="number" step="any" value="1000" />
+          <small>ft</small>
+        </div>
+        <div class="field">
+          <label for="mVal">Length</label>
+          <input id="mVal" type="number" step="any" value="304.8" />
+          <small>m</small>
+        </div>
+        <div class="field">
+          <label for="bblVal">Volume</label>
+          <input id="bblVal" type="number" step="any" value="10" />
+          <small>bbl</small>
+        </div>
+        <div class="field">
+          <label for="m3Val">Volume</label>
+          <input id="m3Val" type="number" step="any" value="1.589873" />
+          <small>m³</small>
+        </div>
+      </div>
+    </article>
+
+    <!-- NEW CARD: Casing / hole size -->
+    <article class="card span-6">
+      <h2>Casing / hole size</h2>
+      <div class="fields">
+        <div class="field">
+          <label for="sizeFrac">Fractional size</label>
+          <input id="sizeFrac" type="text" value="9 5/8" />
+          <small>Standard drilling sizes, e.g. 4 1/2, 6 1/8, 8 1/2, 9 5/8, 12 1/4, 13 3/8</small>
+        </div>
+        <div class="field">
+          <label for="sizeDec">Decimal size</label>
+          <input id="sizeDec" type="number" step="0.0001" value="9.625" />
+          <small>inches</small>
+        </div>
+      </div>
+      <div class="row-note">
+        Enter a standard casing or hole size in fractional form and see the decimal inches instantly.
+      </div>
+    </article>
+
+    <div class="row-note">
+      Conversions are bi-directional. Edit either field in a pair and the other updates instantly.
+    </div>
+
+  </div>
+</section>
+
+        <section class="tab-panel" id="tab-summary">
+          <div class="grid">
+            <article class="card span-12">
+              <h2>Kill sheet summary</h2>
+              <table>
+                <tbody id="summaryTable"></tbody>
+              </table>
+              <p class="footer-note">This app mirrors the attached Surface BOP Vertical Well Kill Sheet structure and implements its core field-unit formulas. Validate against your company procedure, pump calibration sheet, and well-control method before operational use.</p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const num = id => parseFloat($(id).value) || 0;
+    const fmt = (v, d = 2) => isFinite(v) ? Number(v).toFixed(d) : '0.00';
+
+    const fields = Array.from(document.querySelectorAll('input, select'));
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const panels = Array.from(document.querySelectorAll('.tab-panel'));
+
+    tabs.forEach(btn => btn.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      $("tab-" + btn.dataset.tab).classList.add('active');
+    }));
+
+    $('themeToggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      $('themeToggle').textContent = next === 'dark' ? 'Light mode' : 'Dark mode';
+    });
+    $('printBtn').addEventListener('click', () => window.print());
+    $('resetBtn').addEventListener('click', () => { fields.forEach(f => { if (f.tagName === 'SELECT') f.selectedIndex = 0; else f.value = f.defaultValue; }); updateAll(); });
+
+    function selectedPumpData() {
+      const active = $('activePump').value;
+      if (active === '2') return {disp: num('pump2Disp'), rate: num('spr2'), pl: num('pl2'), name: 'Pump 2'};
+      return {disp: num('pump1Disp'), rate: num('spr1'), pl: num('pl1'), name: 'Pump 1'};
+    }
+
+    function compute() {
+      const pump = selectedPumpData();
+      const C = num('mwTest') + (num('lop') / Math.max(num('shoeTvd') * 0.052, 1e-9));
+      const maasp = (C - num('currMud')) * num('shoeTvd') * 0.052;
+
+      const dpVol = num('dpLen') * num('dpCap');
+      const hwdpVol = num('hwdpLen') * num('hwdpCap');
+      const dcVol = num('dcLen') * num('dcCap');
+      const D = dpVol + hwdpVol + dcVol;
+      const E = pump.disp ? D / pump.disp : 0;
+
+      const dcOhVol = num('dcOhLen') * num('dcOhCap');
+      const dpOhVol = num('dpOhLen') * num('dpOhCap');
+      const F = dcOhVol + dpOhVol;
+      const G = num('dpCsgLen') * num('dpCsgCap');
+      const H = F + G;
+      const I = D + H;
+      const J = num('activeSurface');
+      const totalActive = I + J;
+
+      const kmw = num('currMud') + (num('sidpp') / Math.max(num('holeTvd') * 0.052, 1e-9));
+      const icp = pump.pl + num('sidpp');
+      const fcp = num('currMud') ? (kmw / num('currMud')) * pump.pl : 0;
+      const K = icp - fcp;
+      return {pump,C,maasp,dpVol,hwdpVol,dcVol,D,E,dcOhVol,dpOhVol,F,G,H,I,J,totalActive,kmw,icp,fcp,K};
+    }
+
+    function toStrokes(volume, disp){ return disp ? volume / disp : 0; }
+    function toTime(strokes, rate){ return rate ? strokes / rate : 0; }
+
+    function updateVolumeTable(c) {
+      const rows = [
+        ['Drill pipe volume', c.dpVol],
+        ['HWDP volume', c.hwdpVol],
+        ['Drill collar volume', c.dcVol],
+        ['Drill string volume (D)', c.D],
+        ['Open hole volume (F)', c.F],
+        ['DP x casing annulus (G)', c.G],
+        ['Total annulus volume (H)', c.H],
+        ['Total well system volume (I)', c.I],
+        ['Active surface volume (J)', c.J],
+        ['Total active fluid system (I + J)', c.totalActive]
+      ];
+      const tb = $('volumeTable');
+      tb.innerHTML = rows.map(([name, vol]) => {
+        const strokes = toStrokes(vol, c.pump.disp);
+        const time = toTime(strokes, c.pump.rate);
+        return `<tr><td>${name}</td><td>${fmt(vol)} bbl</td><td>${fmt(strokes)} stk</td><td>${fmt(time)} min</td></tr>`;
+      }).join('');
+    }
+
+    function updateSchedule(c) {
+      const tb = $('scheduleTable');
+      if (c.E <= 0) {
+        tb.innerHTML = '<tr><td colspan="3" class="muted">Enter drill string volume and pump displacement to generate the 100-stroke schedule.</td></tr>';
+        return;
+      }
+      const increment = 100;
+      const totalSteps = Math.max(1, Math.ceil(c.E / increment));
+      const slope = c.K / totalSteps;
+      let rows = '';
+      for (let i = 0; i <= totalSteps; i++) {
+        const strokes = Math.min(i * increment, c.E);
+        const pressure = c.icp - slope * i;
+        const ref = i === 0 ? 'Start at ICP' : (i === totalSteps ? 'End near FCP' : 'Intermediate');
+        rows += `<tr><td>${fmt(strokes,0)} stk</td><td>${fmt(Math.max(pressure, c.fcp))} psi</td><td>${ref}</td></tr>`;
+      }
+      tb.innerHTML = rows;
+    }
+
+    function updateSummary(c) {
+      const rows = [
+        ['Current mud weight', `${fmt(num('currMud'))} ppg`],
+        ['Maximum allowable mud weight (C)', `${fmt(c.C)} ppg`],
+        ['Initial MAASP', `${fmt(c.maasp)} psi`],
+        ['SIDPP / SICP', `${fmt(num('sidpp'))} psi / ${fmt(num('sicp'))} psi`],
+        ['Pit gain', `${fmt(num('pitGain'))} bbl`],
+        ['Selected pump', `${c.pump.name}`],
+        ['Selected pump displacement', `${fmt(c.pump.disp,3)} bbl/stk`],
+        ['Selected slow pump rate', `${fmt(c.pump.rate)} spm`],
+        ['Dynamic pressure loss used', `${fmt(c.pump.pl)} psi`],
+        ['Drill string volume (D)', `${fmt(c.D)} bbl`],
+        ['Drill string strokes (E)', `${fmt(c.E)} stk`],
+        ['Total annulus volume (H)', `${fmt(c.H)} bbl`],
+        ['Total well system volume (I)', `${fmt(c.I)} bbl`],
+        ['Total active fluid system', `${fmt(c.totalActive)} bbl`],
+        ['Kill mud weight', `${fmt(c.kmw)} ppg`],
+        ['ICP / FCP', `${fmt(c.icp)} psi / ${fmt(c.fcp)} psi`]
+      ];
+      $('summaryTable').innerHTML = rows.map(([k,v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+    }
+
+    function updateAll() {
+      const c = compute();
+      $('kmC').textContent = `${fmt(c.C)} ppg`;
+      $('maasp').textContent = `${fmt(c.maasp)} psi`;
+      $('selDisp').textContent = `${fmt(c.pump.disp,3)} bbl/stk`;
+      $('selRate').textContent = `${fmt(c.pump.rate)} spm`;
+      $('selPl').textContent = `${fmt(c.pump.pl)} psi`;
+      $('kmw').textContent = `${fmt(c.kmw)} ppg`;
+      $('icp').textContent = `${fmt(c.icp)} psi`;
+      $('fcp').textContent = `${fmt(c.fcp)} psi`;
+      $('kDrop').textContent = `${fmt(c.K)} psi`;
+      updateVolumeTable(c);
+      updateSchedule(c);
+      updateSummary(c);
+    }
+
+    function bindLinear(a,b,factor) {
+      let lock = false;
+      $(a).addEventListener('input', () => { if(lock) return; lock=true; $(b).value = fmt(num(a)*factor,6); lock=false; });
+      $(b).addEventListener('input', () => { if(lock) return; lock=true; $(a).value = fmt(num(b)/factor,6); lock=false; });
+    }
+   bindLinear(psiVal,kpaVal,6.894757);
+bindLinear(ppgVal,sgVal,0.119826);
+bindLinear(ftVal,mVal,0.3048);
+bindLinear(bblVal,m3Val,0.1589873);
+
+// --- Casing / hole size converter (fractional ↔ decimal inches) ---
+
+function parseFractionalInch(v) {
+  v = (v || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\"|inches?|inch|in/g, "")
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (!v) return NaN;
+
+  // pure decimal like "9.625"
+  if (/^[+-]?(\d+(\.\d+)?)$/.test(v)) return parseFloat(v);
+
+  const parts = v.split(" ");
+  let whole = 0;
+  let frac = "";
+
+  if (parts.length === 2) {
+    whole = parseFloat(parts[0]);
+    frac = parts[1];
+  } else if (parts.length === 1) {
+    frac = parts[0];
+  } else {
+    return NaN;
+  }
+
+  const m = frac.match(/^(\d+)\/(\d+)$/);
+  if (!m) return NaN;
+
+  const n = parseFloat(m[1]);
+  const d = parseFloat(m[2]);
+  if (!d) return NaN;
+
+  return (isNaN(whole) ? 0 : whole) + n / d;
+}
+
+function toFractionalInch(v) {
+  if (!isFinite(v)) return "";
+
+  const den = 16; // standard 1/16\" resolution
+  const sign = v < 0 ? "-" : "";
+  v = Math.abs(v);
+
+  const whole = Math.floor(v + 1e-12);
+  let num = Math.round((v - whole) * den);
+
+  if (num === den) {
+    return sign + (whole + 1);
+  }
+  if (num === 0) return sign + whole;
+
+  function gcd(a, b) {
+    return b ? gcd(b, a % b) : a;
+  }
+
+  const g = gcd(num, den);
+  return sign + whole + " " + (num / g) + "/" + (den / g);
+}
+
+const sizeFrac = document.getElementById("sizeFrac");
+const sizeDec  = document.getElementById("sizeDec");
+let sizeLock = false;
+
+if (sizeFrac && sizeDec) {
+  sizeFrac.addEventListener("input", () => {
+    if (sizeLock) return;
+    sizeLock = true;
+    const d = parseFractionalInch(sizeFrac.value);
+    sizeDec.value = isFinite(d) ? Number(d.toFixed(4)) : "";
+    sizeLock = false;
+  });
+
+  sizeDec.addEventListener("input", () => {
+    if (sizeLock) return;
+    sizeLock = true;
+    const n = parseFloat(sizeDec.value);
+    sizeFrac.value = isFinite(n) ? toFractionalInch(n) : "";
+    sizeLock = false;
+  });
+}
+
+fields.forEach(f => f.addEventListener("input", updateAll));
+fields.forEach(f => f.addEventListener("change", updateAll));
+updateAll();
+  </script>
+</body>
+</html>
