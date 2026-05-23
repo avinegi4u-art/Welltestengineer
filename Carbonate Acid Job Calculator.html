@@ -500,8 +500,12 @@ footer a, footer span {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-faint);
-  text-decoration: none;
   transition: color var(--transition);
+}
+
+footer a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 footer a:hover { color: var(--text-muted); }
