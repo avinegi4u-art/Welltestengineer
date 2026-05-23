@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbonate Acid Job Calculator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══ RESET & TOKENS ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --font-body: 'Inter', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Industrial palette — dark steel */
+  --bg: #0f1114;
+  --surface: #181b20;
+  --surface-2: #1f2228;
+  --surface-3: #272b32;
+  --border: #333840;
+  --border-light: #3e4450;
+
+  --text: #e2e4e8;
+  --text-muted: #9399a4;
+  --text-faint: #5e6573;
+
+  /* Energy orange accent */
+  --accent: #e88a3a;
+  --accent-hover: #f09a50;
+  --accent-dim: rgba(232, 138, 58, 0.12);
+  --accent-dim-2: rgba(232, 138, 58, 0.06);
+
+  /* Semantic */
+  --lime: #6daa45;
+  --dolomite: #5591c7;
+  --error: #dd6974;
+  --warning: #e8a43a;
+
+  /* Spacing */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* ═══ LAYOUT ═══ */
+.page-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-4);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-6);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-8);
+}
+
+header svg { flex-shrink: 0; }
+
+header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+header p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ═══ TABS NAV ═══ */
+.tabs-nav {
+  display: flex;
+  gap: var(--sp-1);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: var(--sp-1);
+  margin-bottom: var(--sp-6);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: max-content;
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.tab-btn:hover { color: var(--text); background: var(--surface-2); }
+.tab-btn.active { color: var(--bg); background: var(--accent); font-weight: 600; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ═══ CARDS ═══ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  margin-bottom: var(--sp-5);
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.card-title svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ═══ FORMS ═══ */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+@media (max-width: 540px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+
+.form-group { display: flex; flex-direction: column; gap: var(--sp-1); }
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+input[type="number"], select {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  transition: border-color var(--transition);
+  width: 100%;
+}
+
+input[type="number"]:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-5);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+/* ═══ RESULTS TABLE ═══ */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  margin-top: var(--sp-4);
+}
+
+.results-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.results-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.results-table tr:last-child td { border-bottom: none; }
+
+.val-accent { color: var(--accent); font-weight: 600; }
+.val-lime { color: var(--lime); }
+.val-blue { color: var(--dolomite); }
+
+/* ═══ COMPARISON GRID ═══ */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+
+@media (max-width: 540px) {
+  .compare-grid { grid-template-columns: 1fr; }
+}
+
+.compare-col {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-4);
+  border-left: 3px solid var(--accent);
+}
+
+.compare-col.dolomite { border-left-color: var(--dolomite); }
+
+.compare-col h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: var(--sp-3);
+}
+
+.compare-col .limestone-label { color: var(--accent); }
+.compare-col .dolomite-label { color: var(--dolomite); }
+
+.compare-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--sp-1) 0;
+  font-size: 13px;
+}
+
+.compare-item .label { color: var(--text-muted); }
+.compare-item .value { font-family: var(--font-mono); font-weight: 500; text-align: right; word-break: break-word; }
+.compare-item { flex-wrap: wrap; gap: var(--sp-1); }
+
+/* ═══ NOTES SECTIONS ═══ */
+.note-block {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-4);
+  border-left: 3px solid var(--accent);
+}
+
+.note-block h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: var(--sp-3);
+}
+
+.note-block p, .note-block li {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.note-block ul {
+  list-style: none;
+  padding: 0;
+}
+
+.note-block li {
+  padding: var(--sp-1) 0;
+  padding-left: var(--sp-5);
+  position: relative;
+}
+
+.note-block li::before {
+  content: '▸';
+  position: absolute;
+  left: var(--sp-2);
+  color: var(--accent);
+}
+
+.note-block.info { border-left-color: var(--dolomite); }
+.note-block.info h4 { color: var(--dolomite); }
+.note-block.info li::before { color: var(--dolomite); }
+
+.note-block.warn { border-left-color: var(--warning); }
+.note-block.warn h4 { color: var(--warning); }
+.note-block.warn li::before { color: var(--warning); }
+
+/* ═══ CHECKLIST ═══ */
+.checklist { margin-top: var(--sp-4); }
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-2);
+  transition: background var(--transition);
+}
+
+.check-item:hover { background: var(--surface-3); }
+
+.check-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid var(--border-light);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.check-item input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.check-item input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -1px;
+  left: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg);
+}
+
+.check-label {
+  font-size: 14px;
+  color: var(--text);
+  flex: 1;
+}
+
+.check-label .sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.check-category {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: var(--sp-5);
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.check-category:first-child { margin-top: 0; }
+
+.edit-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--accent-dim-2);
+  border-radius: var(--radius-sm);
+}
+
+.edit-hint svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+
+/* Custom checklist item */
+.add-item-row {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.add-item-row input[type="text"] {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  transition: border-color var(--transition);
+}
+
+.add-item-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-item-row select {
+  width: 160px;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+/* ═══ FOOTER ═══ */
+footer {
+  margin-top: var(--sp-10);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+footer a {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+footer a:hover { color: var(--text-muted); }
+
+/* ═══ FORMULA DISPLAY ═══ */
+.formula {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  margin: var(--sp-3) 0;
+  overflow-x: auto;
+}
+
+.formula .highlight { color: var(--accent); font-weight: 600; }
+
+/* ═══ SUMMARY BAR ═══ */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+
+.summary-item {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+  text-align: center;
+}
+
+.summary-item .label {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-item .value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.summary-item .unit {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+</style>
+</head>
+
+<body>
+<div class="page-wrap">
+
+  <!-- ═══ HEADER ═══ -->
+  <header>
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-label="Acid Calculator">
+      <rect width="40" height="40" rx="8" fill="#272b32"/>
+      <path d="M14 10 L20 10 L24 28 L10 28 Z" stroke="#e88a3a" stroke-width="2" fill="none" stroke-linejoin="round"/>
+      <circle cx="17" cy="22" r="2" fill="#e88a3a" opacity="0.5"/>
+      <circle cx="20" cy="25" r="1.5" fill="#e88a3a" opacity="0.7"/>
+      <path d="M26 14 L30 14 M28 12 L28 16" stroke="#5591c7" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1>Carbonate Acid Job Calculator</h1>
+      <p>HCl dilution, gal/ft estimates, limestone vs dolomite</p>
+    </div>
+  </header>
+
+  <!-- ═══ TABS ═══ -->
+  <nav class="tabs-nav" role="tablist">
+    <button class="tab-btn active" data-tab="dilution" role="tab">HCl Dilution</button>
+    <button class="tab-btn" data-tab="galft" role="tab">Gal / Ft</button>
+    <button class="tab-btn" data-tab="compare" role="tab">CaCO₃ vs CaMg</button>
+    <button class="tab-btn" data-tab="notes" role="tab">Op. Notes</button>
+    <button class="tab-btn" data-tab="checklist" role="tab">Compatibility</button>
+  </nav>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 1: HCl DILUTION -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-dilution">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3L10 3L14 19L6 19Z"/><circle cx="10" cy="15" r="2"/></svg>
+        HCl Stock Dilution Calculator
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Dilute 33% HCl stock solution (SG ≈ 1.164) down to target concentration. Enter total acid volume needed at the target strength.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stock HCl Conc. (%)</label>
+          <input type="number" id="stock-conc" value="33" step="0.1" min="1" max="40">
+        </div>
+        <div class="form-group">
+          <label>Target Total Volume (gal)</label>
+          <input type="number" id="total-vol" value="1000" step="50" min="1">
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-dilution" data-testid="btn-calc-dilution">Calculate All Dilutions</button>
+
+      <div class="formula">
+        V<sub>stock</sub> = V<sub>target</sub> × (<span class="highlight">C<sub>target</sub></span> / C<sub>stock</sub>) &nbsp;|&nbsp; V<sub>water</sub> = V<sub>target</sub> − V<sub>stock</sub>
+      </div>
+
+      <table class="results-table" id="dilution-results">
+        <thead>
+          <tr>
+            <th>Target %</th>
+            <th>33% Stock (gal)</th>
+            <th>Fresh Water (gal)</th>
+            <th>Mix Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 2: GAL/FT ESTIMATOR -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-galft">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+        Gallons-per-Foot Estimator
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Estimate acid volume for a perforated interval. Adjust per your formation and well conditions.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Perforated Interval (ft)</label>
+          <input type="number" id="perf-interval" value="20" step="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>HCl Concentration (%)</label>
+          <select id="galft-conc">
+            <option value="15">15%</option>
+            <option value="23">23%</option>
+            <option value="28" selected>28%</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Formation Type</label>
+          <select id="formation-type">
+            <option value="limestone">Limestone (CaCO₃)</option>
+            <option value="dolomite">Dolomite (CaMg(CO₃)₂)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Treatment Intensity</label>
+          <select id="intensity">
+            <option value="light">Light (50–100 gal/ft)</option>
+            <option value="moderate" selected>Moderate (100–200 gal/ft)</option>
+            <option value="aggressive">Aggressive (200–300 gal/ft)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-galft" data-testid="btn-calc-galft">Estimate Volume</button>
+
+      <div class="summary-bar" id="galft-summary">
+        <!-- Filled by JS -->
+      </div>
+
+      <table class="results-table" id="galft-results" style="margin-top:var(--sp-5);">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 3: LIMESTONE vs DOLOMITE -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-compare">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20"/><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/></svg>
+        Limestone vs Dolomite Acid Response
+      </div>
+
+      <div class="compare-grid">
+        <!-- Limestone Column -->
+        <div class="compare-col">
+          <h4><span class="limestone-label">Limestone (CaCO₃)</span></h4>
+          <div class="compare-item"><span class="label">Reaction</span><span class="value val-accent">2HCl + CaCO₃ → CaCl₂ + H₂O + CO₂</span></div>
+          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.37 lbm CaCO₃ / gal 15% HCl</span></div>
+          <div class="compare-item"><span class="label">Reaction Rate</span><span class="value">Very fast</span></div>
+          <div class="compare-item"><span class="label">Spending Time (BHT 200°F)</span><span class="value">~5–15 min</span></div>
+          <div class="compare-item"><span class="label">Wormhole Formation</span><span class="value">Favorable at optimal rate</span></div>
+          <div class="compare-item"><span class="label">Typical Gal/Ft</span><span class="value">50–200</span></div>
+          <div class="compare-item"><span class="label">Retarder Needed?</span><span class="value">Often yes (high T)</span></div>
+        </div>
+
+        <!-- Dolomite Column -->
+        <div class="compare-col dolomite">
+          <h4><span class="dolomite-label">Dolomite (CaMg(CO₃)₂)</span></h4>
+          <div class="compare-item"><span class="label">Reaction</span><span class="value val-blue">4HCl + CaMg(CO₃)₂ → CaCl₂ + MgCl₂ + 2H₂O + 2CO₂</span></div>
+          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.27 lbm dolomite / gal 15% HCl</span></div>
+          <div class="compare-item"><span class="label">Reaction Rate</span><span class="value">Slower than limestone</span></div>
+          <div class="compare-item"><span class="label">Spending Time (BHT 200°F)</span><span class="value">~15–45 min</span></div>
+          <div class="compare-item"><span class="label">Wormhole Formation</span><span class="value">More uniform dissolution</span></div>
+          <div class="compare-item"><span class="label">Typical Gal/Ft</span><span class="value">100–300</span></div>
+          <div class="compare-item"><span class="label">Retarder Needed?</span><span class="value">Less often (inherently slower)</span></div>
+        </div>
+      </div>
+
+      <!-- Additional comparison notes -->
+      <div class="note-block" style="margin-top:var(--sp-5);">
+        <h4>Key Design Considerations</h4>
+        <ul>
+          <li>Limestone reacts ~5–10x faster than dolomite at the same temperature and HCl concentration. Plan pump rates accordingly to stay in the wormholing regime.</li>
+          <li>For dolomite, higher HCl concentrations (23–28%) are often preferred since the slower reaction gives more penetration depth before spending.</li>
+          <li>In mixed lithology zones, design for the faster-reacting component (limestone) to avoid face dissolution and ensure deeper penetration.</li>
+          <li>Bottomhole temperature is the strongest control on reaction rate. Above 250°F, consider retarded acid systems or organic acids for both lithologies.</li>
+          <li>CO₂ evolution: dolomite produces 2 mol CO₂ per mol acid spent vs. 1 for limestone — plan for higher gas volumes during flowback.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 4: OPERATIONAL NOTES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-notes">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Operational Notes &amp; Selection Guide
+      </div>
+
+      <!-- OPF vs OPR -->
+      <div class="note-block">
+        <h4>OPF (Open Perforation Flow) vs OPR (Open Perforation Rate)</h4>
+        <ul>
+          <li><strong>OPF</strong> — Open-ended flow through perforations with no restriction. Acid enters the formation by gravity and wellbore hydrostatic overbalance. Best for: acid washes, low-rate soaks, and cleanout operations where deep penetration is not the goal.</li>
+          <li><strong>OPR</strong> — Controlled injection rate through perforations, typically 0.25–1.0 BPM/ft. The pump rate is the critical parameter. Best for: matrix acidizing aimed at wormhole creation, where exceeding the optimal injection rate means wasting acid on face dissolution.</li>
+          <li><strong>Selection Rule:</strong> If the goal is to remove near-wellbore damage (scale, mud cake, completion debris), OPF with a soak period is often sufficient. If the goal is to create new flow channels (wormholes) past the damage zone, use OPR with a designed pump schedule.</li>
+          <li><strong>Practical tip:</strong> On coil tubing operations, OPR allows better control of acid placement across the interval. Spot acid at the target depth, then pump at the designed rate using the CT as a conduit.</li>
+        </ul>
+      </div>
+
+      <!-- Acid Wash vs Bullheading -->
+      <div class="note-block info">
+        <h4>Acid Wash vs Bullheading</h4>
+        <ul>
+          <li><strong>Acid Wash</strong> — Circulate acid across the target interval using CT or tubing. Acid contacts the formation face while returns come up the annulus. Provides better control of placement and contact time. Preferred when you need precise acid placement across specific zones, especially in long horizontal sections.</li>
+          <li><strong>Bullheading</strong> — Pump acid down the tubing or casing with no returns; all fluid enters the formation. Simpler operationally but less control over which zones receive acid. The lowest-pressure zone takes most of the fluid.</li>
+          <li><strong>When to use Acid Wash:</strong> Wellbore cleanout, scale removal from perforations, remove filter-cake or completion fluid residue. Typically done at low rates (0.5–2 BPM) with 5–15% HCl. Soak time 30–60 min, then circulate out.</li>
+          <li><strong>When to use Bullheading:</strong> Matrix stimulation where the goal is to push acid into the formation. Higher rates and pressures. Works well in wells with single producing zones. Poor zonal coverage in multi-zone completions unless combined with diverters.</li>
+          <li><strong>Caution:</strong> Never bullhead into a well with uncertain tubular integrity. Pressure test tubing and casing before bullheading. Ensure wellhead pressure ratings accommodate the maximum pump pressure + hydrostatic + friction loss.</li>
+          <li><strong>Diversion:</strong> For both methods in multi-zone completions, consider mechanical (ball sealers, packers) or chemical diversion (VDA, self-diverting acid, fiber) to ensure even acid distribution.</li>
+        </ul>
+      </div>
+
+      <!-- Pump Rate Guidelines -->
+      <div class="note-block warn">
+        <h4>Pump Rate Guidelines for Matrix Acidizing</h4>
+        <ul>
+          <li><strong>Below fracture pressure:</strong> Always verify the fracture gradient. Matrix treatment = injection below fracture pressure. Exceeding it wastes acid into fractures with no wormhole benefit.</li>
+          <li><strong>Optimal injection rate (OIR):</strong> For limestone, typically 0.25–0.5 BPM/ft of interval. For dolomite, can go higher (0.5–1.0 BPM/ft) since the reaction is slower.</li>
+          <li><strong>Surface pressure monitoring:</strong> Track real-time pressure response. A declining surface pressure at constant rate = successful wormhole propagation. Increasing pressure = possible screen-out or emulsion block.</li>
+          <li><strong>Temperature effect:</strong> At higher BHT, reduce concentration or add retarder to maintain acid penetration depth. Spending time drops exponentially with temperature.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TAB 5: COMPATIBILITY CHECKLIST -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-checklist">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Compatibility Checklist
+      </div>
+
+      <div class="edit-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Check items as you verify. Add custom items at the bottom.
+      </div>
+
+      <div class="checklist" id="checklist-container">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="add-item-row">
+        <input type="text" id="new-item-text" placeholder="Add custom checklist item..." data-testid="input-new-item">
+        <select id="new-item-cat" data-testid="select-new-category">
+          <option value="brine">Brine</option>
+          <option value="metallurgy">Metallurgy</option>
+          <option value="additives">Additives</option>
+          <option value="safety">Safety</option>
+        </select>
+        <button class="btn btn-sm" id="btn-add-item" data-testid="btn-add-item">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer>
+    <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">
+      Created with Perplexity Computer
+    </a>
+  </footer>
+
+</div>
+
+<script>
+// ═══ TABS ═══
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══ TAB 1: HCl DILUTION ═══
+function calcDilution() {
+  const stockConc = parseFloat(document.getElementById('stock-conc').value);
+  const totalVol = parseFloat(document.getElementById('total-vol').value);
+  const targets = [28, 23, 15];
+  const tbody = document.querySelector('#dilution-results tbody');
+  tbody.innerHTML = '';
+
+  targets.forEach(target => {
+    if (target >= stockConc) {
+      tbody.innerHTML += `<tr><td>${target}%</td><td colspan="3" style="color:var(--error)">Target ≥ stock concentration</td></tr>`;
+      return;
+    }
+    const vStock = totalVol * (target / stockConc);
+    const vWater = totalVol - vStock;
+    const ratio = (vStock / vWater).toFixed(2);
+
+    tbody.innerHTML += `<tr>
+      <td class="val-accent">${target}%</td>
+      <td>${vStock.toFixed(1)}</td>
+      <td>${vWater.toFixed(1)}</td>
+      <td>${ratio} : 1 (acid : water)</td>
+    </tr>`;
+  });
+}
+
+document.getElementById('btn-calc-dilution').addEventListener('click', calcDilution);
+calcDilution(); // initial
+
+// ═══ TAB 2: GAL/FT ═══
+function calcGalFt() {
+  const interval = parseFloat(document.getElementById('perf-interval').value);
+  const conc = parseInt(document.getElementById('galft-conc').value);
+  const formation = document.getElementById('formation-type').value;
+  const intensity = document.getElementById('intensity').value;
+
+  // Gal/ft ranges based on intensity
+  const ranges = {
+    light: [50, 100],
+    moderate: [100, 200],
+    aggressive: [200, 300]
+  };
+
+  // Dolomite typically needs more acid
+  let [low, high] = ranges[intensity];
+  if (formation === 'dolomite') {
+    low = Math.round(low * 1.3);
+    high = Math.round(high * 1.3);
+  }
+
+  const midGalFt = (low + high) / 2;
+  const totalLow = low * interval;
+  const totalHigh = high * interval;
+  const totalMid = midGalFt * interval;
+
+  // Dissolving power (lbs rock / gal acid) — simplified values
+  const dpMap = {
+    limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
+    dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 }
+  };
+  const dp = dpMap[formation][conc] || 1.37;
+  const rockDissolved = (totalMid * dp).toFixed(0);
+
+  // Summary bar
+  document.getElementById('galft-summary').innerHTML = `
+    <div class="summary-item">
+      <div class="label">Gal/Ft Range</div>
+      <div class="value">${low}–${high}</div>
+      <div class="unit">gal/ft</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Volume (mid)</div>
+      <div class="value">${totalMid.toLocaleString()}</div>
+      <div class="unit">gallons</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Barrels (mid)</div>
+      <div class="value">${(totalMid / 42).toFixed(1)}</div>
+      <div class="unit">bbl</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Rock Dissolved</div>
+      <div class="value">${parseInt(rockDissolved).toLocaleString()}</div>
+      <div class="unit">lbs</div>
+    </div>
+  `;
+
+  // Detail table
+  const tbody = document.querySelector('#galft-results tbody');
+  tbody.innerHTML = `
+    <tr><td>Perforated Interval</td><td class="val-accent">${interval} ft</td></tr>
+    <tr><td>HCl Concentration</td><td>${conc}%</td></tr>
+    <tr><td>Formation Type</td><td>${formation === 'limestone' ? 'Limestone (CaCO₃)' : 'Dolomite (CaMg(CO₃)₂)'}</td></tr>
+    <tr><td>Treatment Intensity</td><td style="text-transform:capitalize">${intensity}</td></tr>
+    <tr><td>Gal/Ft Range</td><td>${low} – ${high} gal/ft</td></tr>
+    <tr><td>Total Volume (low)</td><td>${totalLow.toLocaleString()} gal (${(totalLow/42).toFixed(1)} bbl)</td></tr>
+    <tr><td>Total Volume (mid)</td><td class="val-accent">${totalMid.toLocaleString()} gal (${(totalMid/42).toFixed(1)} bbl)</td></tr>
+    <tr><td>Total Volume (high)</td><td>${totalHigh.toLocaleString()} gal (${(totalHigh/42).toFixed(1)} bbl)</td></tr>
+    <tr><td>Dissolving Power (${conc}% HCl)</td><td>${dp} lbm ${formation === 'limestone' ? 'CaCO₃' : 'dolomite'} / gal</td></tr>
+    <tr><td>Est. Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
+  `;
+}
+
+document.getElementById('btn-calc-galft').addEventListener('click', calcGalFt);
+calcGalFt();
+
+// ═══ TAB 5: COMPATIBILITY CHECKLIST ═══
+const defaultChecklist = [
+  // Brine compatibility
+  { cat: 'brine', text: 'Formation brine composition analyzed (Cl⁻, Ca²⁺, Mg²⁺, Ba²⁺, Sr²⁺, SO₄²⁻, Fe²⁺/Fe³⁺)', sub: 'Critical for predicting precipitation risks' },
+  { cat: 'brine', text: 'Acid-brine compatibility test performed at BHT', sub: 'Check for emulsion, sludge, or precipitate formation' },
+  { cat: 'brine', text: 'Iron content assessed — Fe³⁺ > 500 ppm requires iron control agent', sub: 'Fe³⁺ precipitates as Fe(OH)₃ at pH > 2, plugging pores' },
+  { cat: 'brine', text: 'CaSO₄ / BaSO₄ scale risk evaluated if SO₄²⁻ present', sub: 'Mixing HCl returns with high-sulfate brine can form insoluble scales' },
+  { cat: 'brine', text: 'H₂S presence confirmed/denied — plan for scavenger if > 10 ppm', sub: 'HCl liberates H₂S from FeS or pyrite' },
+  { cat: 'brine', text: 'Completion brine compatibility with acid verified', sub: 'Ensure kill fluid / packer fluid does not react with acid returns' },
+
+  // Metallurgy
+  { cat: 'metallurgy', text: 'Tubing metallurgy confirmed (carbon steel, 13Cr, CRA)', sub: 'Max HCl exposure: L80/N80 = 15% @ 200°F, 13Cr = 10%, CRA per manufacturer' },
+  { cat: 'metallurgy', text: 'Corrosion inhibitor type selected per metallurgy and BHT', sub: 'Confirm CI effectiveness at BHT; some CIs fail above 300°F' },
+  { cat: 'metallurgy', text: 'Corrosion inhibitor intensifier added if BHT > 250°F', sub: 'Standard CI may need formic/acetic acid intensifier at elevated temperatures' },
+  { cat: 'metallurgy', text: 'Casing grade and weight verified for pressure rating', sub: 'NACE MR-01-75 / ISO 15156 compliance if H₂S present' },
+  { cat: 'metallurgy', text: 'Downhole tools compatibility checked (gauges, packers, plugs)', sub: 'Elastomers (Viton, HNBR) rated for acid exposure duration and concentration' },
+  { cat: 'metallurgy', text: 'Contact time with tubulars estimated — within CI limits', sub: 'Typical CI protection: 6–24 hrs depending on T and concentration' },
+
+  // Additives
+  { cat: 'additives', text: 'Corrosion inhibitor (CI) concentration per service company recommendation', sub: 'Typically 0.2–0.6% v/v for standard HCl jobs' },
+  { cat: 'additives', text: 'Iron control agent selected (citric acid, EDTA, or acetic acid blend)', sub: 'Sequesters Fe³⁺ to prevent hydroxide precipitation during spending' },
+  { cat: 'additives', text: 'Mutual solvent (EGMBE) included for wettability restoration', sub: 'Helps prevent water-wet to oil-wet reversal; typically 5–10% in preflush' },
+  { cat: 'additives', text: 'Anti-sludge agent tested if crude > 20° API or asphaltenic', sub: 'Acid + heavy/sour crude → sludge that blocks pore throats' },
+  { cat: 'additives', text: 'Surfactant / non-emulsifier included in acid formulation', sub: 'Prevents acid-crude emulsion during and after treatment' },
+  { cat: 'additives', text: 'Clay stabilizer considered if formation has fines migration risk', sub: 'NH₄Cl or KCl pre-flush may be needed' },
+
+  // Safety
+  { cat: 'safety', text: 'Pressure test tubing and surface equipment before pumping', sub: 'Per NORSOK or API standard — hold for 10 min at 1.1× max treating pressure' },
+  { cat: 'safety', text: 'Emergency shutdown procedure reviewed with crew', sub: 'Include iron sulfide screening and H₂S contingency plan' },
+  { cat: 'safety', text: 'PPE requirements confirmed (acid-resistant suit, face shield, gloves)', sub: 'NFPA 30 / local HSE requirements' },
+  { cat: 'safety', text: 'Flowback plan established — neutralization / disposal of spent acid', sub: 'Spent acid pH, chloride content, and heavy metals must meet disposal criteria' },
+];
+
+let checklistState = [...defaultChecklist];
+
+function renderChecklist() {
+  const container = document.getElementById('checklist-container');
+  container.innerHTML = '';
+
+  const categories = { brine: 'Reservoir Brine Compatibility', metallurgy: 'Tubular Metallurgy', additives: 'Acid Additives & Chemicals', safety: 'Safety & Procedural' };
+
+  Object.keys(categories).forEach(cat => {
+    const items = checklistState.filter(item => item.cat === cat);
+    if (items.length === 0) return;
+
+    container.innerHTML += `<div class="check-category">${categories[cat]}</div>`;
+    items.forEach((item, i) => {
+      const globalIdx = checklistState.indexOf(item);
+      container.innerHTML += `
+        <div class="check-item">
+          <input type="checkbox" id="chk-${globalIdx}" ${item.checked ? 'checked' : ''} data-idx="${globalIdx}" data-testid="chk-${globalIdx}">
+          <label class="check-label" for="chk-${globalIdx}">
+            ${item.text}
+            ${item.sub ? `<span class="sub">${item.sub}</span>` : ''}
+          </label>
+        </div>
+      `;
+    });
+  });
+
+  // Wire up checkboxes
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      checklistState[parseInt(e.target.dataset.idx)].checked = e.target.checked;
+    });
+  });
+}
+
+renderChecklist();
+
+document.getElementById('btn-add-item').addEventListener('click', () => {
+  const text = document.getElementById('new-item-text').value.trim();
+  const cat = document.getElementById('new-item-cat').value;
+  if (!text) return;
+  checklistState.push({ cat, text, sub: '', checked: false });
+  document.getElementById('new-item-text').value = '';
+  renderChecklist();
+});
+
+// Also allow Enter key
+document.getElementById('new-item-text').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-add-item').click();
+});
+</script>
+
+</body>
+</html>
