@@ -799,6 +799,97 @@ footer a:hover { color: var(--text-muted); }
           <!-- Filled by JS -->
         </tbody>
       </table>
+
+      <div class="note-block info" style="margin-top:var(--sp-5);">
+        <h4>Advanced DST Wormhole Design (No Core Data)</h4>
+        <p>
+          Uses DST/PTA permeability, log porosity, target wormhole length, and fracture-pressure limit to estimate matrix-rate window and main-acid PV when coreflood PVBT is unavailable.
+        </p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Target Wormhole Length (ft)</label>
+          <input type="number" id="dst-lw-ft" value="3" step="0.5" min="0.5" max="10">
+        </div>
+        <div class="form-group">
+          <label>DST/PTA Permeability (md)</label>
+          <input type="number" id="dst-perm-md" value="50" step="5" min="0.1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Log Porosity (fraction)</label>
+          <input type="number" id="dst-porosity" value="0.12" step="0.01" min="0.01" max="0.5">
+        </div>
+        <div class="form-group">
+          <label>Wellbore Radius (in.)</label>
+          <input type="number" id="dst-rw-in" value="4.25" step="0.25" min="1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Frac Gradient (psi/ft)</label>
+          <input type="number" id="dst-frac-grad" value="0.90" step="0.01" min="0.1">
+        </div>
+        <div class="form-group">
+          <label>TVD at Mid-Zone (ft)</label>
+          <input type="number" id="dst-tvd-ft" value="9000" step="100" min="1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Reservoir Pressure (psi)</label>
+          <input type="number" id="dst-pres-psi" value="5000" step="50" min="0">
+        </div>
+        <div class="form-group">
+          <label>Safety Margin Below Frac (psi)</label>
+          <input type="number" id="dst-frac-margin" value="300" step="50" min="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Initial Skin</label>
+          <input type="number" id="dst-skin" value="5" step="0.5">
+        </div>
+        <div class="form-group">
+          <label>Damage Radius (ft)</label>
+          <input type="number" id="dst-rb-ft" value="4" step="0.5" min="0.1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Main-Acid PV Factor</label>
+          <input type="number" id="dst-pv-factor" value="1.5" step="0.1" min="0.1">
+        </div>
+        <div class="form-group">
+          <label>Design Interval Source</label>
+          <input type="number" id="dst-design-interval" value="20" readonly>
+        </div>
+      </div>
+
+      <button class="btn" id="btn-calc-dst" data-testid="btn-calc-dst">Compute DST Wormhole Design</button>
+
+      <div class="summary-bar" id="dst-summary">
+        <!-- Filled by JS -->
+      </div>
+
+      <table class="results-table" id="dst-results" style="margin-top:var(--sp-5);">
+        <thead>
+          <tr>
+            <th>DST Design Area</th>
+            <th>Screening Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -1545,7 +1636,156 @@ function calcJobDesign() {
   ]);
 }
 
+function computeDstPoreVolumeBbl(intervalFt, porosity, rwIn, reFt) {
+  const rwFt = rwIn / 12;
+  const annulusAreaFt2 = Math.PI * (Math.pow(reFt, 2) - Math.pow(rwFt, 2));
+  const poreVolumeFt3 = annulusAreaFt2 * intervalFt * porosity;
+  return poreVolumeFt3 / 5.615;
+}
+
+function getDstInputs() {
+  return {
+    interval: parseFloat(document.getElementById('jd-interval').value),
+    lwFt: parseFloat(document.getElementById('dst-lw-ft').value),
+    permMd: parseFloat(document.getElementById('dst-perm-md').value),
+    porosity: parseFloat(document.getElementById('dst-porosity').value),
+    rwIn: parseFloat(document.getElementById('dst-rw-in').value),
+    fracGrad: parseFloat(document.getElementById('dst-frac-grad').value),
+    tvdFt: parseFloat(document.getElementById('dst-tvd-ft').value),
+    pRes: parseFloat(document.getElementById('dst-pres-psi').value),
+    fracMargin: parseFloat(document.getElementById('dst-frac-margin').value),
+    skin: parseFloat(document.getElementById('dst-skin').value),
+    rbFt: parseFloat(document.getElementById('dst-rb-ft').value),
+    pvFactor: parseFloat(document.getElementById('dst-pv-factor').value)
+  };
+}
+
+function calcDstWormholeDesign() {
+  const inputs = getDstInputs();
+  const summary = document.getElementById('dst-summary');
+  const tbody = document.querySelector('#dst-results tbody');
+  const intervalOutput = document.getElementById('dst-design-interval');
+  const values = [
+    inputs.interval,
+    inputs.lwFt,
+    inputs.permMd,
+    inputs.porosity,
+    inputs.rwIn,
+    inputs.fracGrad,
+    inputs.tvdFt,
+    inputs.pRes,
+    inputs.fracMargin,
+    inputs.skin,
+    inputs.rbFt,
+    inputs.pvFactor
+  ];
+
+  intervalOutput.value = Number.isFinite(inputs.interval) ? inputs.interval.toFixed(1) : '';
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  if (
+    values.some(value => !Number.isFinite(value))
+    || inputs.interval <= 0
+    || inputs.lwFt <= 0
+    || inputs.permMd <= 0
+    || inputs.porosity <= 0
+    || inputs.rwIn <= 0
+    || inputs.fracGrad <= 0
+    || inputs.tvdFt <= 0
+    || inputs.pRes < 0
+    || inputs.fracMargin < 0
+    || inputs.rbFt <= 0
+    || inputs.pvFactor <= 0
+  ) {
+    appendTableMessage(tbody, 'Enter positive DST wormhole inputs; reservoir pressure and frac safety margin may be zero but not negative.', 2);
+    return;
+  }
+
+  const rwFt = inputs.rwIn / 12;
+  const reFt = rwFt + inputs.lwFt;
+  if (inputs.rbFt <= rwFt) {
+    appendTableMessage(tbody, 'Damage radius must be greater than wellbore radius for the pressure model.', 2);
+    return;
+  }
+
+  const pvBbl = computeDstPoreVolumeBbl(inputs.interval, inputs.porosity, inputs.rwIn, reFt);
+  const mainAcidBbl = pvBbl * inputs.pvFactor;
+  const mainAcidGal = mainAcidBbl * 42;
+  const galPerFt = mainAcidGal / inputs.interval;
+  const pFrac = inputs.fracGrad * inputs.tvdFt;
+  const dPmax = (pFrac - inputs.fracMargin) - inputs.pRes;
+
+  if (dPmax <= 0) {
+    appendTableMessage(tbody, 'No matrix-rate window: reservoir pressure plus safety margin is at or above calculated fracture pressure.', 2);
+    return;
+  }
+
+  const pressureTerm = Math.log(inputs.rbFt / rwFt) + inputs.skin;
+  if (pressureTerm <= 0) {
+    appendTableMessage(tbody, 'Initial skin/damage-radius inputs create a non-positive pressure term; check skin and radius values.', 2);
+    return;
+  }
+
+  const qMaxStbDay = dPmax * inputs.permMd * inputs.interval / (141.2 * pressureTerm);
+  const qMaxGpm = qMaxStbDay * 42 / (60 * 24);
+  const qWormGpm = qMaxGpm * 0.8;
+  const qWormPerFt = qWormGpm / inputs.interval;
+  const qWormStbDay = qWormGpm * 60 * 24 / 42;
+  const dPAtWorm = 141.2 * qWormStbDay / (inputs.permMd * inputs.interval) * pressureTerm;
+  const pWfAtWorm = inputs.pRes + dPAtWorm;
+  const fracMarginAtWorm = pFrac - pWfAtWorm;
+  const status = fracMarginAtWorm > inputs.fracMargin
+    ? 'Below frac limit'
+    : 'Tight pressure margin';
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">Target Wormhole</div>
+      <div class="value">${inputs.lwFt.toFixed(1)}</div>
+      <div class="unit">ft (re ${reFt.toFixed(2)} ft)</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Main Acid</div>
+      <div class="value">${formatNumber(mainAcidGal)}</div>
+      <div class="unit">gal (${formatNumber(galPerFt)} gal/ft)</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Wormhole Rate</div>
+      <div class="value">${formatNumber(qWormGpm, 1)}</div>
+      <div class="unit">gpm (${formatNumber(qWormPerFt, 2)} gpm/ft)</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Pressure Window</div>
+      <div class="value">${status}</div>
+      <div class="unit">${formatNumber(fracMarginAtWorm)} psi margin</div>
+    </div>
+  `;
+
+  appendRow(tbody, [
+    { text: 'Geometry' },
+    { text: `Target wormhole length ${inputs.lwFt.toFixed(1)} ft gives design radius re ${reFt.toFixed(2)} ft from wellbore radius ${rwFt.toFixed(2)} ft.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Acid PV / volume' },
+    { text: `Pore volume to re is ${formatNumber(pvBbl, 2)} bbl. With PV factor ${inputs.pvFactor.toFixed(1)}, suggested main acid is ${formatNumber(mainAcidGal)} gal (${formatNumber(mainAcidBbl, 2)} bbl), or ${formatNumber(galPerFt)} gal/ft over ${inputs.interval.toFixed(1)} ft.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Rate window' },
+    { text: `Max matrix rate below frac is ${formatNumber(qMaxGpm, 1)} gpm. Recommended wormhole rate is ${formatNumber(qWormGpm, 1)} gpm, about ${formatNumber(qWormPerFt, 2)} gpm/ft.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Pressure check' },
+    { text: `At recommended rate: Δp ${formatNumber(dPAtWorm)} psi, BHP ${formatNumber(pWfAtWorm)} psi, frac pressure ${formatNumber(pFrac)} psi, margin ${formatNumber(fracMarginAtWorm)} psi.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Field use' },
+    { text: 'Screening estimate only. Calibrate with injection test/DST pressure response before main acid and stop rate escalation if pressure approaches the fracture limit.' }
+  ]);
+}
+
 document.getElementById('btn-calc-jobdesign').addEventListener('click', calcJobDesign);
+document.getElementById('btn-calc-dst').addEventListener('click', calcDstWormholeDesign);
 [
   'jd-objective',
   'jd-acid-type',
@@ -1562,7 +1802,24 @@ document.getElementById('btn-calc-jobdesign').addEventListener('click', calcJobD
   const input = document.getElementById(inputId);
   input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', calcJobDesign);
 });
+[
+  'jd-interval',
+  'dst-lw-ft',
+  'dst-perm-md',
+  'dst-porosity',
+  'dst-rw-in',
+  'dst-frac-grad',
+  'dst-tvd-ft',
+  'dst-pres-psi',
+  'dst-frac-margin',
+  'dst-skin',
+  'dst-rb-ft',
+  'dst-pv-factor'
+].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('input', calcDstWormholeDesign);
+});
 calcJobDesign();
+calcDstWormholeDesign();
 
 // ═══ TAB 4: ROCK CHEMISTRY ═══
 const ROCK_MINERALS = [
