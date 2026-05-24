@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carbonate Acid Job Calculator</title>
+  <style>
+    :root {
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-12: 3rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --color-bg: #0f172a;
+      --color-surface: #020617;
+      --color-surface-soft: #020617;
+      --color-border: #1f2937;
+      --color-accent: #22c55e;
+      --color-text: #e5e7eb;
+      --color-text-muted: #9ca3af;
+      --color-badge-warn: #f97316;
+      --color-badge-bad: #f97373;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,0.7);
+      --shadow-md: 0 10px 30px rgba(15,23,42,0.7);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #000 100%);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-3) var(--space-12);
+    }
+    header {
+      margin-bottom: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    header p {
+      margin: 0;
+      color: var(--color-text-muted);
+      max-width: 56rem;
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: var(--space-4);
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .card {
+      background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.92));
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148,163,184,0.18);
+      box-shadow: var(--shadow-sm);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: var(--space-2);
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-text-muted);
+    }
+    .card h3 {
+      margin-top: var(--space-3);
+      margin-bottom: var(--space-1);
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-2);
+    }
+    @media (max-width: 700px) {
+      .grid-2 { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+    input, select, button, textarea {
+      font: inherit;
+    }
+    input, select, textarea {
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(148,163,184,0.3);
+      padding: 0.4rem 0.55rem;
+      background: rgba(15,23,42,0.85);
+      color: var(--color-text);
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.6);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 4rem;
+    }
+
+    button {
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #020617;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      box-shadow: var(--shadow-md);
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--color-text-muted);
+      box-shadow: none;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.3);
+    }
+    button:active { transform: translateY(1px); }
+
+    .small-text {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.1rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.4);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.12rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border: 1px solid rgba(148,163,184,0.4);
+    }
+    .badge-ok { color: var(--color-accent); border-color: rgba(34,197,94,0.7); }
+    .badge-warn { color: var(--color-badge-warn); border-color: rgba(249,115,22,0.7); }
+    .badge-bad { color: #f97373; border-color: rgba(248,113,113,0.8); }
+
+    .output-box {
+      margin-top: var(--space-2);
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(148,163,184,0.4);
+      background: radial-gradient(circle at top left, rgba(34,197,94,0.12), transparent 55%);
+      font-size: 0.85rem;
+    }
+    .output-box strong { color: var(--color-accent); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 0.25rem 0.35rem;
+      text-align: right;
+    }
+    th {
+      background: rgba(15,23,42,0.9);
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      color: var(--color-text-muted);
+    }
+    td:first-child, th:first-child { text-align: left; }
+
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: minmax(0,1fr);
+      gap: 0.35rem;
+    }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    .divider-label {
+      margin: var(--space-3) 0 var(--space-2);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--color-text-muted);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+    @media (max-width: 800px) {
+      .two-col { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>Carbonate Acid Job Calculator v3</h1>
+      <p>
+        Lightweight planner for HCl matrix jobs in carbonates. Designed around formation damage,
+        pore volume, wormholing behaviour and QC / additives so every design step is traceable.
+      </p>
+      <span class="pill">Field Tool &mdash; Matrix Acidizing</span>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT COLUMN: DESIGN + VOLUMES + RATES -->
+      <div>
+        <section class="card">
+          <h2>Design Inputs</h2>
+          <div class="grid-2">
+            <label>Formation type
+              <select id="formationType">
+                <option value="limestone">Limestone</option>
+                <option value="dolomite">Dolomite</option>
+                <option value="mixed">Mixed carbonate</option>
+                <option value="chalk">Chalk</option>
+              </select>
+            </label>
+            <label>Reservoir temperature (°F)
+              <input type="number" id="tempF" value="240" />
+            </label>
+            <label>Permeability k (md)
+              <input type="number" id="permMd" value="10" />
+            </label>
+            <label>Net pay thickness h (ft)
+              <input type="number" id="thicknessFt" value="20" />
+            </label>
+            <label>Porosity ϕ (fraction)
+              <input type="number" step="0.01" id="phi" value="0.18" />
+            </label>
+            <label>Perf interval length (ft)
+              <input type="number" id="perfLen" value="20" />
+            </label>
+            <label>Current skin S
+              <input type="number" step="0.5" id="skinCurrent" value="10" />
+            </label>
+            <label>Target skin after acid S<sub>t</sub>
+              <input type="number" step="0.5" id="skinTarget" value="0" />
+            </label>
+          </div>
+          <p class="small-text" style="margin-top:var(--space-2);">
+            These map to formation damage, carbonate acidizing and wormholing design discussions in
+            standard acid stimulation references.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Volumes &amp; Pore Volume</h2>
+          <div class="grid-2">
+            <label>Design radius r<sub>e</sub> from wellbore (in.)
+              <input type="number" id="reIn" value="18" />
+            </label>
+            <label>Wellbore radius r<sub>w</sub> (in.)
+              <input type="number" id="rwIn" value="4.25" />
+            </label>
+            <label>Planned gal/ft main acid
+              <input type="number" id="galPerFt" value="80" />
+            </label>
+            <label>Total main acid volume at target % (gal)
+              <input type="number" id="totalMainGal" value="1600" />
+            </label>
+          </div>
+          <button style="margin-top:var(--space-3);" onclick="updateVolumes()">Update PV &amp; Volume</button>
+          <div id="pvOutput" class="output-box"></div>
+        </section>
+
+        <section class="card">
+          <h2>DST Wormhole Design (No Core Data)</h2>
+          <p class="small-text">
+            Uses frac limit, skin and target wormhole length to propose matrix rate,
+            acid PV and expected injection pressures for carbonate DST jobs.
+          </p>
+
+          <div class="grid-2" style="margin-top:var(--space-2);">
+            <label>Target wormhole length L<sub>w</sub> (ft)
+              <input type="number" id="LwFt" value="3" min="1" max="5" />
+            </label>
+
+            <label>Frac gradient (psi/ft)
+              <input type="number" id="fracGrad" value="0.9" step="0.01" />
+            </label>
+
+            <label>TVD at mid-zone (ft)
+              <input type="number" id="tvdFt" value="9000" />
+            </label>
+
+            <label>Reservoir pressure p<sub>r</sub> (psi)
+              <input type="number" id="pRes" value="5000" />
+            </label>
+
+            <label>Safety margin below frac (psi)
+              <input type="number" id="fracMargin" value="300" />
+            </label>
+
+            <label>Initial skin S
+              <input type="number" id="skinInitial" value="5" />
+            </label>
+
+            <label>Damage radius r<sub>b</sub> (ft)
+              <input type="number" id="rbFt" value="4" />
+            </label>
+
+            <label>Main-acid PV factor
+              <input type="number" id="pvFactor" value="1.5" step="0.1" />
+            </label>
+          </div>
+
+          <button style="margin-top:var(--space-3);" onclick="runDstWormholeDesign()">
+            Compute DST wormhole design
+          </button>
+
+          <div id="dstWormholeOutput" class="output-box"></div>
+        </section>
+
+        <section class="card">
+          <h2>32/33% HCl Dilution to Working Strength</h2>
+          <div class="grid-2">
+            <label>Stock HCl concentration (%)
+              <select id="stockPct">
+                <option value="32">32%</option>
+                <option value="33">33%</option>
+              </select>
+            </label>
+            <label>Target HCl concentration (%)
+              <select id="targetPct">
+                <option value="28">28%</option>
+                <option value="23">23%</option>
+                <option value="15">15%</option>
+              </select>
+            </label>
+            <label>Total required volume at target % (gal)
+              <input type="number" id="volTargetGal" value="2000" />
+            </label>
+          </div>
+          <button style="margin-top:var(--space-3);" onclick="calcDilution()">Calculate stock &amp; water</button>
+          <div id="dilutionOutput" class="output-box"></div>
+        </section>
+      </div>
+
+      <!-- RIGHT COLUMN: RATES / LAB / PRODUCTIVITY / ADDITIVES -->
+      <div>
+        <section class="card">
+          <h2>Lab PVBT &amp; Rate Window</h2>
+          <p class="small-text">
+            Optional: enter coreflood PVBT vs injection rate for this rock / acid. The tool finds the
+            minimum PVBT and flags if your field rate is likely compact, optimum wormholing or channeling.
+          </p>
+          <table style="margin-top:var(--space-2);">
+            <thead>
+              <tr><th>Lab rate (mL/min)</th><th>PVBT</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="number" value="5" class="rateLab" style="width:100%;" /></td>
+                <td><input type="number" value="1.8" class="pvbtLab" style="width:100%;" /></td>
+              </tr>
+              <tr>
+                <td><input type="number" value="10" class="rateLab" style="width:100%;" /></td>
+                <td><input type="number" value="1.1" class="pvbtLab" style="width:100%;" /></td>
+              </tr>
+              <tr>
+                <td><input type="number" value="20" class="rateLab" style="width:100%;" /></td>
+                <td><input type="number" value="1.6" class="pvbtLab" style="width:100%;" /></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="grid-2" style="margin-top:var(--space-2);">
+            <label>Planned matrix rate per ft (gal/min/ft)
+              <input type="number" id="userRatePerFt" value="1" />
+            </label>
+            <label>Perf interval length (ft)
+              <input type="number" id="userPerfLenRate" value="20" />
+            </label>
+          </div>
+          <button style="margin-top:var(--space-3);" onclick="evaluateRates()">Evaluate rate window</button>
+          <div id="rateOutput" class="output-box"></div>
+        </section>
+
+        <section class="card">
+          <h2>Acid Candidate &amp; Productivity Gain</h2>
+          <p class="small-text">
+            Quick look: if skin drops from S to S<sub>t</sub>, what PI uplift do you get assuming radial flow
+            with fixed drainage radius.
+          </p>
+          <button style="margin-top:var(--space-2);" onclick="updateProductivityGain()">Estimate PI gain</button>
+          <div id="prodGain" class="output-box"></div>
+        </section>
+
+        <section class="card">
+          <h2>Additives &amp; Compatibility Checklist</h2>
+          <p class="small-text">
+            Select the conditions that apply. The checklist suggests which additive *family* you should plan
+            and why, based on standard carbonate-acidizing practice.
+          </p>
+          <div class="grid-2" style="margin-top:var(--space-2);">
+            <label>Sour component (H2S) expected?
+              <select id="hasH2S">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>CRA / high Cr tubing present?
+              <select id="craTubulars">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>Bottomhole temperature (°F)
+              <input type="number" id="tempAdd" value="240" />
+            </label>
+            <label>Oil prone to emulsion / sludge?
+              <select id="emulsionRisk">
+                <option value="unknown">Unknown</option>
+                <option value="low">Low</option>
+                <option value="high">High / asphaltenic</option>
+              </select>
+            </label>
+            <label>Non-carbonate streaks / fines sensitive?
+              <select id="finesRisk">
+                <option value="no">No</option>
+                <option value="yes">Yes / suspected</option>
+              </select>
+            </label>
+            <label>Need slower reaction / deeper penetration?
+              <select id="needsRetarder">
+                <option value="no">No</option>
+                <option value="yes">Yes (HT / short contact time)</option>
+              </select>
+            </label>
+          </div>
+          <button style="margin-top:var(--space-3);" onclick="suggestAdditives()">Build additive checklist</button>
+          <ul id="additiveList" class="checklist" style="margin-top:var(--space-2);"></ul>
+        </section>
+
+        <section class="card">
+          <h2>Field QC &amp; Safety Reminders</h2>
+          <p class="small-text" style="margin-bottom:var(--space-2);">
+            Summarised from standard acidizing QC / safety guidance. Tick off in pre-job review and
+            pre-pump meeting.
+          </p>
+          <div class="two-col">
+            <div>
+              <div class="divider-label">Before pumping</div>
+              <ul class="checklist">
+                <li><input type="checkbox" /> <span>Equipment rig-up, pressure test, and bleed paths verified.</span></li>
+                <li><input type="checkbox" /> <span>Final acid recipe (HCl %, additives) checked vs program.</span></li>
+                <li><input type="checkbox" /> <span>Corrosion test at temperature completed for tubular metallurgy.</span></li>
+                <li><input type="checkbox" /> <span>Compatibility tests done (brine–acid–crude / Fe / scale).</span></li>
+                <li><input type="checkbox" /> <span>Iron / solids in lines flushed or displaced before main acid.</span></li>
+              </ul>
+            </div>
+            <div>
+              <div class="divider-label">During / after pumping</div>
+              <ul class="checklist">
+                <li><input type="checkbox" /> <span>Density / rate trending monitored vs design, adjust spend / diversion.</span></li>
+                <li><input type="checkbox" /> <span>Pressure limits for casing / packer respected, no screenout-style spike.</span></li>
+                <li><input type="checkbox" /> <span>Spent acid flowback sampled, clarity / Fe / oil cut noted.</span></li>
+                <li><input type="checkbox" /> <span>Post-job PI / drawdown and skin estimate planned (build-up / test).</span></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function num(v) {
+      const x = parseFloat(v);
+      return isFinite(x) ? x : 0;
+    }
+
+    function computePoreVolume(lengthFt, phi, rwIn, reIn) {
+      const rwFt = rwIn / 12;
+      const reFt = reIn / 12;
+      const areaFt2 = Math.PI * (Math.pow(reFt, 2) - Math.pow(rwFt, 2));
+      const bulkVolFt3 = areaFt2 * lengthFt;
+      const poreVolFt3 = bulkVolFt3 * phi;
+      const bblPerFt3 = 1 / 5.615;
+      return poreVolFt3 * bblPerFt3;
+    }
+
+    function updateVolumes() {
+      const phi = num(document.getElementById('phi').value);
+      const h = num(document.getElementById('thicknessFt').value);
+      const rwIn = num(document.getElementById('rwIn').value);
+      const reIn = num(document.getElementById('reIn').value);
+      const perfLen = num(document.getElementById('perfLen').value);
+      const galPerFt = num(document.getElementById('galPerFt').value);
+      const totalMainGal = num(document.getElementById('totalMainGal').value);
+
+      const pvBbl = computePoreVolume(h, phi, rwIn, reIn);
+      const pvGal = pvBbl * 42;
+      const totalDesignGal = galPerFt * perfLen;
+      const pvRatio = pvGal > 0 ? totalDesignGal / pvGal : 0;
+      const pvRatioMain = pvGal > 0 ? totalMainGal / pvGal : 0;
+
+      const el = document.getElementById('pvOutput');
+      if (!phi || !h || !reIn || !rwIn || !perfLen) {
+        el.textContent = 'Enter φ, h, re, rw and interval length to compute pore volume.';
+        return;
+      }
+
+      el.innerHTML = `
+        <div><strong>Pore volume (design cylinder, h = ${h.toFixed(1)} ft):</strong> ${pvBbl.toFixed(2)} bbl (${pvGal.toFixed(0)} gal).</div>
+        <div style="margin-top:0.35rem;">Perf main stage at ${galPerFt.toFixed(0)} gal/ft over ${perfLen.toFixed(1)} ft = <strong>${totalDesignGal.toFixed(0)} gal</strong>
+          (~${pvRatio.toFixed(2)} PV).</div>
+        <div style="margin-top:0.35rem;">Total main acid input field (box above) = <strong>${totalMainGal.toFixed(0)} gal</strong>
+          (~${pvRatioMain.toFixed(2)} PV).</div>
+        <div style="margin-top:0.4rem;" class="small-text">Adjust gal/ft and radius until PV range matches your local experience / lab PVBT guidance.</div>
+      `;
+    }
+
+    function calcDilution() {
+      const targetPct = num(document.getElementById('targetPct').value);
+      const volTarget = num(document.getElementById('volTargetGal').value);
+      const stockPct = num(document.getElementById('stockPct').value) || 32;
+      if (!targetPct || !volTarget) {
+        document.getElementById('dilutionOutput').textContent = 'Enter target % and volume.';
+        return;
+      }
+      const vStock = volTarget * targetPct / stockPct;
+      const vWater = volTarget - vStock;
+      const ratio = vStock > 0 ? (vWater / vStock) : 0;
+      document.getElementById('dilutionOutput').innerHTML = `
+        To prepare <strong>${volTarget.toFixed(0)} gal</strong> of ${targetPct.toFixed(0)}% HCl from ${stockPct.toFixed(0)}% stock:
+        <ul style="margin:0.4rem 0 0 1rem;">
+          <li>${vStock.toFixed(0)} gal of ${stockPct.toFixed(0)}% HCl stock</li>
+          <li>${vWater.toFixed(0)} gal of fresh water</li>
+          <li>Mix ratio ≈ 1 : ${ratio.toFixed(2)} (stock : water) by volume.</li>
+        </ul>
+        <div class="small-text" style="margin-top:0.35rem;">Always respect supplier SDS, corrosion / inhibitor limits and local mixing procedures.</div>
+      `;
+    }
+
+    function evaluateRates() {
+      const rateInputs = Array.from(document.querySelectorAll('.rateLab'));
+      const pvbtInputs = Array.from(document.querySelectorAll('.pvbtLab'));
+      const userRatePerFt = num(document.getElementById('userRatePerFt').value);
+      const perfLen = num(document.getElementById('userPerfLenRate').value);
+      const el = document.getElementById('rateOutput');
+
+      let bestIdx = -1;
+      let bestPv = Infinity;
+      const rates = [];
+      const pvbt = [];
+
+      rateInputs.forEach((inp, i) => {
+        const r = num(inp.value);
+        const p = num(pvbtInputs[i].value);
+        if (r > 0 && p > 0) {
+          rates.push(r);
+          pvbt.push(p);
+          if (p < bestPv) { bestPv = p; bestIdx = rates.length - 1; }
+        }
+      });
+
+      if (bestIdx === -1 || userRatePerFt <= 0 || perfLen <= 0) {
+        el.textContent = 'Enter valid lab PVBT data plus a planned per-ft rate and perf length.';
+        return;
+      }
+
+      const rOpt = rates[bestIdx];
+      const pvOpt = pvbt[bestIdx];
+      const userTotalGpm = userRatePerFt * perfLen;
+      const ratio = userRatePerFt / rOpt; // dimensionless comparison only
+
+      let regime = '';
+      let badgeClass = '';
+      if (ratio < 0.5) {
+        regime = 'Compact / face dissolution biased (rate well below lab optimum).';
+        badgeClass = 'badge-bad';
+      } else if (ratio > 2.0) {
+        regime = 'Channeling / inefficient spending risk (rate well above lab optimum).';
+        badgeClass = 'badge-warn';
+      } else {
+        regime = 'Near optimum wormholing window based on lab PVBT minimum.';
+        badgeClass = 'badge-ok';
+      }
+
+      el.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <div><strong>Lab optimum</strong> at ~${rOpt.toFixed(1)} mL/min (PVBT ≈ ${pvOpt.toFixed(2)}).</div>
+          <span class="badge ${badgeClass}">${ratio.toFixed(2)} × lab optimum</span>
+        </div>
+        <div style="margin-top:0.35rem;">Planned matrix rate: <strong>${userRatePerFt.toFixed(2)} gal/min/ft</strong> over ${perfLen.toFixed(1)} ft
+          ≈ <strong>${userTotalGpm.toFixed(1)} gpm</strong>.</div>
+        <div style="margin-top:0.35rem;">${regime}</div>
+        <div class="small-text" style="margin-top:0.4rem;">Tune rate to sit inside the wormholing window from your own lab work and local experience.</div>
+      `;
+    }
+
+    function estimateJratio(sCurrent, sTarget) {
+      const lnReRw = 3.0; // simple fixed geometry term for comparison
+      const jCurrent = 1 / (lnReRw + sCurrent);
+      const jTarget = 1 / (lnReRw + sTarget);
+      return jTarget / jCurrent;
+    }
+
+    function updateProductivityGain() {
+      const sCur = num(document.getElementById('skinCurrent').value);
+      const sTar = num(document.getElementById('skinTarget').value);
+      const el = document.getElementById('prodGain');
+      if (!isFinite(sCur) || !isFinite(sTar)) {
+        el.textContent = 'Enter current and target skin.';
+        return;
+      }
+      const ratio = estimateJratio(sCur, sTar);
+      const pct = (ratio - 1) * 100;
+      let state = '';
+      if (pct <= 0) state = 'No PI uplift from this skin change; revisit damage diagnosis / target.';
+      else if (pct < 50) state = 'Modest uplift; acid may be marginal without more diversion / placement focus.';
+      else state = 'Significant PI gain potential; candidate is strong if fluid / placement are correct.';
+
+      el.innerHTML = `
+        If skin drops from <strong>${sCur.toFixed(1)}</strong> to <strong>${sTar.toFixed(1)}</strong>,
+        the model PI increases by ≈ <strong>${pct.toFixed(0)}%</strong>.
+        <div style="margin-top:0.35rem;">${state}</div>
+        <div class="small-text" style="margin-top:0.4rem;">Use a proper IPR / build-up where available; this is a quick radial-flow comparison only.</div>
+      `;
+    }
+
+    function suggestAdditives() {
+      const h2s = document.getElementById('hasH2S').value === 'yes';
+      const cra = document.getElementById('craTubulars').value === 'yes';
+      const temp = parseFloat(document.getElementById('tempAdd').value) || 180;
+      const emul = document.getElementById('emulsionRisk').value;
+      const fines = document.getElementById('finesRisk').value === 'yes';
+      const needsRet = document.getElementById('needsRetarder').value === 'yes';
+      const ul = document.getElementById('additiveList');
+      ul.innerHTML = '';
+
+      const items = [];
+
+      // Corrosion control and intensifiers
+      if (temp <= 212) {
+        items.push('Corrosion inhibitor for HCl at this temperature (base package is mandatory for all jobs).');
+      } else {
+        items.push('High-temperature corrosion inhibitor + intensifier (e.g. organic acid / iodide type) for >212°F service.');
+      }
+      if (cra) {
+        items.push('Check CRA-compatible inhibitor / intensifier package for high Cr / CRA strings (avoid aggressive systems that attack CRAs).');
+      }
+
+      // Iron and sulfide management
+      items.push('Iron control: reducing agent and/or chelating agent to keep dissolved Fe in solution and avoid Fe(OH)3 / FeS / sludge.');
+      if (h2s) {
+        items.push('H2S scavenger and FeS control strategy (sour system – plan for FeS dissolution and re-precipitation control).');
+      }
+
+      // Emulsion / sludge control and solvents
+      if (emul === 'high') {
+        items.push('Non-emulsifier screened on reservoir crude + mutual solvent to limit emulsion / asphaltic sludge when contacting oil.');
+      } else {
+        items.push('Basic non-emulsifier package screened on crude / brine (even if emulsion risk is low).');
+      }
+
+      // Reaction rate / retardation
+      if (needsRet || temp >= 250) {
+        items.push('Retarded acid system or organic acid / emulsified / gelled HCl to slow reaction and extend live-acid penetration.');
+      }
+
+      // Fines / non-carbonate streaks
+      if (fines) {
+        items.push('Clay / fines stabiliser or preflush for any non-carbonate streaks intersected by perforations.');
+      }
+
+      // Diversion / placement aids
+      items.push('Diversion aid where required: foamed acid, viscoelastic surfactant, polymer gelling, or particulate diverter depending on interval heterogeneity.');
+
+      items.forEach(t => {
+        const li = document.createElement('li');
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        li.appendChild(box);
+        const span = document.createElement('span');
+        span.textContent = t;
+        li.appendChild(span);
+        ul.appendChild(li);
+      });
+    }
+
+    function computePoreVolumeToRadius(hFt, phi, rwIn, reFt) {
+      if (!hFt || !phi || !rwIn || !reFt) return null;
+      const rwFt = rwIn / 12;
+      const areaFt2 = Math.PI * (Math.pow(reFt, 2) - Math.pow(rwFt, 2));
+      const bulkVolFt3 = areaFt2 * hFt;
+      const poreVolFt3 = bulkVolFt3 * phi;
+      const bblPerFt3 = 1 / 5.615;
+      return poreVolFt3 * bblPerFt3;
+    }
+
+    function computeMaxMatrixRate() {
+      const k = num(document.getElementById('permMd').value);
+      const h = num(document.getElementById('thicknessFt').value);
+      const mu = 1.0;
+      const B = 1.0;
+      const rwIn = num(document.getElementById('rwIn').value);
+      const rbFt = num(document.getElementById('rbFt').value) || 4;
+      const s = num(document.getElementById('skinInitial').value) || 0;
+
+      const fracGrad = num(document.getElementById('fracGrad').value);
+      const tvdFt = num(document.getElementById('tvdFt').value);
+      const pRes = num(document.getElementById('pRes').value);
+      const fracMargin = num(document.getElementById('fracMargin').value) || 300;
+
+      if (!k || !h || !rwIn || !fracGrad || !tvdFt || !pRes) return null;
+
+      const pFrac = fracGrad * tvdFt;
+      const dPmax = (pFrac - fracMargin) - pRes;
+      if (dPmax <= 0) return null;
+
+      const rwFt = rwIn / 12;
+      const denom = 141.2 * mu * B * (Math.log(rbFt / rwFt) + s);
+      if (denom <= 0) return null;
+
+      const qMaxStbDay = dPmax * k * h / denom;
+      const qMaxGpm = qMaxStbDay * 42 / (60 * 24);
+      const qWormGpm = qMaxGpm * 0.8;
+
+      return { qMaxGpm, qWormGpm, dPmax, pFrac };
+    }
+
+    function runDstWormholeDesign() {
+      const out = document.getElementById('dstWormholeOutput');
+
+      const LwFt = num(document.getElementById('LwFt').value);
+      const pvFactor = num(document.getElementById('pvFactor').value) || 1.5;
+
+      const hFt = num(document.getElementById('thicknessFt').value);
+      const phi = num(document.getElementById('phi').value);
+      const rwIn = num(document.getElementById('rwIn').value);
+      const perfLen = num(document.getElementById('perfLen').value) || hFt;
+
+      const reFt = (rwIn / 12) + LwFt;
+      const pvBbl = computePoreVolumeToRadius(hFt, phi, rwIn, reFt);
+
+      if (!pvBbl) {
+        out.textContent = 'Check thickness, porosity, radii and Lw inputs.';
+        return;
+      }
+
+      const mainAcidBbl = pvBbl * pvFactor;
+      const mainAcidGal = mainAcidBbl * 42;
+      const galPerFt = perfLen > 0 ? (mainAcidGal / perfLen) : 0;
+
+      const rateInfo = computeMaxMatrixRate();
+      if (!rateInfo) {
+        out.textContent = 'Check k, frac gradient, TVD and pressures.';
+        return;
+      }
+
+      const q = rateInfo.qWormGpm;
+
+      const k = num(document.getElementById('permMd').value);
+      const mu = 1.0;
+      const B = 1.0;
+      const rbFt = num(document.getElementById('rbFt').value) || 4;
+      const s = num(document.getElementById('skinInitial').value) || 0;
+      const pRes = num(document.getElementById('pRes').value);
+      const rwFt = rwIn / 12;
+
+      const qStbDay = q * 60 * 24 / 42;
+      const dP = 141.2 * qStbDay * mu * B / (k * hFt) * (Math.log(rbFt / rwFt) + s);
+      const pWf = pRes + dP;
+      const fracGrad = num(document.getElementById('fracGrad').value);
+      const tvdFt = num(document.getElementById('tvdFt').value);
+      const pFrac = fracGrad * tvdFt;
+      const margin = pFrac - pWf;
+
+      out.innerHTML = `
+        <div><strong>Geometry:</strong> target wormhole length L<sub>w</sub> ≈ ${LwFt.toFixed(1)} ft (r<sub>e</sub> ≈ ${reFt.toFixed(2)} ft).</div>
+
+        <div style="margin-top:0.25rem;">
+          Pore volume to r<sub>e</sub> ≈ <strong>${pvBbl.toFixed(2)} bbl</strong>.
+          With PV factor ${pvFactor.toFixed(1)}, suggested main-acid volume ≈
+          <strong>${mainAcidGal.toFixed(0)} gal</strong> (${mainAcidBbl.toFixed(2)} bbl)
+          ≈ ${galPerFt.toFixed(0)} gal/ft over ${perfLen.toFixed(1)} ft.
+        </div>
+
+        <div style="margin-top:0.35rem;">
+          <strong>Rate window (matrix, no core data):</strong><br/>
+          Max matrix rate (below frac) ≈ ${rateInfo.qMaxGpm.toFixed(1)} gpm.<br/>
+          Recommended wormhole rate ≈ <strong>${q.toFixed(1)} gpm</strong>
+          (~${(perfLen > 0 ? (q / perfLen) : 0).toFixed(2)} gal/min/ft).
+        </div>
+
+        <div style="margin-top:0.35rem;">
+          At ${q.toFixed(1)} gpm: Δp ≈ ${dP.toFixed(0)} psi, BHP ≈ ${pWf.toFixed(0)} psi,
+          frac pressure ≈ ${pFrac.toFixed(0)} psi, margin ≈ ${margin.toFixed(0)} psi.
+        </div>
+
+        <div class="small-text" style="margin-top:0.4rem;">
+          Field-heuristic design using max-Δp/max-rate concept for matrix acidizing
+          and 1–5 ft wormhole lengths typical for carbonate jobs. Use injection test and DST PTA
+          to calibrate before main acid.
+        </div>
+      `;
+    }
+
+    // Initialise default outputs
+    updateVolumes();
+    calcDilution();
+    evaluateRates();
+    updateProductivityGain();
+    runDstWormholeDesign();
+  
+    function formatNum(value, digits = 2) {
+      if (!Number.isFinite(value)) return '—';
+      return value.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    }
+
+    function renderResult(containerId, items) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = items.map(item => `
+        <article class="metric ${item.tone || ''}">
+          <span>${item.label}</span>
+          <strong>${item.value}</strong>
+          <small>${item.note || ''}</small>
+        </article>
+      `).join('');
+    }
+
+    function acidSelectionLogic() {
+      const rock = document.getElementById('rockType').value;
+      const mineralogy = document.getElementById('mineralogy').value;
+      const tempF = parseFloat(document.getElementById('acidTempF').value) || 0;
+      const pressurePsi = parseFloat(document.getElementById('acidPressurePsi').value) || 0;
+      const sludge = document.getElementById('asphalteneRisk').value;
+      const carbonatePct = parseFloat(document.getElementById('carbonatePct').value) || 0;
+
+      let acid = '15% HCl';
+      let reason = 'Standard carbonate matrix acid with manageable corrosion and strong dissolving power.';
+      let warning = 'Suitable for most calcite-rich carbonates.';
+      let intensifier = tempF > 200 ? 'Add intensifier / inhibitor booster.' : 'Standard inhibitor package usually sufficient.';
+
+      if (rock === 'sandstone') {
+        acid = carbonatePct > 10 ? 'Do not use HF blend' : 'Mud acid / HF blend';
+        reason = carbonatePct > 10 ? 'HF is blocked because carbonate content is high enough to risk CaF2 precipitation.' : 'Silicate and clay dissolution requires HF-containing system.';
+        warning = carbonatePct > 10 ? 'Use preflush and redesign around carbonate compatibility.' : 'Check fines migration and preflush compatibility.';
+      } else if (mineralogy === 'illite-zeolite') {
+        acid = 'Organic acid (acetic / formic)';
+        reason = 'Acid-sensitive fines and zeolite / illite can destabilize under strong HCl.';
+        warning = 'Use slower-reacting acid to reduce clay breakdown and migration.';
+      } else if (tempF >= 220) {
+        acid = 'Chelating / organic high-temp acid';
+        reason = 'At very high temperature HCl becomes too corrosive and spends too fast near the face.';
+        warning = 'Prefer GLDA/HEDTA or organic blends for deeper penetration.';
+      } else if (sludge === 'high') {
+        acid = '15% HCl or organic blend';
+        reason = 'High asphaltene risk makes concentrated HCl more likely to create sludge/emulsion problems.';
+        warning = 'Avoid 28% HCl unless crude compatibility has been tested.';
+      } else if (rock !== 'sandstone' && ['calcite','mixed-carbonate','dolomite'].includes(mineralogy)) {
+        acid = mineralogy === 'dolomite' ? '15% or 28% HCl with lab confirmation' : '15% HCl / 28% HCl';
+        reason = mineralogy === 'dolomite' ? 'Dolomite often benefits from higher strength only if corrosion and spend profile are acceptable.' : 'HCl forms soluble chlorides with carbonate minerals and is the standard wormholing acid.';
+        warning = sludge === 'medium' ? 'Medium sludge risk: prefer 15% HCl unless tested.' : 'Use 28% HCl only when extra dissolving capacity justifies corrosion/sludge risk.';
+      }
+
+      const pressureNote = (acid.toLowerCase().includes('formic') || acid.toLowerCase().includes('organic')) && pressurePsi < 1500
+        ? 'Pressure below 1,500 psi may reduce formic-acid intensifier performance.'
+        : 'Pressure is adequate for intensifier-based systems if selected.';
+
+      renderResult('acidSelectionResults', [
+        { label: 'Recommended acid', value: acid, note: reason },
+        { label: 'Selection note', value: warning, note: intensifier },
+        { label: 'Pressure check', value: pressureNote, note: 'Use lab compatibility for final selection.' }
+      ]);
+    }
+
+    function acidCapacityCalc() {
+      const strength = document.getElementById('acidStrength').value;
+      const gal = parseFloat(document.getElementById('acidVolumeGal').value) || 0;
+      const lbPer1000 = strength === '28' ? 3670 : 1840;
+      const ft3Per1000 = strength === '28' ? 21.6 : 10.8;
+      const dissolvedLb = gal / 1000 * lbPer1000;
+      const dissolvedFt3 = gal / 1000 * ft3Per1000;
+      renderResult('acidCapacityResults', [
+        { label: 'Limestone dissolved', value: `${formatNum(dissolvedLb, 1)} lb`, note: `${strength}% HCl basis` },
+        { label: 'Equivalent volume', value: `${formatNum(dissolvedFt3, 2)} ft³`, note: 'Assumes clean limestone reaction capacity.' },
+        { label: 'Rule of thumb', value: strength === '28' ? 'High capacity / higher corrosion risk' : 'Standard balance of capacity and corrosion', note: 'Use compatibility and corrosion testing before final design.' }
+      ]);
+    }
+
+    function wormholeCalc() {
+      const rw = parseFloat(document.getElementById('rwFt').value) || 0;
+      const target = parseFloat(document.getElementById('targetRwhFt').value) || 0;
+      const pvbt = parseFloat(document.getElementById('pvbt').value) || 0;
+      const phi = parseFloat(document.getElementById('porosity').value) || 0;
+      const h = parseFloat(document.getElementById('thicknessFt').value) || 0;
+      const V = parseFloat(document.getElementById('wormholeVolumeBbl').value) || 0;
+      const vft3 = V * 5.615;
+      const denom = Math.PI * Math.max(phi, 1e-9) * Math.max(h, 1e-9) * Math.max(pvbt, 1e-9);
+      const rwh = Math.sqrt((rw * rw) + (vft3 / denom));
+      const requiredFt3 = Math.max(((target * target) - (rw * rw)) * Math.PI * phi * h * pvbt, 0);
+      const requiredBbl = requiredFt3 / 5.615;
+      renderResult('wormholeResults', [
+        { label: 'Predicted radius', value: `${formatNum(rwh, 2)} ft`, note: 'Volumetric wormhole model result.' },
+        { label: 'Volume for target radius', value: `${formatNum(requiredBbl, 2)} bbl`, note: 'Based on selected PVBT, porosity and thickness.' },
+        { label: 'Lab reminder', value: 'Use PVBT from ~3,000 psi coreflood', note: 'Keeps CO2 in solution and improves breakthrough accuracy.' }
+      ]);
+    }
+
+    function skinCalc() {
+      const mu = parseFloat(document.getElementById('muCp').value) || 0;
+      const qi = parseFloat(document.getElementById('qiBpd').value) || 0;
+      const k = parseFloat(document.getElementById('permMd').value) || 0;
+      const h = parseFloat(document.getElementById('skinThicknessFt').value) || 0;
+      const dp = parseFloat(document.getElementById('deltaPPsi').value) || 0;
+      const rb = parseFloat(document.getElementById('rbFt').value) || 0;
+      const rw = parseFloat(document.getElementById('skinRwFt').value) || 0;
+      const term = (0.00708 * k * h * Math.max(dp, 1e-9));
+      const s = term ? ((mu * qi) / term) - Math.log(Math.max(rb / Math.max(rw, 1e-9), 1.0001)) : 0;
+      const trend = s < 0 ? 'Improved near-wellbore condition' : s < 5 ? 'Moderate skin / monitor trend' : 'High skin; stimulation response still limited';
+      renderResult('skinResults', [
+        { label: 'Calculated skin', value: formatNum(s, 2), note: 'Paccaloni-style monitoring indicator.' },
+        { label: 'Interpretation', value: trend, note: 'A steadily decreasing skin during pumping supports wormhole growth.' },
+        { label: 'Inputs required live', value: 'WHP, rate, reservoir pressure', note: 'Refresh with actual treating data to track job progress.' }
+      ]);
+    }
+
+    function corrosionCalc() {
+      const metallurgy = document.getElementById('metallurgy').value;
+      const wo = parseFloat(document.getElementById('wo').value) || 0;
+      const wf = parseFloat(document.getElementById('wf').value) || 0;
+      const area = parseFloat(document.getElementById('areaCm2').value) || 1;
+      const pitting = parseFloat(document.getElementById('pittingIndex').value) || 0;
+      const tempF = parseFloat(document.getElementById('corrTempF').value) || 0;
+      const pressurePsi = parseFloat(document.getElementById('corrPressurePsi').value) || 0;
+      const rate = ((wo - wf) / Math.max(area, 1e-9)) * 2.05;
+      const limit = metallurgy === 'ct' ? 0.02 : 0.05;
+      const status = rate > limit ? 'Above limit' : 'Within limit';
+      let note = metallurgy === 'ct' ? 'CT threshold is tighter because wall loss and fatigue risk are higher.' : 'Standard tubular screening threshold.';
+      if (['13cr', 'duplex'].includes(metallurgy)) note = 'CRA selected: chrome oxide layer can be attacked by HCl; verify inhibitor package carefully.';
+      const highTemp = tempF > 200 ? 'High-temperature job: add intensifier such as formic acid or KI-based booster.' : 'Temperature does not force intensifier by default.';
+      const pressureWarn = tempF > 200 && pressurePsi < 1500 ? 'Low pressure can reduce formic-acid inhibition effectiveness.' : 'Pressure acceptable for intensified inhibition package.';
+      const pitWarn = pitting > 3 ? 'Pitting index exceeds threshold (>3): localized attack warning.' : 'Pitting index acceptable.';
+      renderResult('corrosionResults', [
+        { label: 'Corrosion rate', value: `${formatNum(rate, 3)} lbm/ft²`, note },
+        { label: 'Limit check', value: `${status} vs ${formatNum(limit, 3)} lbm/ft²`, note: pitWarn, tone: rate > limit || pitting > 3 ? 'bad' : '' },
+        { label: 'Protection guidance', value: highTemp, note: pressureWarn }
+      ]);
+    }
+
+    function runExtendedModules() {
+      acidSelectionLogic();
+      acidCapacityCalc();
+      wormholeCalc();
+      skinCalc();
+      corrosionCalc();
+    }
+
+    document.querySelectorAll('#rockType,#mineralogy,#acidTempF,#acidPressurePsi,#asphalteneRisk,#carbonatePct,#acidStrength,#acidVolumeGal,#rwFt,#targetRwhFt,#pvbt,#porosity,#thicknessFt,#wormholeVolumeBbl,#muCp,#qiBpd,#permMd,#skinThicknessFt,#deltaPPsi,#rbFt,#skinRwFt,#metallurgy,#wo,#wf,#areaCm2,#pittingIndex,#corrTempF,#corrPressurePsi').forEach(el => {
+      el.addEventListener('input', runExtendedModules);
+      el.addEventListener('change', runExtendedModules);
+    });
+    runExtendedModules();
+
+</script>
+</body>
+</html>
