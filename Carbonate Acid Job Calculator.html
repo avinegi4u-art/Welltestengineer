@@ -703,6 +703,11 @@ footer a:hover { color: var(--text-muted); }
             <option value="dolomite">Dolomite (CaMg(CO₃)₂)</option>
           </select>
         </div>
+            <div class="form-group">
+      <label for="galft-bht">Bottomhole Temp. (°F)</label>
+      <input type="number" id="galft-bht" value="200" step="5" min="40">
+    </div>
+  </div>
         <div class="form-group">
           <label>Treatment Intensity</label>
           <select id="intensity">
@@ -730,6 +735,11 @@ footer a:hover { color: var(--text-muted); }
           <!-- Filled by JS -->
         </tbody>
       </table>
+
+      <div id="galft-warning" style="display:none;" class="note-block warn">
+    <h4>⚠️ Retarder Recommended</h4>
+    <p>At BHT > 225°F, HCl spending time drops significantly. Use retarded or emulsified acid to ensure adequate penetration depth before the acid fully spends.</p>
+  </div>
     </div>
   </div>
 
