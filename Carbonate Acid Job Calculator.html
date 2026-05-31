@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+
+  
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carbonate Acid Job Calculator</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -192,6 +194,15 @@ input[type="number"]:focus, select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+  /* Validation feedback */
+input[type="number"].invalid, select.invalid {
+  border-color: var(--error);
+}
+
+input[type="number"].invalid:focus, select.invalid:focus {
+  box-shadow: 0 0 0 2px rgba(221, 105, 116, 0.2);
 }
 
 .btn {
@@ -547,6 +558,41 @@ footer a:hover { color: var(--text-muted); }
 </head>
 
 <body>
+
+  /* === DELETE BUTTON === */
+.btn-delete {
+  margin-left: auto;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.btn-delete:hover {
+  background: var(--error);
+  color: var(--bg);
+  transform: none;
+}
+
+/* === PRINT STYLES === */
+@media print {
+  body { background: white; color: black; }
+  .page-wrap { max-width: 100%; }
+  .tabs-nav, .btn, .edit-hint, .add-item-row, .check-actions { display: none; }
+  .tab-panel { display: block !important; }
+  .check-item input[type="checkbox"] { 
+    print-color-adjust: exact; 
+    -webkit-print-color-adjust: exact; 
+  }
+}
 <div class="page-wrap">
 
   <!-- ═══ HEADER ═══ -->
