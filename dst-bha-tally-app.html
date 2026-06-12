@@ -1193,14 +1193,20 @@
         const scaleY = Math.min(1.2, 520 / totalLen);
         const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
         let y = 30;
+        const depthTextX = hasCasing ? stringCx - 100 : stringCx - 72;
+        parts.push(`<text x="${depthTextX}" y="24" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">Bot MD (ft)</text>`);
         parts.push(`<text x="${stringCx - 40}" y="24" font-size="12" fill="currentColor" opacity=".75">${hasCasing ? 'BHA string' : 'Surface / lubricator'}</text>`);
+        parts.push(`<text x="${labelX + 10}" y="24" font-size="11" fill="currentColor" opacity=".7">Description</text>`);
         parts.push(`<line x1="${stringCx}" y1="20" x2="${stringCx}" y2="9999" stroke="currentColor" opacity=".12" stroke-width="2"/>`);
         rows.forEach((r, i) => {
           const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
           const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
           const col = colors[i % colors.length];
+          const botFt = unit === 'm' ? r.botMd * FT_PER_M : r.botMd;
           parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
           const labelY = y + Math.min(h / 2 + 4, 14);
+          parts.push(`<line x1="${depthTextX + 4}" y1="${labelY}" x2="${stringCx - w / 2 - 6}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
+          parts.push(`<text x="${depthTextX}" y="${labelY + 4}" font-size="11" text-anchor="end" fill="currentColor" opacity=".85">${fmt(botFt, 2)}</text>`);
           parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${labelY}" x2="${labelX}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".55"/>`);
           parts.push(`<text x="${labelX + 10}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
           y += h + 4;
