@@ -199,8 +199,14 @@
       .scroll { max-height: none; }
     }
     .print-only { display: none !important; }
+    .casing-table input { width: 100%; min-width: 4.5rem; padding: .25rem .35rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
+    .casing-table th, .casing-table td { vertical-align: middle; }
+    .print-hint { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 14rem; line-height: 1.35; text-align: right; }
     @media print {
-      @page { size: landscape; margin: 10mm 12mm; }
+      @page portrait-page { size: portrait; margin: 12mm 10mm 22mm 10mm; }
+      @page landscape-page { size: landscape; margin: 10mm 12mm 20mm 12mm; }
+      body.print-portrait { page: portrait-page; }
+      body.print-landscape { page: landscape-page; }
       body { background: #fff !important; color: #000 !important; font-size: 9pt; }
       .app { max-width: none; padding: 0; }
       .no-print, .tabs, .topbar .actions, .topbar .sub, #startBanner, .kpi-wrap, .save-dot { display: none !important; }
@@ -228,6 +234,11 @@
       #printHeader .print-title { font-size: 15pt; font-weight: 700; }
       #printHeader .print-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; font-size: 8.5pt; margin-top: 6px; }
       #printHeader .print-totals { margin-top: 6px; font-size: 9pt; font-weight: 700; }
+      #printFooter {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        padding: 4px 10mm; font-size: 8pt; text-align: center;
+        border-top: 1px solid #ccc; color: #333; background: #fff;
+      }
     }
   </style>
 </head>
@@ -256,7 +267,9 @@
         <button class="btn no-print" id="saveBtn" type="button">Save project</button>
         <button class="btn no-print" id="loadBtn" type="button">Load project</button>
         <input type="file" id="loadFile" accept=".json" hidden>
-        <button class="btn primary" id="printBtn" type="button">Print / PDF</button>
+        <button class="btn primary" id="printPortraitBtn" type="button" title="Portrait — tally then diagram">Print portrait</button>
+        <button class="btn primary" id="printLandscapeBtn" type="button" title="Landscape — tally then diagram">Print landscape</button>
+        <span class="print-hint no-print">In the print dialog, turn off <strong>Headers and footers</strong> to hide the file path.</span>
       </div>
     </header>
 
@@ -281,6 +294,7 @@
       <div class="print-grid" id="printMeta"></div>
       <div class="print-totals" id="printTotals"></div>
     </div>
+    <div id="printFooter" class="print-only"><span id="printFooterText"></span></div>
 
     <section class="panel" id="mainPanel">
       <input type="radio" name="bha-tab" id="rtab-well" class="tab-radio" checked>
@@ -334,7 +348,6 @@
                 </div>
                 <div class="field"><label for="datumElev">Datum / RKB elevation</label><input id="datumElev" type="number" step="0.1" value="0"><small>ft</small></div>
                 <div class="field"><label for="hangoff">Hang-off / reference MD</label><input id="hangoff" type="number" step="0.01" value="0"><small>used when depth mode = calculated</small></div>
-                <div class="field"><label for="casingOd">Casing ID (annulus ref)</label><input id="casingOd" placeholder="e.g. 8.681"><small>in</small></div>
                 <div class="field"><label for="tubingNom">Nominal tubing</label><input id="tubingNom" placeholder="e.g. 3-1/2"></div>
                 <div class="field"><label for="displayUnit">Display units</label>
                   <select id="displayUnit"><option value="ft">Feet (ft)</option><option value="m">Metres (m)</option></select>
@@ -344,6 +357,24 @@
                 </div>
                 <div class="field"><label for="steelPpg">Steel density</label><input id="steelPpg" type="number" step="0.1" value="65.5"><small>ppg (buoyancy)</small></div>
                 <div class="field"><label for="fluidLevelMd">Well fluid level MD</label><input id="fluidLevelMd" type="number" step="0.01" value="0"><small>items below this are buoyed</small></div>
+              </div>
+            </article>
+            <article class="card span-12">
+              <h2>Casing data</h2>
+              <p class="muted">Completion casing / liner strings — shown on the diagram outside the BHA string. Depths in display units (<span id="casingUnitLabel">m</span>).</p>
+              <div class="scroll">
+                <table class="casing-table" id="casingTable">
+                  <thead>
+                    <tr>
+                      <th>Section / size</th><th>OD (in)</th><th>ID (in)</th><th>Wt (ppf)</th>
+                      <th>Top MD</th><th>Shoe MD</th><th>Cement top</th><th class="no-print"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="casingTableBody"></tbody>
+                </table>
+              </div>
+              <div class="actions no-print" style="margin-top:var(--space-3)">
+                <button class="btn sm" id="addCasingBtn" type="button">Add casing row</button>
               </div>
             </article>
             <article class="card span-12">
@@ -402,7 +433,7 @@
         <section class="tab-panel" id="tab-tally">
           <article class="card">
             <h2>Field tally</h2>
-            <p class="muted">Cumulative MD, internal volume, and buoyed WIR (klbf) while RIH in well fluid.</p>
+            <p class="muted">Cumulative MD, internal volume, and cumulative WIR (klbf) while RIH in well fluid.</p>
             <div id="warnBox" class="no-print"></div>
             <div class="scroll">
               <table id="tallyTable">
@@ -410,7 +441,7 @@
                   <tr>
                     <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
                     <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
-                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Buoyed<br>(klbf)</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
+                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -484,7 +515,7 @@
         <section class="tab-panel" id="tab-diagram">
           <article class="card">
             <h2>Vertical string sketch</h2>
-            <p class="muted">Length and width scaled proportionally by item length and OD.</p>
+            <p class="muted">MD-scaled sketch — casing strings outside the BHA; widths proportional to OD.</p>
             <div class="diagram-wrap" id="diagram"></div>
           </article>
         </section>
@@ -577,7 +608,7 @@
         name: '', customer: '', field: '', rig: '', formation: '', dstRun: '', engineer: '', date: '',
         objective: '', fluidPpg: 17.2, datumElev: 0, hangoff: 0, depthMode: 'imported',
         steelPpg: STEEL_PPG_DEFAULT, fluidLevelMd: 0,
-        casingOd: '', tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
+        casingOd: '', casings: [], tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
       },
       items: [],
       pendingWorkbook: null
@@ -634,6 +665,62 @@
       if (botMd <= fluidLevelMd) return 0;
       if (topMd >= fluidLevelMd) return 1;
       return Math.max(0, Math.min(1, (botMd - fluidLevelMd) / lenMd));
+    }
+
+    function defaultCasings() {
+      return [
+        { name: '7" Production (35 PPF)', od: '7.000', id: '6.004', weightPpf: '35', topMd: 0, shoeMd: 4200, cementTop: '' }
+      ];
+    }
+
+    function migrateCasings(well) {
+      if (!Array.isArray(well.casings)) well.casings = [];
+      if (!well.casings.length && well.casingOd) {
+        const parsed = parseInch(well.casingOd);
+        well.casings.push({
+          name: String(well.casingOd).includes('"') ? String(well.casingOd) : 'Production casing',
+          od: parsed > 0 ? String(parsed) : '', id: parsed > 0 ? String(parsed) : String(well.casingOd),
+          weightPpf: '', topMd: 0, shoeMd: '', cementTop: ''
+        });
+      }
+      return well.casings;
+    }
+
+    function renderCasingTable() {
+      const casings = migrateCasings(state.well);
+      const tb = $('casingTableBody');
+      if (!tb) return;
+      tb.innerHTML = casings.length ? casings.map((c, i) => `
+        <tr data-ci="${i}">
+          <td><input class="casing-in" data-f="name" value="${esc(c.name || '')}" placeholder="e.g. 9-5/8 Production"></td>
+          <td><input class="casing-in" data-f="od" value="${esc(c.od || '')}" placeholder="9.625"></td>
+          <td><input class="casing-in" data-f="id" value="${esc(c.id || '')}" placeholder="8.681"></td>
+          <td><input class="casing-in" data-f="weightPpf" value="${esc(c.weightPpf || '')}" placeholder="47"></td>
+          <td><input class="casing-in" data-f="topMd" type="number" step="0.01" value="${c.topMd ?? ''}" placeholder="0"></td>
+          <td><input class="casing-in" data-f="shoeMd" type="number" step="0.01" value="${c.shoeMd ?? ''}"></td>
+          <td><input class="casing-in" data-f="cementTop" type="number" step="0.01" value="${c.cementTop ?? ''}"></td>
+          <td class="no-print"><button class="btn sm danger" data-act="rmCasing" data-i="${i}" type="button">×</button></td>
+        </tr>`).join('') : '<tr><td colspan="8" class="muted">No casing rows — click Add casing row</td></tr>';
+      if ($('casingUnitLabel')) $('casingUnitLabel').textContent = dispUnit();
+    }
+
+    function readCasingsFromDom() {
+      const tb = $('casingTableBody');
+      if (!tb) return;
+      state.well.casings = [...tb.querySelectorAll('tr[data-ci]')].map(tr => {
+        const o = {};
+        tr.querySelectorAll('.casing-in').forEach(inp => {
+          const f = inp.dataset.f;
+          if (f === 'topMd' || f === 'shoeMd' || f === 'cementTop') {
+            o[f] = inp.value === '' ? '' : Number(inp.value);
+          } else {
+            o[f] = inp.value.trim();
+          }
+        });
+        return o;
+      });
+      const inner = state.well.casings.find(c => parseInch(c.id) > 0);
+      state.well.casingOd = inner ? inner.id : '';
     }
 
     function guessCat(name) {
@@ -734,7 +821,7 @@
       state.well.depthMode = $('depthMode').value;
       state.well.datumElev = Number($('datumElev').value) || 0;
       state.well.hangoff = Number($('hangoff').value) || 0;
-      state.well.casingOd = $('casingOd').value.trim();
+      readCasingsFromDom();
       state.well.tubingNom = $('tubingNom').value.trim();
       state.well.displayUnit = $('displayUnit').value;
       state.well.hydBasis = $('hydBasis').value;
@@ -757,7 +844,8 @@
       $('depthMode').value = state.well.depthMode || 'calculated';
       $('datumElev').value = state.well.datumElev;
       $('hangoff').value = state.well.hangoff;
-      $('casingOd').value = state.well.casingOd;
+      migrateCasings(state.well);
+      renderCasingTable();
       $('tubingNom').value = state.well.tubingNom;
       $('displayUnit').value = state.well.displayUnit;
       $('hydBasis').value = state.well.hydBasis;
@@ -810,6 +898,7 @@
       const rows = computedRows();
       const warnings = collectWarnings(rows);
       const unit = dispUnit();
+      if ($('casingUnitLabel')) $('casingUnitLabel').textContent = unit;
       const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       const totalVol = rows.at(-1)?.cumVol || 0;
       const deepest = rows.at(-1)?.botMd ?? state.well.hangoff ?? 0;
@@ -861,19 +950,33 @@
         <td>${fmt(r.cap, 4)}</td>
         <td>${fmt(r.vol, 3)}</td>
         <td>${fmt(r.cumVol, 3)}</td>
-        <td>${fmt(toKlbf(r.buoyedLb), 3)}</td>
         <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
         <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
       </tr>`).join('');
 
+      const casingMeta = migrateCasings(state.well).filter(c => c.name || c.od || c.id)
+        .map(c => `${c.name || 'Casing'} ${c.od || '—'}"×${c.id || '—'}" (${fmt(c.topMd ?? 0, 0)}–${fmt(c.shoeMd ?? deepest, 0)} ${unit})`)
+        .join('; ');
       $('printMeta').innerHTML = [
         ['Well', state.well.name || '—'], ['Client', state.well.customer || '—'],
         ['Rig', state.well.rig || '—'], ['DST', state.well.dstRun || '—'],
         ['Formation', state.well.formation || '—'], ['Date', state.well.date || '—'],
-        ['Fluid', `${state.well.fluidPpg} ppg`], ['Engineer', state.well.engineer || '—']
+        ['Fluid', `${state.well.fluidPpg} ppg`], ['Engineer', state.well.engineer || '—'],
+        ['Casing', casingMeta || '—']
       ].map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
       $('printTotals').textContent =
         `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmt(totalVol, 2)} bbl  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
+      const casings = migrateCasings(state.well);
+      const casingLine = casings.filter(c => c.name || c.od || c.id).map(c =>
+        `${c.name || 'Casing'}: ${c.od || '—'}" OD / ${c.id || '—'}" ID (${fmt(c.topMd ?? 0, 0)}–${fmt(c.shoeMd ?? deepest, 0)} ${unit})`
+      ).join('  |  ');
+      if ($('printFooterText')) {
+        $('printFooterText').textContent = [
+          [state.well.customer, state.well.name, state.well.dstRun].filter(Boolean).join(' · '),
+          state.well.date || '',
+          casingLine
+        ].filter(Boolean).join('  —  ');
+      }
 
       const byCat = {};
       rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
@@ -927,27 +1030,71 @@
 
     function drawDiagram(rows, unit) {
       const el = $('diagram');
-      if (!rows.length) { el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>'; return; }
-      const spanMd = Math.abs((rows.at(-1).botMd || 0) - (rows[0]?.topMd || 0)) || rows.reduce((a, r) => a + r.lenMd, 0) || 1;
-      const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
-      const scaleY = Math.min(1.2, 520 / spanMd);
-      const cx = 180;
-      let y = 30;
+      const casings = migrateCasings(state.well).filter(c => parseInch(c.od) > 0 || parseInch(c.id) > 0);
+      if (!rows.length && !casings.length) {
+        el.innerHTML = '<p class="muted">Add string items or casing data to generate sketch.</p>';
+        return;
+      }
+      const rowMinMd = rows.length ? Math.min(...rows.map(r => r.topMd)) : 0;
+      const rowMaxMd = rows.length ? Math.max(...rows.map(r => r.botMd)) : 0;
+      const casingMaxMd = casings.reduce((a, c) => Math.max(a, Number(c.shoeMd) || 0, Number(c.topMd) || 0), 0);
+      const minMd = Math.min(rowMinMd, 0, ...casings.map(c => Number(c.topMd) || 0));
+      const maxMd = Math.max(rowMaxMd, casingMaxMd, minMd + 1);
+      const spanMd = maxMd - minMd || 1;
+      const maxStringOd = rows.length ? Math.max(...rows.map(r => parseInch(r.od) || 3.5), 3.5) : 3.5;
+      const maxCasingOd = casings.reduce((a, c) => Math.max(a, parseInch(c.od) || parseInch(c.id)), 0);
+      const maxOd = Math.max(maxStringOd, maxCasingOd, 5);
+      const plotH = Math.min(620, Math.max(420, spanMd * 0.14));
+      const padTop = 36, padBottom = 28;
+      const totalH = padTop + plotH + padBottom;
+      const cx = 270;
+      const maxW = 150;
+      const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
       const parts = [];
-      const colors = ['#01696f','#437a22','#964219','#3d5a80','#a12c3c','#6a4fb5'];
-      parts.push(`<line x1="${cx}" y1="20" x2="${cx}" y2="9999" stroke="currentColor" opacity=".15" stroke-width="2"/>`);
-      parts.push(`<text x="20" y="24" font-size="12" fill="currentColor" opacity=".7">Surface / lubricator</text>`);
-      rows.forEach((r, i) => {
-        const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
-        const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
-        const col = colors[i % colors.length];
-        parts.push(`<rect x="${cx - w/2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
-        parts.push(`<line x1="${cx + w/2 + 8}" y1="${y}" x2="340" y2="${y}" stroke="${col}" stroke-dasharray="3 3" opacity=".6"/>`);
-        parts.push(`<text x="350" y="${y + 14}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
-        parts.push(`<text x="350" y="${y + 28}" font-size="11" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
-        y += h + 4;
+      parts.push(`<text x="10" y="22" font-size="11" fill="currentColor" opacity=".7">MD (${unit})</text>`);
+      parts.push(`<text x="6" y="${padTop + 4}" font-size="10" fill="currentColor" opacity=".6">${fmt(minMd, 0)}</text>`);
+      parts.push(`<text x="6" y="${padTop + plotH}" font-size="10" fill="currentColor" opacity=".6">${fmt(maxMd, 0)}</text>`);
+      parts.push(`<text x="420" y="22" font-size="11" fill="currentColor" opacity=".7">BHA string (inside casing)</text>`);
+      const sortedCasings = [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id)));
+      const casingColors = ['#6b7280', '#78716c', '#57534e', '#44403c'];
+      sortedCasings.forEach((c, i) => {
+        const top = Number(c.topMd) || 0;
+        const shoe = Number(c.shoeMd) || maxMd;
+        if (shoe <= top) return;
+        const y1 = mdY(top);
+        const y2 = mdY(shoe);
+        const h = Math.max(6, y2 - y1);
+        const od = parseInch(c.od) || parseInch(c.id) * 1.08;
+        const w = Math.max(28, (od / maxOd) * maxW);
+        const col = casingColors[i % casingColors.length];
+        parts.push(`<rect x="${cx - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}20" stroke="${col}" stroke-width="2.5" rx="2"/>`);
+        parts.push(`<text x="${cx - w / 2 - 10}" y="${y1 + 14}" font-size="10" text-anchor="end" fill="${col}" font-weight="700">${esc(c.name || 'Casing')}</text>`);
+        parts.push(`<text x="${cx - w / 2 - 10}" y="${y1 + 26}" font-size="9" text-anchor="end" fill="currentColor" opacity=".65">${esc(c.od || '—')}" OD · ${esc(c.id || '—')}" ID${c.weightPpf ? ` · ${esc(c.weightPpf)} ppf` : ''}</text>`);
+        if (c.cementTop !== '' && c.cementTop != null && !isNaN(c.cementTop)) {
+          const cy = mdY(Number(c.cementTop));
+          parts.push(`<line x1="${cx - w / 2}" y1="${cy}" x2="${cx + w / 2}" y2="${cy}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 3"/>`);
+          parts.push(`<text x="${cx + w / 2 + 6}" y="${cy + 4}" font-size="9" fill="#b45309">TOC ${fmt(c.cementTop, 0)} ${unit}</text>`);
+        }
       });
-      el.innerHTML = `<svg viewBox="0 0 920 ${y + 30}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, y + 30)}px">${parts.join('')}</svg>`;
+      parts.push(`<line x1="${cx}" y1="${padTop}" x2="${cx}" y2="${padTop + plotH}" stroke="currentColor" opacity=".1" stroke-width="1"/>`);
+      const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
+      const labelEvery = rows.length > 40 ? Math.ceil(rows.length / 28) : 1;
+      rows.forEach((r, i) => {
+        const y1 = mdY(r.topMd);
+        const y2 = mdY(r.botMd);
+        const h = Math.max(5, Math.abs(y2 - y1));
+        const y = Math.min(y1, y2);
+        const w = Math.max(12, (parseInch(r.od) || 3) / maxOd * (maxW * 0.52));
+        const col = colors[i % colors.length];
+        parts.push(`<rect x="${cx - w / 2}" y="${y}" width="${w}" height="${h}" rx="2" fill="${col}40" stroke="${col}" stroke-width="1.5"/>`);
+        if (i % labelEvery === 0 || i === rows.length - 1) {
+          const labelY = y + Math.min(h / 2 + 4, 12);
+          parts.push(`<line x1="${cx + w / 2 + 6}" y1="${labelY}" x2="410" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
+          parts.push(`<text x="420" y="${labelY}" font-size="10" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
+          parts.push(`<text x="420" y="${labelY + 12}" font-size="9" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)}</text>`);
+        }
+      });
+      el.innerHTML = `<svg viewBox="0 0 920 ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, totalH)}px">${parts.join('')}</svg>`;
     }
 
     function normHeaderCell(v) {
@@ -1152,6 +1299,8 @@
 
     function applyProject(data) {
       if (data.well) state.well = { ...state.well, ...data.well };
+      migrateCasings(state.well);
+      if (!state.well.casings.length) state.well.casings = defaultCasings();
       if (Array.isArray(data.items)) state.items = data.items;
       writeWellToDom();
       render();
@@ -1431,11 +1580,23 @@
     $('exportCsvBtn').onclick = exportCsv;
     $('exportXlsxBtn').onclick = exportXlsx;
     $('exportProjectBtn').onclick = exportProject;
-    $('printBtn').onclick = () => {
+    function doPrint(orientation) {
       readWellFromDom();
       render();
+      document.body.classList.remove('print-portrait', 'print-landscape');
+      document.body.classList.add(orientation === 'portrait' ? 'print-portrait' : 'print-landscape');
+      const prevTitle = document.title;
+      document.title = [state.well.name, state.well.dstRun, 'BHA Tally'].filter(Boolean).join(' — ') || 'DST BHA Tally';
+      const cleanup = () => {
+        document.body.classList.remove('print-portrait', 'print-landscape');
+        document.title = prevTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
       window.print();
-    };
+    }
+    $('printPortraitBtn').onclick = () => doPrint('portrait');
+    $('printLandscapeBtn').onclick = () => doPrint('landscape');
     $('saveBtn').onclick = exportProject;
     $('loadBtn').onclick = () => $('loadFile').click();
     $('loadFile').onchange = e => {
@@ -1461,10 +1622,27 @@
       switchTab('builder');
     };
 
-    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','steelPpg','fluidLevelMd','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
+    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','steelPpg','fluidLevelMd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
       $(id).addEventListener('input', render);
       $(id).addEventListener('change', render);
     });
+
+    $('addCasingBtn').onclick = () => {
+      readCasingsFromDom();
+      state.well.casings.push({ name: '', od: '', id: '', weightPpf: '', topMd: 0, shoeMd: '', cementTop: '' });
+      renderCasingTable();
+      scheduleSave();
+    };
+    $('casingTableBody').addEventListener('click', e => {
+      const btn = e.target.closest('[data-act="rmCasing"]');
+      if (!btn) return;
+      readCasingsFromDom();
+      state.well.casings.splice(+btn.dataset.i, 1);
+      renderCasingTable();
+      render();
+    });
+    $('casingTableBody').addEventListener('input', () => { readCasingsFromDom(); render(); });
+    $('casingTableBody').addEventListener('change', () => { readCasingsFromDom(); render(); });
 
     function boot() {
       try {
