@@ -204,6 +204,34 @@
     }
     .tally-warn-list { margin: 0; padding: .45rem .75rem .6rem 1.65rem; }
     .tally-warn-list li { margin: .3rem 0; line-height: 1.45; }
+    .app:has(#rtab-builder:checked) .kpi-wrap,
+    .app:has(#rtab-builder:checked) #startBanner { display: none !important; }
+    .app:has(#rtab-builder:checked) .topbar .sub { display: none; }
+    #tab-builder .string-list-card {
+      display: flex; flex-direction: column; min-height: calc(100vh - 175px);
+    }
+    .string-list-scroll {
+      flex: 1 1 0; min-height: 520px; overflow-y: auto;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg); padding: .35rem;
+    }
+    .string-item {
+      padding: .4rem .55rem; margin-bottom: .3rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      background: var(--color-surface-2);
+    }
+    .string-item-hd {
+      display: flex; justify-content: space-between; gap: .4rem; align-items: flex-start;
+    }
+    .string-item-title {
+      font-size: 0.82rem; line-height: 1.2; font-weight: 600;
+    }
+    .string-item-meta {
+      margin-top: .2rem; font-size: 0.7rem; color: var(--color-text-muted);
+      line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .string-item .chip { padding: .06rem .35rem; font-size: 0.6rem; vertical-align: middle; }
+    .string-item .btn.sm { padding: .12rem .35rem; font-size: 0.65rem; }
     .chip {
       display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-full);
       font-size: var(--text-xs); font-weight: 700; color: #fff;
@@ -257,6 +285,8 @@
       .scroll { max-height: none; }
       .tally-layout { height: calc(100vh - 260px); min-height: 420px; }
       .tally-warnings-panel { flex: 0 0 7rem; max-height: 7rem; }
+      #tab-builder .string-list-card { min-height: calc(100vh - 220px); }
+      .string-list-scroll { min-height: 420px; }
     }
     .print-only { display: none !important; }
     .casing-table input { width: 100%; min-width: 4.5rem; padding: .25rem .35rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
@@ -493,10 +523,10 @@
                 <button class="btn" id="loadSampleBtn" type="button">Load DST-2 reference (Chetna)</button>
               </div>
             </article>
-            <article class="card span-6">
+            <article class="card span-6 string-list-card">
               <h2>String list</h2>
-              <p class="muted">Reorder or edit items. First item = surface / lubricator end.</p>
-              <div id="stringList" class="scroll" style="max-height:52vh"></div>
+              <p class="muted" style="margin-bottom:var(--space-2)">Reorder or edit items. First item = surface / lubricator end.</p>
+              <div id="stringList" class="string-list-scroll"></div>
               <div class="actions no-print" style="margin-top:var(--space-3)">
                 <button class="btn danger" id="clearAllBtn" type="button">Clear string</button>
                 <button class="btn" id="reverseBtn" type="button">Reverse order</button>
@@ -516,8 +546,8 @@
                   <thead>
                     <tr>
                       <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
-                      <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
-                      <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
+                      <th>OD (in)</th><th>ID (in)</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
+                      <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -593,7 +623,7 @@
         <section class="tab-panel" id="tab-diagram">
           <article class="card">
             <h2>Vertical string sketch</h2>
-            <p class="muted">MD-scaled sketch — casing strings outside the BHA; widths proportional to OD.</p>
+            <p class="muted">BHA string scaled by item length; casing shown separately on the left when entered in Well &amp; job.</p>
             <div class="diagram-wrap" id="diagram"></div>
           </article>
         </section>
@@ -1004,9 +1034,9 @@
       }
 
       $('stringList').innerHTML = rows.length ? rows.map(r => `
-        <div style="padding:.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:.5rem;background:var(--color-bg)">
-          <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start">
-            <div><strong>${r.idx}. ${esc(r.name)}</strong> <span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></div>
+        <div class="string-item">
+          <div class="string-item-hd">
+            <div class="string-item-title">${r.idx}. ${esc(r.name)} <span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></div>
             <div class="tr-actions no-print">
               <button class="btn sm" data-act="up" data-i="${r.idx - 1}" type="button">↑</button>
               <button class="btn sm" data-act="down" data-i="${r.idx - 1}" type="button">↓</button>
@@ -1014,12 +1044,14 @@
               <button class="btn sm danger" data-act="del" data-i="${r.idx - 1}" type="button">×</button>
             </div>
           </div>
-          <div class="muted" style="margin-top:.35rem;font-size:var(--text-xs)">
-            ${esc(r.box || '')}${r.box && r.pin ? ' × ' : ''}${esc(r.pin || '')} ·
-            Len ${fmt(r.lenMd, 2)} ${unit} · MD ${fmt(r.topMd, 2)}–${fmt(r.botMd, 2)} ${unit} · Vol ${fmt(r.vol, 3)} bbl${r.company ? ` · ${esc(r.company)}` : ''}
-          </div>
+          <div class="string-item-meta">${esc(r.box || '')}${r.box && r.pin ? ' × ' : ''}${esc(r.pin || '')} · Len ${fmt(r.lenMd, 2)} ${unit} · MD ${fmt(r.topMd, 2)}–${fmt(r.botMd, 2)} ${unit}${r.company ? ` · ${esc(r.company)}` : ''}</div>
         </div>`).join('') : '<p class="muted">No items — add from builder, library, or import.</p>';
 
+      $('tallyTable').querySelector('thead').innerHTML = `<tr>
+        <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+        <th>OD (in)</th><th>ID (in)</th><th>Len (${unit})</th><th>Top MD (${unit})</th><th>Bot MD (${unit})</th>
+        <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR (klbf)</th><th class="no-print">Actions</th>
+      </tr>`;
       const tb = $('tallyTable').querySelector('tbody');
       tb.innerHTML = rows.map(r => `<tr>
         <td>${r.idx}</td>
@@ -1031,7 +1063,6 @@
         <td>${fmt(r.topMd, 3)}</td>
         <td>${fmt(r.botMd, 3)}</td>
         <td>${fmt(r.cap, 4)}</td>
-        <td>${fmt(r.vol, 3)}</td>
         <td>${fmt(r.cumVol, 3)}</td>
         <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
         <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
@@ -1115,69 +1146,69 @@
       const el = $('diagram');
       const casings = migrateCasings(state.well).filter(c => parseInch(c.od) > 0 || parseInch(c.id) > 0);
       if (!rows.length && !casings.length) {
-        el.innerHTML = '<p class="muted">Add string items or casing data to generate sketch.</p>';
+        el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>';
         return;
       }
-      const rowMinMd = rows.length ? Math.min(...rows.map(r => r.topMd)) : 0;
-      const rowMaxMd = rows.length ? Math.max(...rows.map(r => r.botMd)) : 0;
-      const casingMaxMd = casings.reduce((a, c) => Math.max(a, Number(c.shoeMd) || 0, Number(c.topMd) || 0), 0);
-      const minMd = Math.min(rowMinMd, 0, ...casings.map(c => Number(c.topMd) || 0));
-      const maxMd = Math.max(rowMaxMd, casingMaxMd, minMd + 1);
-      const spanMd = maxMd - minMd || 1;
-      const maxStringOd = rows.length ? Math.max(...rows.map(r => parseInch(r.od) || 3.5), 3.5) : 3.5;
-      const maxCasingOd = casings.reduce((a, c) => Math.max(a, parseInch(c.od) || parseInch(c.id)), 0);
-      const maxOd = Math.max(maxStringOd, maxCasingOd, 5);
-      const plotH = Math.min(620, Math.max(420, spanMd * 0.14));
-      const padTop = 36, padBottom = 28;
-      const totalH = padTop + plotH + padBottom;
-      const cx = 270;
-      const maxW = 150;
-      const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
+      const hasCasing = casings.length > 0;
       const parts = [];
-      parts.push(`<text x="10" y="22" font-size="11" fill="currentColor" opacity=".7">MD (${unit})</text>`);
-      parts.push(`<text x="6" y="${padTop + 4}" font-size="10" fill="currentColor" opacity=".6">${fmt(minMd, 0)}</text>`);
-      parts.push(`<text x="6" y="${padTop + plotH}" font-size="10" fill="currentColor" opacity=".6">${fmt(maxMd, 0)}</text>`);
-      parts.push(`<text x="420" y="22" font-size="11" fill="currentColor" opacity=".7">BHA string (inside casing)</text>`);
-      const sortedCasings = [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id)));
-      const casingColors = ['#6b7280', '#78716c', '#57534e', '#44403c'];
-      sortedCasings.forEach((c, i) => {
-        const top = Number(c.topMd) || 0;
-        const shoe = Number(c.shoeMd) || maxMd;
-        if (shoe <= top) return;
-        const y1 = mdY(top);
-        const y2 = mdY(shoe);
-        const h = Math.max(6, y2 - y1);
-        const od = parseInch(c.od) || parseInch(c.id) * 1.08;
-        const w = Math.max(28, (od / maxOd) * maxW);
-        const col = casingColors[i % casingColors.length];
-        parts.push(`<rect x="${cx - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}20" stroke="${col}" stroke-width="2.5" rx="2"/>`);
-        parts.push(`<text x="${cx - w / 2 - 10}" y="${y1 + 14}" font-size="10" text-anchor="end" fill="${col}" font-weight="700">${esc(c.name || 'Casing')}</text>`);
-        parts.push(`<text x="${cx - w / 2 - 10}" y="${y1 + 26}" font-size="9" text-anchor="end" fill="currentColor" opacity=".65">${esc(c.od || '—')}" OD · ${esc(c.id || '—')}" ID${c.weightPpf ? ` · ${esc(c.weightPpf)} ppf` : ''}</text>`);
-        if (c.cementTop !== '' && c.cementTop != null && !isNaN(c.cementTop)) {
-          const cy = mdY(Number(c.cementTop));
-          parts.push(`<line x1="${cx - w / 2}" y1="${cy}" x2="${cx + w / 2}" y2="${cy}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 3"/>`);
-          parts.push(`<text x="${cx + w / 2 + 6}" y="${cy + 4}" font-size="9" fill="#b45309">TOC ${fmt(c.cementTop, 0)} ${unit}</text>`);
-        }
-      });
-      parts.push(`<line x1="${cx}" y1="${padTop}" x2="${cx}" y2="${padTop + plotH}" stroke="currentColor" opacity=".1" stroke-width="1"/>`);
-      const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
-      const labelEvery = rows.length > 40 ? Math.ceil(rows.length / 28) : 1;
-      rows.forEach((r, i) => {
-        const y1 = mdY(r.topMd);
-        const y2 = mdY(r.botMd);
-        const h = Math.max(5, Math.abs(y2 - y1));
-        const y = Math.min(y1, y2);
-        const w = Math.max(12, (parseInch(r.od) || 3) / maxOd * (maxW * 0.52));
-        const col = colors[i % colors.length];
-        parts.push(`<rect x="${cx - w / 2}" y="${y}" width="${w}" height="${h}" rx="2" fill="${col}40" stroke="${col}" stroke-width="1.5"/>`);
-        if (i % labelEvery === 0 || i === rows.length - 1) {
-          const labelY = y + Math.min(h / 2 + 4, 12);
-          parts.push(`<line x1="${cx + w / 2 + 6}" y1="${labelY}" x2="410" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
-          parts.push(`<text x="420" y="${labelY}" font-size="10" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
-          parts.push(`<text x="420" y="${labelY + 12}" font-size="9" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)}</text>`);
-        }
-      });
-      el.innerHTML = `<svg viewBox="0 0 920 ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, totalH)}px">${parts.join('')}</svg>`;
+      let totalH = 60;
+      const casingLaneW = hasCasing ? 210 : 0;
+      const stringCx = hasCasing ? 400 : 180;
+      const labelX = hasCasing ? 500 : 350;
+      const svgW = hasCasing ? 1020 : 920;
+
+      if (hasCasing) {
+        const rowMaxMd = rows.length ? Math.max(...rows.map(r => r.botMd)) : 0;
+        const casingMaxMd = casings.reduce((a, c) => Math.max(a, Number(c.shoeMd) || 0, Number(c.topMd) || 0), 0);
+        const minMd = Math.min(rows.length ? Math.min(...rows.map(r => r.topMd)) : 0, 0, ...casings.map(c => Number(c.topMd) || 0));
+        const maxMd = Math.max(rowMaxMd, casingMaxMd, minMd + 1);
+        const spanMd = maxMd - minMd || 1;
+        const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
+        const plotH = Math.min(640, Math.max(420, spanMd * 0.11));
+        const padTop = 36;
+        const cxCas = 105;
+        const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
+        parts.push(`<text x="12" y="22" font-size="11" fill="currentColor" opacity=".75">Casing (MD ${unit})</text>`);
+        parts.push(`<line x1="${casingLaneW}" y1="18" x2="${casingLaneW}" y2="${padTop + plotH + 20}" stroke="currentColor" opacity=".15" stroke-width="1.5"/>`);
+        [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id))).forEach((c, i) => {
+          const top = Number(c.topMd) || 0;
+          const shoe = Number(c.shoeMd) || maxMd;
+          if (shoe <= top) return;
+          const y1 = mdY(top);
+          const y2 = mdY(shoe);
+          const h = Math.max(8, y2 - y1);
+          const od = parseInch(c.od) || parseInch(c.id) * 1.08;
+          const w = Math.max(22, (od / maxCasingOd) * 72);
+          const col = ['#6b7280', '#78716c', '#57534e'][i % 3];
+          parts.push(`<rect x="${cxCas - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}18" stroke="${col}" stroke-width="2" rx="2"/>`);
+          parts.push(`<text x="${cxCas - w / 2 - 6}" y="${y1 + 12}" font-size="9" text-anchor="end" fill="${col}" font-weight="700">${esc(c.name || 'Casing')}</text>`);
+          parts.push(`<text x="${cxCas - w / 2 - 6}" y="${y1 + 22}" font-size="8" text-anchor="end" fill="currentColor" opacity=".65">${esc(c.od || '—')}" / ${esc(c.id || '—')}"</text>`);
+        });
+        totalH = Math.max(totalH, padTop + plotH + 32);
+      }
+
+      if (rows.length) {
+        const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
+        const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
+        const scaleY = Math.min(1.2, 520 / totalLen);
+        const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
+        let y = 30;
+        parts.push(`<text x="${stringCx - 40}" y="24" font-size="12" fill="currentColor" opacity=".75">${hasCasing ? 'BHA string' : 'Surface / lubricator'}</text>`);
+        parts.push(`<line x1="${stringCx}" y1="20" x2="${stringCx}" y2="9999" stroke="currentColor" opacity=".12" stroke-width="2"/>`);
+        rows.forEach((r, i) => {
+          const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
+          const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
+          const col = colors[i % colors.length];
+          parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
+          parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${y + 8}" x2="${labelX}" y2="${y + 8}" stroke="${col}" stroke-dasharray="3 3" opacity=".55"/>`);
+          parts.push(`<text x="${labelX + 10}" y="${y + 12}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
+          parts.push(`<text x="${labelX + 10}" y="${y + 26}" font-size="11" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
+          y += h + 4;
+        });
+        totalH = Math.max(totalH, y + 30);
+      }
+
+      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, totalH)}px">${parts.join('')}</svg>`;
     }
 
     function normHeaderCell(v) {
@@ -1415,11 +1446,11 @@
     function exportCsv() {
       const rows = computedRows();
       const u = dispUnit();
-      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
+      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
       const lines = [header.join(',')].concat(rows.map(r => [
         r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
         fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
-        fmt(r.cap, 4), fmt(r.vol, 3), fmt(r.cumVol, 3), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
+        fmt(r.cap, 4), fmt(r.cumVol, 3), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
       ].join(',')));
       dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
     }
@@ -1433,12 +1464,12 @@
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
         ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
-        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
+        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
       ];
       rows.forEach(r => aoa.push([
         r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
         Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
-        Number(fmt(r.cap, 4)), Number(fmt(r.vol, 3)), Number(fmt(r.cumVol, 3)),
+        Number(fmt(r.cap, 4)), Number(fmt(r.cumVol, 3)),
         Number(fmt(r.buoyedLb, 1)), Number(fmt(toKlbf(r.cumWirLb), 3)), r.serial || '', r.notes || ''
       ]));
       aoa.push([], ['Total length', fmt(rows.reduce((a, b) => a + b.lenMd, 0), 3) + ' ' + u]);
