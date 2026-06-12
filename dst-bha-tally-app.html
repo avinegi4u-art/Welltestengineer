@@ -81,14 +81,27 @@
       padding: .65rem 1rem; border-radius: var(--radius-full); background: transparent;
       border: 1px solid transparent; color: var(--color-text-muted);
     }
-    .tab.active {
-      background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
-    }
+    .tab-radio { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     .content { padding: var(--space-4); }
     .tab-panel { display: none; min-height: 280px; }
-    .tab-panel.active { display: block; }
-    .tab { cursor: pointer; }
+    .tab { cursor: pointer; user-select: none; }
     .tab:hover { border-color: var(--color-border); color: var(--color-text); }
+    #rtab-well:checked ~ nav .tab[for="rtab-well"],
+    #rtab-builder:checked ~ nav .tab[for="rtab-builder"],
+    #rtab-tally:checked ~ nav .tab[for="rtab-tally"],
+    #rtab-hydraulics:checked ~ nav .tab[for="rtab-hydraulics"],
+    #rtab-diagram:checked ~ nav .tab[for="rtab-diagram"],
+    #rtab-import:checked ~ nav .tab[for="rtab-import"],
+    #rtab-library:checked ~ nav .tab[for="rtab-library"] {
+      background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
+    }
+    #rtab-well:checked ~ .content #tab-well,
+    #rtab-builder:checked ~ .content #tab-builder,
+    #rtab-tally:checked ~ .content #tab-tally,
+    #rtab-hydraulics:checked ~ .content #tab-hydraulics,
+    #rtab-diagram:checked ~ .content #tab-diagram,
+    #rtab-import:checked ~ .content #tab-import,
+    #rtab-library:checked ~ .content #tab-library { display: block; }
     #bootError {
       margin-bottom: var(--space-4); padding: var(--space-4);
       border: 1px solid var(--color-error); border-radius: var(--radius-lg);
@@ -192,6 +205,11 @@
   </style>
 </head>
 <body>
+  <noscript>
+    <div style="padding:1rem;background:#fff3cd;border-bottom:1px solid #ffc107;font-family:sans-serif">
+      <strong>JavaScript is off.</strong> Tabs still work (click labels below). For Excel import and calculations, enable JavaScript or open in Chrome/Edge.
+    </div>
+  </noscript>
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -217,8 +235,8 @@
 
     <div class="row-note" id="startBanner" style="margin-bottom:var(--space-4);display:none">
       <strong>Get started:</strong> Click <button class="btn sm primary" id="bannerLoadBtn" type="button">Load DST-2 reference</button>
-      or go to <button class="btn sm" id="bannerImportBtn" type="button">Import / export</button> and select your BHA .xlsx file.
-      Keep <code>dst-2-bha-reference.js</code> in the same folder as this HTML file.
+      or open the <label for="rtab-import" class="btn sm" style="display:inline-block;cursor:pointer">Import / export</label> tab and select your BHA .xlsx file.
+      <br><small>Download the repo folder and open in <strong>Chrome/Edge</strong> — do not use GitHub’s file preview (JavaScript won’t run).</small>
     </div>
 
     <section class="kpi-wrap" aria-label="String summary">
@@ -230,20 +248,27 @@
       <div class="kpi" id="kpiWarnWrap" hidden><div class="label">Warnings</div><div class="value warn" id="kpiWarn">0</div></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="mainPanel">
+      <input type="radio" name="bha-tab" id="rtab-well" class="tab-radio" checked>
+      <input type="radio" name="bha-tab" id="rtab-builder" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-tally" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-hydraulics" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-diagram" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-import" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-library" class="tab-radio">
       <nav class="tabs" aria-label="BHA sections">
-        <button class="tab active" data-tab="well" type="button">Well &amp; job</button>
-        <button class="tab" data-tab="builder" type="button">String builder</button>
-        <button class="tab" data-tab="tally" type="button">Tally table</button>
-        <button class="tab" data-tab="hydraulics" type="button">Volumes &amp; hydraulics</button>
-        <button class="tab" data-tab="diagram" type="button">Diagram</button>
-        <button class="tab" data-tab="import" type="button">Import / export</button>
-        <button class="tab" data-tab="library" type="button">Tool library</button>
+        <label class="tab" for="rtab-well" data-tab="well">Well &amp; job</label>
+        <label class="tab" for="rtab-builder" data-tab="builder">String builder</label>
+        <label class="tab" for="rtab-tally" data-tab="tally">Tally table</label>
+        <label class="tab" for="rtab-hydraulics" data-tab="hydraulics">Volumes &amp; hydraulics</label>
+        <label class="tab" for="rtab-diagram" data-tab="diagram">Diagram</label>
+        <label class="tab" for="rtab-import" data-tab="import">Import / export</label>
+        <label class="tab" for="rtab-library" data-tab="library">Tool library</label>
       </nav>
 
-      <div class="content">
+      <div class="content" id="tabContent">
         <!-- Well & job -->
-        <section class="tab-panel active" id="tab-well">
+        <section class="tab-panel" id="tab-well">
           <div class="grid">
             <article class="card span-6">
               <h2>Well identification</h2>
@@ -1006,13 +1031,12 @@
     }
 
     function switchTab(tabName) {
-      document.querySelectorAll('.tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === tabName);
-      });
-      document.querySelectorAll('.tab-panel').forEach(p => {
-        p.classList.toggle('active', p.id === 'tab-' + tabName);
-      });
+      const radio = document.getElementById('rtab-' + tabName);
+      if (radio) radio.checked = true;
+      const panel = document.getElementById('tab-' + tabName);
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    window.switchTab = switchTab;
 
     function exportCsv() {
       const rows = computedRows();
@@ -1154,12 +1178,14 @@
         </div>`).join('');
     }
 
-    // Tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    // Tabs — labels use CSS radio (work without JS); JS adds scroll-into-view
+    document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setTimeout(() => switchTab(tab.dataset.tab), 0);
+      });
     });
-    $('bannerLoadBtn').onclick = () => { loadSample(); switchTab('tally'); };
-    $('bannerImportBtn').onclick = () => switchTab('import');
+    if ($('bannerLoadBtn')) $('bannerLoadBtn').onclick = () => { loadSample(); switchTab('tally'); };
+    if ($('bannerImportBtn')) $('bannerImportBtn').onclick = () => switchTab('import');
 
     $('themeToggle').onclick = () => {
       const d = document.documentElement;
