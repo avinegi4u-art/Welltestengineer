@@ -235,9 +235,12 @@
               <h2>Well identification</h2>
               <p class="muted">Header fields print on the tally export — match your BHA worksheet.</p>
               <div class="fields">
-                <div class="field"><label for="wellName">Well name</label><input id="wellName" placeholder="e.g. Chetna D_33"></div>
-                <div class="field"><label for="fieldName">Field / block</label><input id="fieldName" placeholder="e.g. GD"></div>
-                <div class="field"><label for="dstRun">DST / run #</label><input id="dstRun" placeholder="e.g. DST-3"></div>
+                <div class="field"><label for="wellName">Well name</label><input id="wellName" placeholder="e.g. D33#G / D-33-9"></div>
+                <div class="field"><label for="customer">Client</label><input id="customer" placeholder="e.g. ONGC"></div>
+                <div class="field"><label for="fieldName">Field / block</label><input id="fieldName" placeholder="e.g. Mumbai Offshore"></div>
+                <div class="field"><label for="rigName">Rig</label><input id="rigName" placeholder="e.g. GD Chetna"></div>
+                <div class="field"><label for="dstRun">DST / run #</label><input id="dstRun" placeholder="e.g. DST-2"></div>
+                <div class="field"><label for="formation">Formation</label><input id="formation" placeholder="e.g. Panna / Sandstone"></div>
                 <div class="field"><label for="engineer">Engineer</label><input id="engineer" placeholder="Name"></div>
                 <div class="field"><label for="jobDate">Date</label><input id="jobDate" type="date"></div>
                 <div class="field"><label for="objective">Test objective</label><input id="objective" placeholder="e.g. DST flow test"></div>
@@ -247,9 +250,15 @@
               <h2>String &amp; fluid reference</h2>
               <p class="muted">Used for volume basis, depth reference, and hydrostatic calculations.</p>
               <div class="fields">
-                <div class="field"><label for="fluidPpg">Fluid weight</label><input id="fluidPpg" type="number" step="0.1" value="16.5"><small>ppg</small></div>
+                <div class="field"><label for="fluidPpg">Fluid weight</label><input id="fluidPpg" type="number" step="0.1" value="17.2"><small>ppg</small></div>
+                <div class="field"><label for="depthMode">Depth mode</label>
+                  <select id="depthMode">
+                    <option value="imported">Use imported MD (Excel)</option>
+                    <option value="calculated">Calculate from lengths</option>
+                  </select>
+                </div>
                 <div class="field"><label for="datumElev">Datum / RKB elevation</label><input id="datumElev" type="number" step="0.1" value="0"><small>ft</small></div>
-                <div class="field"><label for="hangoff">Hang-off / reference MD</label><input id="hangoff" type="number" step="0.01" value="0"><small>ft from surface</small></div>
+                <div class="field"><label for="hangoff">Hang-off / reference MD</label><input id="hangoff" type="number" step="0.01" value="0"><small>used when depth mode = calculated</small></div>
                 <div class="field"><label for="casingOd">Casing ID (annulus ref)</label><input id="casingOd" placeholder="e.g. 8.681"><small>in</small></div>
                 <div class="field"><label for="tubingNom">Nominal tubing</label><input id="tubingNom" placeholder="e.g. 3-1/2"></div>
                 <div class="field"><label for="displayUnit">Display units</label>
@@ -297,7 +306,7 @@
               <div class="actions" style="margin-top:var(--space-3)">
                 <button class="btn primary" id="addItemBtn" type="button">Add to string</button>
                 <button class="btn" id="clearFormBtn" type="button">Clear form</button>
-                <button class="btn" id="loadSampleBtn" type="button">Load DST-3 sample</button>
+                <button class="btn" id="loadSampleBtn" type="button">Load DST-2 reference (Chetna)</button>
               </div>
             </article>
             <article class="card span-6">
@@ -383,7 +392,7 @@
               <div class="actions" style="margin-top:var(--space-3)">
                 <button class="btn primary" id="parseFileBtn" type="button">Parse file</button>
               </div>
-              <p class="row-note" style="margin-top:var(--space-3)">Excel: auto-detects headers (description, length, OD, ID, box, pin, top/bottom, volume). PDF: extracts text rows with dimensions and thread keywords.</p>
+              <p class="row-note" style="margin-top:var(--space-3)">Excel: reads Halliburton-style BHA sheets (Description col C, Box/Pin, OD/ID, Length m, Top/Bottom MD). Auto-picks tally worksheet and fills well header from CUSTOMER / WELL NAME / RIG rows.</p>
             </article>
             <article class="card span-6">
               <h2>JSON paste</h2>
@@ -425,6 +434,7 @@
     </div>
   </dialog>
 
+  <script src="dst-2-bha-reference.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js"></script>
   <script>
@@ -454,9 +464,9 @@
 
     const state = {
       well: {
-        name: '', field: '', dstRun: '', engineer: '', date: '',
-        objective: '', fluidPpg: 16.5, datumElev: 0, hangoff: 0,
-        casingOd: '', tubingNom: '3-1/2', displayUnit: 'ft', hydBasis: 'bottom', notes: ''
+        name: '', customer: '', field: '', rig: '', formation: '', dstRun: '', engineer: '', date: '',
+        objective: '', fluidPpg: 17.2, datumElev: 0, hangoff: 0, depthMode: 'imported',
+        casingOd: '', tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
       },
       items: [],
       pendingWorkbook: null
@@ -487,8 +497,11 @@
 
     function capacityBblFt(idIn) { const id = parseInch(idIn); return id > 0 ? (id * id) / CAP_CONST : 0; }
     function volumeBbl(lenFt, idIn) { return capacityBblFt(idIn) * lenFt; }
-    function hydroPsi(depthFt, ppg) { return depthFt * ppg * HYD_CONST; }
-    function dispLen(ft, unit) { return unit === 'm' ? ft / FT_PER_M : ft; }
+    function hydroPsi(depthMd, ppg, mdUnit) {
+      const ft = mdUnit === 'm' ? depthMd * FT_PER_M : depthMd;
+      return Math.max(0, ft) * ppg * HYD_CONST;
+    }
+    function lenToDisplay(lenFt, unit) { return unit === 'm' ? lenFt / FT_PER_M : lenFt; }
     function dispUnit() { return state.well.displayUnit; }
 
     function guessCat(name) {
@@ -526,20 +539,29 @@
     }
 
     function computedRows() {
-      const hang = Number(state.well.hangoff) || 0;
-      let top = hang, cumVol = 0;
+      const mdU = dispUnit();
+      const useImported = state.well.depthMode === 'imported';
+      let topCalc = Number(state.well.hangoff) || 0, cumVol = 0;
       return state.items.map((x, i) => {
         const lenFt = toFt(x.length, x.unit || 'm');
+        const lenMd = mdU === 'm' ? lenFt / FT_PER_M : lenFt;
         const cap = capacityBblFt(x.id);
-        const vol = volumeBbl(lenFt, x.id);
+        const calcVol = volumeBbl(lenFt, x.id);
+        const vol = x.refVol != null && !isNaN(x.refVol) ? x.refVol : calcVol;
         cumVol += vol;
-        const row = {
-          ...x, idx: i + 1, lenFt, cap, vol, cumVol,
-          topMd: top, botMd: top + lenFt,
+        let topMd, botMd;
+        if (useImported && x.topMd != null && x.botMd != null) {
+          topMd = x.topMd;
+          botMd = x.botMd;
+        } else {
+          topMd = topCalc;
+          botMd = topCalc + lenMd;
+          topCalc = botMd;
+        }
+        return {
+          ...x, idx: i + 1, lenFt, lenMd, cap, vol, cumVol, topMd, botMd, mdUnit: mdU,
           thread: [x.box, x.pin].filter(Boolean).join(' x ')
         };
-        top = row.botMd;
-        return row;
       });
     }
 
@@ -560,12 +582,16 @@
 
     function readWellFromDom() {
       state.well.name = $('wellName').value.trim();
+      state.well.customer = $('customer').value.trim();
       state.well.field = $('fieldName').value.trim();
+      state.well.rig = $('rigName').value.trim();
+      state.well.formation = $('formation').value.trim();
       state.well.dstRun = $('dstRun').value.trim();
       state.well.engineer = $('engineer').value.trim();
       state.well.date = $('jobDate').value;
       state.well.objective = $('objective').value.trim();
-      state.well.fluidPpg = Number($('fluidPpg').value) || 16.5;
+      state.well.fluidPpg = Number($('fluidPpg').value) || 17.2;
+      state.well.depthMode = $('depthMode').value;
       state.well.datumElev = Number($('datumElev').value) || 0;
       state.well.hangoff = Number($('hangoff').value) || 0;
       state.well.casingOd = $('casingOd').value.trim();
@@ -577,12 +603,16 @@
 
     function writeWellToDom() {
       $('wellName').value = state.well.name;
+      $('customer').value = state.well.customer || '';
       $('fieldName').value = state.well.field;
+      $('rigName').value = state.well.rig || '';
+      $('formation').value = state.well.formation || '';
       $('dstRun').value = state.well.dstRun;
       $('engineer').value = state.well.engineer;
       $('jobDate').value = state.well.date || '';
       $('objective').value = state.well.objective;
       $('fluidPpg').value = state.well.fluidPpg;
+      $('depthMode').value = state.well.depthMode || 'calculated';
       $('datumElev').value = state.well.datumElev;
       $('hangoff').value = state.well.hangoff;
       $('casingOd').value = state.well.casingOd;
@@ -635,18 +665,18 @@
       const rows = computedRows();
       const warnings = collectWarnings(rows);
       const unit = dispUnit();
-      const totalLen = rows.reduce((a, b) => a + b.lenFt, 0);
+      const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       const totalVol = rows.at(-1)?.cumVol || 0;
-      const deepest = rows.at(-1)?.botMd || state.well.hangoff || 0;
+      const deepest = rows.at(-1)?.botMd ?? state.well.hangoff ?? 0;
       let hydDepth = deepest;
-      if (state.well.hydBasis === 'top') hydDepth = rows[0]?.topMd || state.well.hangoff || 0;
-      if (state.well.hydBasis === 'datum') hydDepth = Number(state.well.datumElev) || 0;
+      if (state.well.hydBasis === 'top') hydDepth = rows[0]?.topMd ?? state.well.hangoff ?? 0;
+      if (state.well.hydBasis === 'datum') hydDepth = unit === 'm' ? (Number(state.well.datumElev) || 0) / FT_PER_M : (Number(state.well.datumElev) || 0);
 
       $('kpiItems').textContent = rows.length;
-      $('kpiLen').textContent = fmt(dispLen(totalLen, unit), 2) + ' ' + unit;
+      $('kpiLen').textContent = fmt(totalLen, 2) + ' ' + unit;
       $('kpiVol').textContent = fmt(totalVol, 3) + ' bbl';
-      $('kpiDeep').textContent = fmt(dispLen(deepest, unit), 2) + ' ' + unit;
-      $('kpiHyd').textContent = fmt(hydroPsi(deepest, state.well.fluidPpg), 1) + ' psi';
+      $('kpiDeep').textContent = fmt(deepest, 2) + ' ' + unit;
+      $('kpiHyd').textContent = fmt(hydroPsi(hydDepth, state.well.fluidPpg, unit), 1) + ' psi';
       $('kpiWarn').textContent = warnings.length;
       $('kpiWarnWrap').hidden = warnings.length === 0;
 
@@ -667,20 +697,20 @@
           </div>
           <div class="muted" style="margin-top:.35rem;font-size:var(--text-xs)">
             ${esc(r.box || '')}${r.box && r.pin ? ' × ' : ''}${esc(r.pin || '')} ·
-            Len ${fmt(dispLen(r.lenFt, unit), 2)} ${unit} · MD ${fmt(dispLen(r.topMd, unit), 2)}–${fmt(dispLen(r.botMd, unit), 2)} ${unit} · Vol ${fmt(r.vol, 3)} bbl
+            Len ${fmt(r.lenMd, 2)} ${unit} · MD ${fmt(r.topMd, 2)}–${fmt(r.botMd, 2)} ${unit} · Vol ${fmt(r.vol, 3)} bbl${r.company ? ` · ${esc(r.company)}` : ''}
           </div>
         </div>`).join('') : '<p class="muted">No items — add from builder, library, or import.</p>';
 
       const tb = $('tallyTable').querySelector('tbody');
       tb.innerHTML = rows.map(r => `<tr>
         <td>${r.idx}</td>
-        <td>${esc(r.name)}${r.serial ? `<div class="muted">S/N ${esc(r.serial)}</div>` : ''}</td>
+        <td>${esc(r.name)}${r.company ? `<div class="muted">${esc(r.company)}${r.toolNo ? ' · ' + esc(r.toolNo) : ''}</div>` : ''}${r.serial ? `<div class="muted">S/N ${esc(r.serial)}</div>` : ''}</td>
         <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
         <td>${esc(r.box)}</td><td>${esc(r.pin)}</td>
         <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
-        <td>${fmt(dispLen(r.lenFt, unit), 3)}</td>
-        <td>${fmt(dispLen(r.topMd, unit), 3)}</td>
-        <td>${fmt(dispLen(r.botMd, unit), 3)}</td>
+        <td>${fmt(r.lenMd, 3)}</td>
+        <td>${fmt(r.topMd, 3)}</td>
+        <td>${fmt(r.botMd, 3)}</td>
         <td>${fmt(r.cap, 4)}</td>
         <td>${fmt(r.vol, 3)}</td>
         <td>${fmt(r.cumVol, 3)}</td>
@@ -690,15 +720,16 @@
       const byCat = {};
       rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
       $('volSummaryTable').querySelector('tbody').innerHTML = [
-        ['Total string length', `${fmt(dispLen(totalLen, unit), 3)} ${unit}`],
+        ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
         ['Total internal volume', `${fmt(totalVol, 3)} bbl`],
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
-        ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg), 1)} psi`],
+        ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
+        ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`],
         ...Object.entries(byCat).map(([k, v]) => [`Volume — ${k}`, `${fmt(v, 3)} bbl`])
       ].map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
 
       $('hydTable').querySelector('tbody').innerHTML = rows.map(r =>
-        `<tr><td>${esc(r.name)}</td><td>${fmt(dispLen(r.botMd, unit), 2)} ${unit}</td><td>${fmt(hydroPsi(r.botMd, state.well.fluidPpg), 1)} psi</td></tr>`
+        `<tr><td>${esc(r.name)}</td><td>${fmt(r.botMd, 2)} ${unit}</td><td>${fmt(hydroPsi(r.botMd, state.well.fluidPpg, unit), 1)} psi</td></tr>`
       ).join('') || '<tr><td colspan="3" class="muted">No items</td></tr>';
 
       $('connTable').querySelector('tbody').innerHTML = rows.length < 2 ? '<tr><td colspan="4" class="muted">Need at least 2 items</td></tr>' :
@@ -716,9 +747,9 @@
     function drawDiagram(rows, unit) {
       const el = $('diagram');
       if (!rows.length) { el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>'; return; }
-      const totalLen = rows.at(-1).botMd - (rows[0]?.topMd || 0) || 1;
+      const spanMd = Math.abs((rows.at(-1).botMd || 0) - (rows[0]?.topMd || 0)) || rows.reduce((a, r) => a + r.lenMd, 0) || 1;
       const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
-      const scaleY = Math.min(1.2, 520 / totalLen);
+      const scaleY = Math.min(1.2, 520 / spanMd);
       const cx = 180;
       let y = 30;
       const parts = [];
@@ -726,65 +757,135 @@
       parts.push(`<line x1="${cx}" y1="20" x2="${cx}" y2="9999" stroke="currentColor" opacity=".15" stroke-width="2"/>`);
       parts.push(`<text x="20" y="24" font-size="12" fill="currentColor" opacity=".7">Surface / lubricator</text>`);
       rows.forEach((r, i) => {
-        const h = Math.max(14, r.lenFt * scaleY);
+        const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
         const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
         const col = colors[i % colors.length];
         parts.push(`<rect x="${cx - w/2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
         parts.push(`<line x1="${cx + w/2 + 8}" y1="${y}" x2="340" y2="${y}" stroke="${col}" stroke-dasharray="3 3" opacity=".6"/>`);
         parts.push(`<text x="350" y="${y + 14}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
-        parts.push(`<text x="350" y="${y + 28}" font-size="11" fill="currentColor" opacity=".75">${fmt(dispLen(r.topMd, unit), 1)}–${fmt(dispLen(r.botMd, unit), 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
+        parts.push(`<text x="350" y="${y + 28}" font-size="11" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
         y += h + 4;
       });
       el.innerHTML = `<svg viewBox="0 0 920 ${y + 30}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, y + 30)}px">${parts.join('')}</svg>`;
     }
 
+    function normHeaderCell(v) {
+      return String(v ?? '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
     function findHeaderRow(rows) {
-      const keys = ['description','tool','item','length','od','id','box','pin','volume','top','bottom'];
-      for (let i = 0; i < Math.min(rows.length, 25); i++) {
-        const line = (rows[i] || []).map(c => String(c).toLowerCase());
+      const keys = ['description', 'tool', 'item', 'length', 'od', 'id', 'box', 'pin', 'volume', 'top', 'bottom'];
+      for (let i = 0; i < Math.min(rows.length, 30); i++) {
+        const line = (rows[i] || []).map(normHeaderCell);
         const hits = keys.filter(k => line.some(h => h.includes(k))).length;
-        if (hits >= 3) return i;
+        if (hits >= 4) return i;
       }
       return 0;
     }
 
+    function pickCol(header, arr) {
+      for (const k of arr) {
+        const i = header.findIndex(h => h.includes(k));
+        if (i >= 0) return i;
+      }
+      return -1;
+    }
+
+    function cleanOdId(v) {
+      const s = String(v ?? '').trim();
+      return /^n\/?a$/i.test(s) ? '' : s;
+    }
+
+    function parseMdCell(v) {
+      if (v == null || v === '') return null;
+      const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function extractWellMeta(rows) {
+      const meta = {};
+      const scan = (limit) => {
+        for (let r = 0; r < Math.min(rows.length, limit); r++) {
+          const cells = (rows[r] || []).map(v => String(v ?? '').trim());
+          for (let c = 0; c < cells.length - 1; c++) {
+            const label = cells[c].toUpperCase().replace(/[:\s]+$/g, '');
+            const val = cells[c + 1] || cells[c + 2] || '';
+            if (!val) continue;
+            if (label.includes('CUSTOMER') || label === 'CLIENT') meta.customer = val;
+            if (label.includes('WELL NAME') || label === 'WELL') meta.name = val;
+            if (label === 'RIG' || label.includes('RIG NAME')) meta.rig = val;
+            if (label === 'TEST' || label.includes('DST')) meta.dstRun = val;
+            if (label.includes('FORMATION')) meta.formation = val.replace(/\n/g, ' / ');
+            if (label === 'DATE') meta.date = String(val).slice(0, 10);
+            if (label.includes('KILL FLUID') || label.includes('FLUID DENSITY')) {
+              const ppg = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+              if (ppg > 8 && ppg < 25) meta.fluidPpg = ppg;
+            }
+          }
+        }
+      };
+      scan(12);
+      return meta;
+    }
+
     function extractRowsFromSheet(rows) {
       const hi = findHeaderRow(rows);
-      const header = (rows[hi] || []).map(x => String(x).toLowerCase().replace(/[^a-z0-9 ]/g, ' '));
-      const pick = arr => { for (const k of arr) { const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; } return -1; };
-      const nameI = pick(['tool description', 'description', 'component', 'tool name', 'item', 'tool']);
-      const boxI = pick(['box', 'top conn', 'upper conn']);
-      const pinI = pick(['pin', 'bottom conn', 'lower conn']);
-      const odI = pick(['od', 'outer dia', 'o d']);
-      const idI = pick(['id', 'inner dia', 'i d']);
-      const lenI = pick(['length', 'len', 'item length']);
-      const topI = pick(['top of tool', 'top md', 'top depth', 'top']);
-      const botI = pick(['bottom of tool', 'bottom md', 'bottom depth', 'bottom']);
-      const volI = pick(['volume', 'vol', 'internal vol']);
-      const serialI = pick(['serial', 's n', 'serial no']);
-      const catI = pick(['category', 'type']);
+      const header = (rows[hi] || []).map(normHeaderCell);
+      const nameI = pickCol(header, ['tool description', 'description', 'component', 'tool name', 'item', 'tool']);
+      const toolI = pickCol(header, ['tool number', 'tool no', 'tool #']);
+      const coI = pickCol(header, ['company', 'vendor']);
+      const boxI = pickCol(header, ['box', 'top conn', 'upper conn']);
+      const pinI = pickCol(header, ['pin', 'bottom conn', 'lower conn']);
+      const odI = pickCol(header, ['od in', 'od', 'outer dia', 'o d']);
+      const idI = pickCol(header, ['id in', 'id', 'inner dia', 'i d']);
+      const lenI = pickCol(header, ['length m', 'length', 'len', 'item length']);
+      const topI = pickCol(header, ['top of tool', 'top md', 'top depth']);
+      const botI = pickCol(header, ['bottom of tool', 'bottom md', 'bottom depth', 'bottom of']);
+      const volI = pickCol(header, ['volume', 'vol', 'internal vol']);
+      const serialI = pickCol(header, ['serial', 's n', 'serial no']);
+      const catI = pickCol(header, ['category', 'type']);
+      const lenUnit = header[lenI] && header[lenI].includes('ft') ? 'ft' : 'm';
       const out = [];
       for (const r of rows.slice(hi + 1)) {
         const cells = r.map(v => String(v ?? '').trim());
-        const name = (cells[nameI] || cells[0] || '').trim();
-        if (!name || /^(total|subtotal|page|sheet|bha|dst|remarks|note)/i.test(name)) continue;
+        const name = (nameI >= 0 ? cells[nameI] : '') || cells.find((c, i) => i <= 5 && c.length > 3) || '';
+        if (!name) continue;
+        if (/^(end of bha|bottom hole assembly|total|subtotal|remarks|prepared by)/i.test(name)) break;
+        if (/^(balaji|kiran|unni|avinash|abdul|yogesh|divyesh|maniratnam)$/i.test(name.split(/\s/)[0] + ' ' + (name.split(/\s/)[1] || ''))) break;
         const length = toNum(cells[lenI]);
-        if (!length && !cells[odI] && !cells[idI]) continue;
-        const box = cells[boxI] || '';
-        const pin = cells[pinI] || '';
+        const topMd = parseMdCell(cells[topI]);
+        const botMd = parseMdCell(cells[botI]);
+        if (!length && !cells[odI] && !cells[idI] && topMd == null && botMd == null) continue;
+        const refVol = toNum(cells[volI]);
         out.push({
           name,
-          cat: cells[catI] || guessCat(name),
-          length: length || 0,
-          unit: 'm',
-          od: cells[odI] || '',
-          id: cells[idI] || '',
-          box, pin,
-          serial: cells[serialI] || '',
-          notes: [cells[topI] && `Top: ${cells[topI]}`, cells[botI] && `Bot: ${cells[botI]}`, cells[volI] && `Ref vol: ${cells[volI]}`].filter(Boolean).join(' | ')
+          toolNo: toolI >= 0 ? cells[toolI] : '',
+          company: coI >= 0 ? cells[coI] : '',
+          cat: (catI >= 0 && cells[catI]) ? cells[catI] : guessCat(name),
+          length: length || (topMd != null && botMd != null ? Math.abs(botMd - topMd) : 0),
+          unit: lenUnit,
+          od: cleanOdId(cells[odI]),
+          id: cleanOdId(cells[idI]),
+          box: cells[boxI] || '',
+          pin: cells[pinI] || '',
+          serial: serialI >= 0 ? cells[serialI] : '',
+          topMd, botMd,
+          refVol: refVol || null,
+          notes: ''
         });
       }
-      return out.filter(x => x.length > 0 || x.od || x.id);
+      return out.filter(x => x.length > 0 || x.od || x.id || x.topMd != null);
+    }
+
+    function pickBestSheet(names) {
+      const score = n => {
+        const s = n.toLowerCase();
+        let v = 0;
+        if (/packer|bha|schematic|string|tally|tool/i.test(s)) v += 5;
+        if (/calc|summary|pressure|hydro/i.test(s)) v -= 3;
+        return v;
+      };
+      return [...names].sort((a, b) => score(b) - score(a))[0];
     }
 
     function extractTextLines(lines) {
@@ -812,6 +913,11 @@
       return out;
     }
 
+    function sheetRows(wb, sn) {
+      const ws = wb.Sheets[sn];
+      return XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+    }
+
     async function parseExcelFile(file, sheetName) {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
@@ -819,10 +925,21 @@
       const names = wb.SheetNames;
       $('sheetField').hidden = names.length < 2;
       $('sheetPick').innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-      const sn = sheetName || names[0];
+      const sn = sheetName || pickBestSheet(names);
       $('sheetPick').value = sn;
-      const ws = wb.Sheets[sn];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      const rows = sheetRows(wb, sn);
+      const meta = extractWellMeta(rows);
+      if (meta.fluidPpg) state.well.fluidPpg = meta.fluidPpg;
+      Object.assign(state.well, {
+        name: meta.name || state.well.name,
+        customer: meta.customer || state.well.customer,
+        rig: meta.rig || state.well.rig,
+        dstRun: meta.dstRun || state.well.dstRun,
+        formation: meta.formation || state.well.formation,
+        date: meta.date || state.well.date,
+        displayUnit: 'm',
+        depthMode: 'imported'
+      });
       return extractRowsFromSheet(rows);
     }
 
@@ -838,40 +955,28 @@
       return extractTextLines(text.split(/\n+/).map(s => s.trim()).filter(Boolean));
     }
 
-    function loadSample() {
-      state.well = {
-        name: 'Chetna D_33', field: 'GD', dstRun: 'DST-3', engineer: '',
-        date: new Date().toISOString().slice(0, 10), objective: 'DST flow test @ 16.5 ppg',
-        fluidPpg: 16.5, datumElev: 0, hangoff: 0, casingOd: '8.681',
-        tubingNom: '3-1/2', displayUnit: 'ft', hydBasis: 'bottom', notes: 'Reference layout — verify lengths/serials against final BHA sheet.'
-      };
-      state.items = [
-        { name: 'Lubricator valve', cat: 'Valve', length: 1.52, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
-        { name: 'X-over', cat: 'X-over', length: 0.21, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
-        { name: 'Handling sub', cat: 'Sub', length: 1.10, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
-        { name: 'Surface test tree', cat: 'Tree', length: 2.12, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
-        { name: 'DST circulating valve', cat: 'Valve', length: 1.85, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
-        { name: 'Hydraulic jar', cat: 'Sub', length: 2.40, unit: 'm', od: '5.000', id: '2.500', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
-        { name: 'RTTS packer', cat: 'Packer', length: 3.20, unit: 'm', od: '5.750', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
-        { name: 'X-over (5-3/4 x 3-1/2 VAM)', cat: 'X-over', length: 0.35, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
-        { name: '3-1/2 VAM tubing joint', cat: 'Tubing', length: 9.14, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
-        { name: '3-1/2 VAM tubing joint', cat: 'Tubing', length: 9.14, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
-        { name: 'Blast joint', cat: 'Tubing', length: 3.05, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
-        { name: 'Gauge carrier', cat: 'Sub', length: 0.90, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
-        { name: 'Perforating gun', cat: 'Gun', length: 1.52, unit: 'm', od: '3.375', id: '2.250', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
-        { name: 'Bull plug', cat: 'Other', length: 0.30, unit: 'm', od: '3.500', id: '0', box: '3-1/2 VAM BOX', pin: '—' }
-      ];
+    function applyProject(data) {
+      if (data.well) state.well = { ...state.well, ...data.well };
+      if (Array.isArray(data.items)) state.items = data.items;
       writeWellToDom();
       render();
+    }
+
+    function loadSample() {
+      if (window.DST2_REFERENCE) {
+        applyProject(window.DST2_REFERENCE);
+        return;
+      }
+      alert('Reference data not found. Import DST-2 BHA GD Chetna D_33#G 17.2 ppg, Final.xlsx from the repo.');
     }
 
     function exportCsv() {
       const rows = computedRows();
       const u = dispUnit();
-      const header = ['No','Description','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Serial','Notes'];
+      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Serial','Notes'];
       const lines = [header.join(',')].concat(rows.map(r => [
-        r.idx, qq(r.name), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
-        fmt(dispLen(r.lenFt, u)), fmt(dispLen(r.topMd, u)), fmt(dispLen(r.botMd, u)),
+        r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
+        fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
         fmt(r.cap, 4), fmt(r.vol, 3), fmt(r.cumVol, 3), qq(r.serial), qq(r.notes)
       ].join(',')));
       dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
@@ -883,16 +988,18 @@
       const w = state.well;
       const aoa = [
         ['DST BHA TALLY'], [],
-        ['Well', w.name], ['Field', w.field], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
+        ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
+        ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
-        ['No','Tool Description','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Serial','Notes']
+        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Serial','Notes']
       ];
       rows.forEach(r => aoa.push([
-        r.idx, r.name, r.cat, r.box, r.pin, r.od, r.id,
-        Number(fmt(dispLen(r.lenFt, u))), Number(fmt(dispLen(r.topMd, u))), Number(fmt(dispLen(r.botMd, u))),
+        r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
+        Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
         Number(fmt(r.cap, 4)), Number(fmt(r.vol, 3)), Number(fmt(r.cumVol, 3)), r.serial || '', r.notes || ''
       ]));
-      aoa.push([], ['Total length', fmt(dispLen(rows.reduce((a,b)=>a+b.lenFt,0), u), 3) + ' ' + u]);
+      aoa.push([], ['Total length', fmt(rows.reduce((a, b) => a + b.lenMd, 0), 3) + ' ' + u]);
+      aoa.push(['End of BHA MD', fmt(rows.at(-1)?.botMd || 0, 3) + ' ' + u]);
       aoa.push(['Total volume (bbl)', fmt(rows.at(-1)?.cumVol || 0, 3)]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
@@ -1041,6 +1148,7 @@
         if (!items.length) return alert('No tally rows detected — check sheet layout or add manually.');
         if (state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) return;
         state.items = items;
+        writeWellToDom();
         render();
         alert(`Imported ${items.length} items.`);
       } catch (err) {
@@ -1049,12 +1157,13 @@
     };
 
     $('sheetPick').onchange = async () => {
-      const f = $('fileUp').files[0];
-      if (!f || !state.pendingWorkbook) return;
-      const ws = state.pendingWorkbook.Sheets[$('sheetPick').value];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      if (!state.pendingWorkbook) return;
+      const rows = sheetRows(state.pendingWorkbook, $('sheetPick').value);
+      const meta = extractWellMeta(rows);
+      Object.assign(state.well, meta, { displayUnit: 'm', depthMode: 'imported' });
       if (state.items.length && !confirm('Re-parse selected sheet and replace current string?')) return;
       state.items = extractRowsFromSheet(rows);
+      writeWellToDom();
       render();
     };
 
@@ -1101,7 +1210,7 @@
       document.querySelector('.tab[data-tab="builder"]').click();
     };
 
-    ['wellName','fieldName','dstRun','engineer','jobDate','objective','fluidPpg','datumElev','hangoff','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
+    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
       $(id).addEventListener('input', render);
       $(id).addEventListener('change', render);
     });
