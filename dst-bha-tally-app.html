@@ -1136,25 +1136,52 @@
     $('editCancel').onclick = () => $('editDialog').close();
     $('editSave').onclick = saveEdit;
 
-    $('parseFileBtn').onclick = async () => {
-      const f = $('fileUp').files[0];
+    function setParseStatus(msg, ok) {
+      const p = $('parseStatus');
+      if (!p) return;
+      p.textContent = msg;
+      p.style.color = ok ? 'var(--color-success)' : ok === false ? 'var(--color-error)' : 'var(--color-text-muted)';
+    }
+
+    async function runFileImport(f, replaceConfirm) {
       if (!f) return alert('Choose a file first');
+      if (typeof XLSX === 'undefined' && /\.(xlsx|xlsm|xls)$/i.test(f.name)) {
+        return alert('Excel library not loaded — check internet connection and refresh the page.');
+      }
       try {
+        setParseStatus('Parsing…');
         let items;
         if (/\.(xlsx|xlsm|xls)$/i.test(f.name)) {
           items = await parseExcelFile(f, $('sheetPick').value);
         } else if (/\.pdf$/i.test(f.name)) {
           items = await parsePdfFile(f);
-        } else return alert('Unsupported file type');
-        if (!items.length) return alert('No tally rows detected — check sheet layout or add manually.');
-        if (state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) return;
+        } else {
+          setParseStatus('Unsupported file type.', false);
+          return alert('Unsupported file type');
+        }
+        if (!items.length) {
+          setParseStatus('No tally rows detected.', false);
+          return alert('No tally rows detected — check sheet layout or add manually.');
+        }
+        if (replaceConfirm && state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) {
+          setParseStatus('Import cancelled.', false);
+          return;
+        }
         state.items = items;
         writeWellToDom();
         render();
-        alert(`Imported ${items.length} items.`);
+        setParseStatus(`Imported ${items.length} items.`, true);
       } catch (err) {
+        console.error(err);
+        setParseStatus(err.message, false);
         alert('Parse error: ' + err.message);
       }
+    }
+
+    $('parseFileBtn').onclick = () => runFileImport($('fileUp').files[0], true);
+    $('fileUp').onchange = () => {
+      const f = $('fileUp').files[0];
+      if (f) runFileImport(f, true);
     };
 
     $('sheetPick').onchange = async () => {
