@@ -85,8 +85,16 @@
       background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
     }
     .content { padding: var(--space-4); }
-    .tab-panel { display: none; }
+    .tab-panel { display: none; min-height: 280px; }
     .tab-panel.active { display: block; }
+    .tab { cursor: pointer; }
+    .tab:hover { border-color: var(--color-border); color: var(--color-text); }
+    #bootError {
+      margin-bottom: var(--space-4); padding: var(--space-4);
+      border: 1px solid var(--color-error); border-radius: var(--radius-lg);
+      background: color-mix(in oklab, var(--color-error) 10%, var(--color-bg));
+      color: var(--color-error);
+    }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-4); }
     .card {
       grid-column: span 12; background: var(--color-surface-2);
@@ -206,6 +214,12 @@
         <button class="btn primary" id="printBtn" type="button">Print / PDF</button>
       </div>
     </header>
+
+    <div class="row-note" id="startBanner" style="margin-bottom:var(--space-4);display:none">
+      <strong>Get started:</strong> Click <button class="btn sm primary" id="bannerLoadBtn" type="button">Load DST-2 reference</button>
+      or go to <button class="btn sm" id="bannerImportBtn" type="button">Import / export</button> and select your BHA .xlsx file.
+      Keep <code>dst-2-bha-reference.js</code> in the same folder as this HTML file.
+    </div>
 
     <section class="kpi-wrap" aria-label="String summary">
       <div class="kpi"><div class="label">Items</div><div class="value" id="kpiItems">0</div></div>
@@ -436,10 +450,8 @@
   </dialog>
 
   <script src="dst-2-bha-reference.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
 
     const STORAGE_KEY = 'dst-bha-tally-v2';
     const FT_PER_M = 3.280839895;
@@ -742,6 +754,7 @@
 
       drawDiagram(rows, unit);
       $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items }, null, 2);
+      updateStartBanner();
       scheduleSave();
     }
 
@@ -944,9 +957,23 @@
       return extractRowsFromSheet(rows);
     }
 
+    async function ensurePdfJs() {
+      if (window.pdfjsLib) return window.pdfjsLib;
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('PDF library failed to load'));
+        document.head.appendChild(s);
+      });
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+      return pdfjsLib;
+    }
+
     async function parsePdfFile(file) {
+      const pdfjs = await ensurePdfJs();
       const buf = await file.arrayBuffer();
-      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      const doc = await pdfjs.getDocument({ data: buf }).promise;
       let text = '';
       for (let i = 1; i <= doc.numPages; i++) {
         const pg = await doc.getPage(i);
@@ -963,12 +990,28 @@
       render();
     }
 
-    function loadSample() {
+    async function loadSample() {
       if (window.DST2_REFERENCE) {
         applyProject(window.DST2_REFERENCE);
         return;
       }
-      alert('Reference data not found. Import DST-2 BHA GD Chetna D_33#G 17.2 ppg, Final.xlsx from the repo.');
+      try {
+        const res = await fetch('dst-2-bha-reference.json');
+        if (res.ok) {
+          applyProject(await res.json());
+          return;
+        }
+      } catch (e) { /* file:// or offline */ }
+      alert('Reference file not found.\n\nDownload the full repo and keep these files together:\n• dst-bha-tally-app.html\n• dst-2-bha-reference.js\n\nOr use Import / export → select your BHA .xlsx');
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'tab-' + tabName);
+      });
     }
 
     function exportCsv() {
@@ -1040,10 +1083,18 @@
         if (!raw) return false;
         const data = JSON.parse(raw);
         if (data.well) state.well = { ...state.well, ...data.well };
-        if (Array.isArray(data.items)) state.items = data.items;
-        writeWellToDom();
-        return true;
+        if (Array.isArray(data.items) && data.items.length) {
+          state.items = data.items;
+          writeWellToDom();
+          return true;
+        }
+        return false;
       } catch (e) { return false; }
+    }
+
+    function updateStartBanner() {
+      const b = $('startBanner');
+      if (b) b.style.display = state.items.length ? 'none' : 'block';
     }
 
     function openEditDialog(i) {
@@ -1105,13 +1156,10 @@
 
     // Tabs
     document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        $('tab-' + tab.dataset.tab).classList.add('active');
-      });
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
+    $('bannerLoadBtn').onclick = () => { loadSample(); switchTab('tally'); };
+    $('bannerImportBtn').onclick = () => switchTab('import');
 
     $('themeToggle').onclick = () => {
       const d = document.documentElement;
@@ -1235,7 +1283,7 @@
       const card = e.target.closest('.lib-item');
       if (!card) return;
       fillItemForm(TOOL_LIBRARY[+card.dataset.li]);
-      document.querySelector('.tab[data-tab="builder"]').click();
+      switchTab('builder');
     };
 
     ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
@@ -1243,9 +1291,23 @@
       $(id).addEventListener('change', render);
     });
 
-    renderLibrary();
-    if (!loadFromStorage()) loadSample();
-    else render();
+    function boot() {
+      try {
+        renderLibrary();
+        if (loadFromStorage()) render();
+        else loadSample();
+        updateStartBanner();
+      } catch (err) {
+        console.error(err);
+        const box = document.createElement('div');
+        box.id = 'bootError';
+        box.innerHTML = '<strong>App failed to start.</strong> ' + esc(err.message) +
+          '<br><br>Try: refresh with internet on, or download the full repo (HTML + .js files in same folder).';
+        document.querySelector('.app').insertBefore(box, document.querySelector('.kpi-wrap'));
+      }
+    }
+
+    boot();
   </script>
 </body>
 </html>
