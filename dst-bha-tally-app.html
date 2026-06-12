@@ -150,8 +150,11 @@
     .app:has(#rtab-tally:checked) #startBanner { display: none !important; }
     .app:has(#rtab-tally:checked) .topbar .sub { display: none; }
     .app:has(#rtab-tally:checked) .tally-layout {
-      height: calc(100vh - 195px);
-      min-height: 560px;
+      height: calc(100vh - 118px);
+      min-height: 640px;
+    }
+    .app:has(#rtab-tally:checked) .tally-scroll {
+      min-height: 500px;
     }
     #tab-tally .card { display: flex; flex-direction: column; min-height: 0; padding: var(--space-3) var(--space-4); }
     #tab-tally h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
@@ -184,11 +187,11 @@
       margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .tally-warnings-panel {
-      flex: 0 0 auto; max-height: 4.25rem; overflow-y: auto;
+      flex: 0 0 8.5rem; max-height: 8.5rem; overflow-y: auto;
       border: 1px solid color-mix(in oklab, var(--color-warning) 35%, var(--color-border));
       border-radius: var(--radius-md);
       background: color-mix(in oklab, var(--color-warning) 8%, var(--color-bg));
-      font-size: var(--text-xs); color: var(--color-text-muted);
+      font-size: 0.8rem; color: var(--color-text);
     }
     .tally-warnings-panel[hidden] { display: none !important; }
     .tally-warn-hd {
@@ -199,8 +202,8 @@
       background: color-mix(in oklab, var(--color-warning) 14%, var(--color-bg));
       border-bottom: 1px solid color-mix(in oklab, var(--color-warning) 25%, var(--color-border));
     }
-    .tally-warn-list { margin: 0; padding: .35rem .65rem .5rem 1.5rem; }
-    .tally-warn-list li { margin: .2rem 0; line-height: 1.35; }
+    .tally-warn-list { margin: 0; padding: .45rem .75rem .6rem 1.65rem; }
+    .tally-warn-list li { margin: .3rem 0; line-height: 1.45; }
     .chip {
       display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-full);
       font-size: var(--text-xs); font-weight: 700; color: #fff;
@@ -253,7 +256,7 @@
       .content { padding: var(--space-3); }
       .scroll { max-height: none; }
       .tally-layout { height: calc(100vh - 260px); min-height: 420px; }
-      .tally-warnings-panel { max-height: 3.75rem; }
+      .tally-warnings-panel { flex: 0 0 7rem; max-height: 7rem; }
     }
     .print-only { display: none !important; }
     .casing-table input { width: 100%; min-width: 4.5rem; padding: .25rem .35rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
@@ -276,14 +279,29 @@
       #tab-tally, #tab-diagram { display: block !important; }
       #tab-tally { page-break-after: auto; }
       #tab-diagram { page-break-before: always; }
-      .scroll, .tally-scroll { max-height: none !important; overflow: visible !important; min-height: 0 !important; }
-      .tally-layout { min-height: 0 !important; }
+      .scroll, .tally-scroll { max-height: none !important; overflow: visible !important; min-height: 0 !important; height: auto !important; border: none !important; }
+      .tally-layout { min-height: 0 !important; height: auto !important; }
       .card { border: none; box-shadow: none; padding: 0; margin-bottom: 10px; background: #fff !important; }
       .card .hd .muted, .card > .muted, .card h2 + .muted { display: none !important; }
       .card h2 { font-size: 11pt; margin: 0 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
       table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+      #tallyTable thead { display: table-header-group; }
+      #tallyTable th, #tallyTable td {
+        padding: 2px 4px !important; font-size: 7.5pt !important; line-height: 1.25 !important;
+        border: 1px solid #bbb; vertical-align: top;
+      }
+      #tallyTable th {
+        position: static !important; top: auto !important;
+        background: #e8e8e8 !important; color: #000 !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      #tallyTable .tally-name {
+        display: block !important; -webkit-line-clamp: unset !important;
+        overflow: visible !important; font-weight: 600;
+      }
+      #tallyTable .tally-sub { font-size: 6.5pt !important; }
       th, td { border: 1px solid #bbb; padding: 2px 4px; vertical-align: top; }
-      th { background: #e8e8e8 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      th { background: #e8e8e8 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; }
       .chip { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #aaa; font-size: 6.5pt; padding: 1px 4px; }
       .muted { color: #444 !important; font-size: 6.5pt; }
       .diagram-wrap { overflow: visible; padding: 0; }
@@ -1652,13 +1670,24 @@
       document.body.classList.add(orientation === 'portrait' ? 'print-portrait' : 'print-landscape');
       const prevTitle = document.title;
       document.title = [state.well.name, state.well.dstRun, 'BHA Tally'].filter(Boolean).join(' — ') || 'DST BHA Tally';
+      const tallyScroll = document.querySelector('.tally-scroll');
+      const tallyThs = [...document.querySelectorAll('#tallyTable th')];
+      const thStyles = tallyThs.map(th => th.style.cssText);
+      tallyThs.forEach(th => { th.style.position = 'static'; th.style.top = 'auto'; });
+      if (tallyScroll) {
+        tallyScroll.style.overflow = 'visible';
+        tallyScroll.style.maxHeight = 'none';
+        tallyScroll.style.height = 'auto';
+      }
       const cleanup = () => {
         document.body.classList.remove('print-portrait', 'print-landscape');
         document.title = prevTitle;
+        tallyThs.forEach((th, i) => { th.style.cssText = thStyles[i]; });
+        if (tallyScroll) { tallyScroll.style.overflow = ''; tallyScroll.style.maxHeight = ''; tallyScroll.style.height = ''; }
         window.removeEventListener('afterprint', cleanup);
       };
       window.addEventListener('afterprint', cleanup);
-      window.print();
+      requestAnimationFrame(() => window.print());
     }
     $('printPortraitBtn').onclick = () => doPrint('portrait');
     $('printLandscapeBtn').onclick = () => doPrint('landscape');
