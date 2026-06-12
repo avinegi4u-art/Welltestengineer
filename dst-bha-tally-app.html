@@ -393,6 +393,7 @@
                 <button class="btn primary" id="parseFileBtn" type="button">Parse file</button>
               </div>
               <p class="row-note" style="margin-top:var(--space-3)">Excel: reads Halliburton-style BHA sheets (Description col C, Box/Pin, OD/ID, Length m, Top/Bottom MD). Auto-picks tally worksheet and fills well header from CUSTOMER / WELL NAME / RIG rows.</p>
+              <p class="muted" id="parseStatus" style="margin-top:var(--space-2)">Select a .xlsx file — import runs automatically.</p>
             </article>
             <article class="card span-6">
               <h2>JSON paste</h2>
@@ -1140,9 +1141,9 @@
       if (!f) return alert('Choose a file first');
       try {
         let items;
-        if (/xlsx?|xls$/i.test(f.name)) {
+        if (/\.(xlsx|xlsm|xls)$/i.test(f.name)) {
           items = await parseExcelFile(f, $('sheetPick').value);
-        } else if (/pdf$/i.test(f.name)) {
+        } else if (/\.pdf$/i.test(f.name)) {
           items = await parsePdfFile(f);
         } else return alert('Unsupported file type');
         if (!items.length) return alert('No tally rows detected — check sheet layout or add manually.');

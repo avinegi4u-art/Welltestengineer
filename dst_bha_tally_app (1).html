@@ -88,8 +88,8 @@
       <div class="hd"><h3>Upload file</h3></div>
       <div class="bd">
         <div class="row"><label>Excel or PDF</label><input id="fileUp" type="file" accept=".xlsx,.xls,.pdf"></div>
-        <div class="actions"><button class="btn" id="parseFile">Parse file</button><button class="btn" id="detect">Detect rows</button></div>
-        <p class="tiny">For Excel, the app reads the first sheet. For PDF, it extracts text and searches for rows with length, OD, ID, and thread data.</p>
+        <div class="actions"><button class="btn primary" id="parseFile" type="button">Parse file</button><button class="btn" id="detect" type="button">Detect rows</button></div>
+        <p class="tiny" id="parseStatus">Select your BHA .xlsx — Halliburton / ONGC sheets (header ~row 6, Description in col C) are supported.</p>
       </div>
     </div>
 
@@ -166,20 +166,52 @@ const hydroPsi=(depthFt,ppg)=>depthFt*ppg*0.052;
 
 function guessCat(n){ n=(n||'').toLowerCase(); return n.includes('packer')?'Packer':n.includes('valve')?'Valve':n.includes('tubing')?'Tubing':n.includes('gun')?'Gun':'Other'; }
 function toNum(v){ const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return Number.isFinite(n)?n:0; }
+function normH(v){ return String(v??'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function isExcelName(n){ return /\.(xlsx|xlsm|xls)$/i.test(n); }
+function isPdfName(n){ return /\.pdf$/i.test(n); }
+function setParseStatus(msg, ok){ const p=$('parseStatus'); if(p){ p.textContent=msg; p.style.color=ok?'var(--primary)':ok===false?'var(--danger)':'var(--muted)'; } }
+
+function findHeaderRow(rows){
+  const keys=['description','tool','item','length','od','id','box','pin','volume','top','bottom'];
+  for(let i=0;i<Math.min(rows.length,30);i++){
+    const line=(rows[i]||[]).map(normH);
+    if(keys.filter(k=>line.some(h=>h.includes(k))).length>=4) return i;
+  }
+  return 0;
+}
+
+function pickCol(header, arr){
+  for(const k of arr){ const i=header.findIndex(h=>h.includes(k)); if(i>=0) return i; }
+  return -1;
+}
+
+function pickBestSheet(names){
+  return [...names].sort((a,b)=>{
+    const score=n=>/packer|bha|schematic|string|tally|tool/i.test(n)?5:0 - (/calc|summary|pressure/i.test(n)?3:0);
+    return score(b)-score(a);
+  })[0];
+}
 
 function extractRows(rows){
-  const header=(rows[0]||[]).map(x=>x.toLowerCase().replace(/[^a-z0-9 ]/g,' '));
-  const pick=(arr)=>{for(const k of arr){const i=header.findIndex(h=>h.includes(k)); if(i>=0) return i;} return -1};
-  const nameI=pick(['description','tool description','tool','item']);
-  const boxI=pick(['box']); const pinI=pick(['pin']);
-  const odI=pick(['od']); const idI=pick(['id']); const lenI=pick(['length']); const topI=pick(['top of tool']); const botI=pick(['bottom of tool']); const volI=pick(['volume']);
+  const hi=findHeaderRow(rows);
+  const header=(rows[hi]||[]).map(normH);
+  const nameI=pickCol(header,['tool description','description','component','tool name','item','tool']);
+  const boxI=pickCol(header,['box','top conn']); const pinI=pickCol(header,['pin','bottom conn']);
+  const odI=pickCol(header,['od in','od','outer dia']); const idI=pickCol(header,['id in','id','inner dia']);
+  const lenI=pickCol(header,['length m','length','len']); const topI=pickCol(header,['top of tool','top md','top depth']);
+  const botI=pickCol(header,['bottom of tool','bottom md','bottom depth']); const volI=pickCol(header,['volume','vol']);
   const out=[];
-  for(const r of rows.slice(1)){
-    const name=(r[nameI]||r[0]||'').trim();
-    const thread=[r[boxI],r[pinI]].filter(Boolean).join(' ').trim();
-    const length=toNum(r[lenI]);
-    if(!name || !length || /title|header|footer|sheet/i.test(name)) continue;
-    out.push({name,thread,odv:r[odI]||'',idv:r[idI]||'',length,unit:'m',cat:guessCat(name),vmode:'id',notes:[r[topI],r[botI],r[volI]].filter(Boolean).join(' | ')});
+  for(const r of rows.slice(hi+1)){
+    const cells=r.map(v=>String(v??'').trim());
+    const name=(nameI>=0?cells[nameI]:'')||cells.find((c,i)=>i<=5&&c.length>2)||'';
+    if(!name) continue;
+    if(/^(end of bha|bottom hole assembly|total|remarks)/i.test(name)) break;
+    const length=toNum(cells[lenI]);
+    const od=cells[odI]||'', idv=cells[idI]||'';
+    if(!length && !od && !idv) continue;
+    const thread=[cells[boxI],cells[pinI]].filter(Boolean).join(' x ').trim();
+    const top=cells[topI], bot=cells[botI], vol=cells[volI];
+    out.push({name,thread,odv:/^n\/?a$/i.test(od)?'':od,idv:/^n\/?a$/i.test(idv)?'':idv,length:length||0,unit:'m',cat:guessCat(name),vmode:'id',notes:[top&&`Top: ${top}`,bot&&`Bot: ${bot}`,vol&&`Vol: ${vol}`].filter(Boolean).join(' | ')});
   }
   return out;
 }
@@ -201,15 +233,21 @@ function extractTextLines(lines){
 }
 
 async function parseExcel(f){
+  if(typeof XLSX==='undefined') throw new Error('Excel library not loaded — check internet and refresh the page.');
   const buf=await f.arrayBuffer();
   const wb=XLSX.read(buf,{type:'array'});
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
-  s.items=extractRows(rows.map(r=>r.map(v=>String(v??''))));
+  const sheet=pickBestSheet(wb.SheetNames);
+  const ws=wb.Sheets[sheet];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+  const items=extractRows(rows.map(r=>r.map(v=>String(v??''))));
+  if(!items.length) throw new Error(`No rows found on sheet "${sheet}". Header row may not match.`);
+  s.items=items;
+  setParseStatus(`Imported ${items.length} items from "${sheet}".`, true);
   render();
 }
 
 async function parsePdf(f){
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF library not loaded — check internet and refresh.');
   const buf=await f.arrayBuffer();
   const doc=await pdfjsLib.getDocument({data:buf}).promise;
   let text='';
@@ -218,16 +256,27 @@ async function parsePdf(f){
     const tc=await pg.getTextContent();
     text += tc.items.map(x=>x.str).join(' ')+'\n';
   }
-  s.items=extractTextLines(text.split(/\n+/).map(s=>s.trim()).filter(Boolean));
+  const items=extractTextLines(text.split(/\n+/).map(s=>s.trim()).filter(Boolean));
+  if(!items.length) throw new Error('No tally rows detected in PDF text.');
+  s.items=items;
+  setParseStatus(`Imported ${items.length} items from PDF.`, true);
   render();
 }
 
 async function parseFile(){
   const f=el.fileUp.files[0];
-  if(!f) return alert('Choose a file first');
-  if(/xlsx?|xls$/i.test(f.name)) return parseExcel(f);
-  if(/pdf$/i.test(f.name)) return parsePdf(f);
-  alert('Unsupported file');
+  if(!f){ alert('Choose a file first'); return; }
+  try{
+    setParseStatus('Parsing…');
+    if(isExcelName(f.name)) return await parseExcel(f);
+    if(isPdfName(f.name)) return await parsePdf(f);
+    alert('Unsupported file — use .xlsx, .xls, or .pdf');
+    setParseStatus('Unsupported file type.', false);
+  }catch(err){
+    console.error(err);
+    alert('Import failed: '+err.message);
+    setParseStatus(err.message, false);
+  }
 }
 
 function rows(){
@@ -302,7 +351,13 @@ el.copyJson.onclick=()=>navigator.clipboard.writeText(JSON.stringify(s.items,nul
 el.importJson.onclick=()=>{try{s.items=JSON.parse(el.json.value); render();}catch(e){alert('Invalid JSON')}};
 el.parseFile.onclick=parseFile;
 el.detect.onclick=parseFile;
-el.fileUp.onchange=()=>{el.parseFile.disabled=!el.fileUp.files.length; el.detect.disabled=!el.fileUp.files.length;};
+el.fileUp.onchange=()=>{
+  const has=!!el.fileUp.files.length;
+  el.parseFile.disabled=!has;
+  el.detect.disabled=!has;
+  if(has) setParseStatus('File selected — click Parse file or wait for auto-import…');
+  if(has) parseFile();
+};
 el.fileUp.onchange();
 el.fluid.onchange=()=>{s.fluid=Number(el.fluid.value||16.5); render();};
 el.basis.onchange=()=>{s.basis=el.basis.value; render();};
