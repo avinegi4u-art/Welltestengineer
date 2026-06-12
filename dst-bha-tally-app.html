@@ -1200,9 +1200,9 @@
           const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
           const col = colors[i % colors.length];
           parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
-          parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${y + 8}" x2="${labelX}" y2="${y + 8}" stroke="${col}" stroke-dasharray="3 3" opacity=".55"/>`);
-          parts.push(`<text x="${labelX + 10}" y="${y + 12}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
-          parts.push(`<text x="${labelX + 10}" y="${y + 26}" font-size="11" fill="currentColor" opacity=".75">${fmt(r.topMd, 1)}–${fmt(r.botMd, 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
+          const labelY = y + Math.min(h / 2 + 4, 14);
+          parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${labelY}" x2="${labelX}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".55"/>`);
+          parts.push(`<text x="${labelX + 10}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
           y += h + 4;
         });
         totalH = Math.max(totalH, y + 30);
