@@ -172,19 +172,20 @@
     }
     #tallyTable th, #tallyTable td {
       padding: .28rem .35rem; font-size: 0.8125rem; line-height: 1.2;
-      vertical-align: middle;
+      vertical-align: middle; text-align: center;
     }
     #tallyTable th { font-size: 0.72rem; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
     #tallyTable .chip { padding: .08rem .35rem; font-size: 0.62rem; vertical-align: middle; }
     #tallyTable .btn.sm { padding: .15rem .4rem; font-size: 0.68rem; }
-    #tallyTable .tally-desc { min-width: 9rem; max-width: 15rem; }
+    #tallyTable .tally-desc { min-width: 9rem; max-width: 15rem; text-align: center; }
     #tallyTable .tally-name {
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-      overflow: hidden; line-height: 1.2; font-weight: 500;
+      overflow: hidden; line-height: 1.2; font-weight: 500; text-align: center;
     }
     #tallyTable .tally-sub {
       font-size: 0.7rem; color: var(--color-text-muted); line-height: 1.15;
       margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-align: center;
     }
     .tally-warnings-panel {
       flex: 0 0 8.5rem; max-height: 8.5rem; overflow-y: auto;
@@ -318,7 +319,7 @@
       #tallyTable thead { display: table-header-group; }
       #tallyTable th, #tallyTable td {
         padding: 2px 4px !important; font-size: 7.5pt !important; line-height: 1.25 !important;
-        border: 1px solid #bbb; vertical-align: top;
+        border: 1px solid #bbb; vertical-align: middle; text-align: center !important;
       }
       #tallyTable th {
         position: static !important; top: auto !important;
