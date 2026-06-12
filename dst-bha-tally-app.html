@@ -90,6 +90,7 @@
     #rtab-builder:checked ~ nav .tab[for="rtab-builder"],
     #rtab-tally:checked ~ nav .tab[for="rtab-tally"],
     #rtab-hydraulics:checked ~ nav .tab[for="rtab-hydraulics"],
+    #rtab-weight:checked ~ nav .tab[for="rtab-weight"],
     #rtab-diagram:checked ~ nav .tab[for="rtab-diagram"],
     #rtab-import:checked ~ nav .tab[for="rtab-import"],
     #rtab-library:checked ~ nav .tab[for="rtab-library"] {
@@ -99,6 +100,7 @@
     #rtab-builder:checked ~ .content #tab-builder,
     #rtab-tally:checked ~ .content #tab-tally,
     #rtab-hydraulics:checked ~ .content #tab-hydraulics,
+    #rtab-weight:checked ~ .content #tab-weight,
     #rtab-diagram:checked ~ .content #tab-diagram,
     #rtab-import:checked ~ .content #tab-import,
     #rtab-library:checked ~ .content #tab-library { display: block; }
@@ -245,6 +247,7 @@
       <div class="kpi"><div class="label">Internal volume</div><div class="value" id="kpiVol">0 bbl</div></div>
       <div class="kpi"><div class="label">Deepest MD</div><div class="value" id="kpiDeep">0 ft</div></div>
       <div class="kpi"><div class="label">Hydrostatic @ datum</div><div class="value" id="kpiHyd">0 psi</div></div>
+      <div class="kpi"><div class="label">Buoyed WIR (total)</div><div class="value" id="kpiWir">0 klbf</div></div>
       <div class="kpi" id="kpiWarnWrap" hidden><div class="label">Warnings</div><div class="value warn" id="kpiWarn">0</div></div>
     </section>
 
@@ -253,6 +256,7 @@
       <input type="radio" name="bha-tab" id="rtab-builder" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-tally" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-hydraulics" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-weight" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-diagram" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-import" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-library" class="tab-radio">
@@ -261,6 +265,7 @@
         <label class="tab" for="rtab-builder" data-tab="builder">String builder</label>
         <label class="tab" for="rtab-tally" data-tab="tally">Tally table</label>
         <label class="tab" for="rtab-hydraulics" data-tab="hydraulics">Volumes &amp; hydraulics</label>
+        <label class="tab" for="rtab-weight" data-tab="weight">Weight / WIR</label>
         <label class="tab" for="rtab-diagram" data-tab="diagram">Diagram</label>
         <label class="tab" for="rtab-import" data-tab="import">Import / export</label>
         <label class="tab" for="rtab-library" data-tab="library">Tool library</label>
@@ -306,6 +311,8 @@
                 <div class="field"><label for="hydBasis">Hydrostatic basis</label>
                   <select id="hydBasis"><option value="bottom">Bottom of string</option><option value="top">Top of string</option><option value="datum">At datum MD</option></select>
                 </div>
+                <div class="field"><label for="steelPpg">Steel density</label><input id="steelPpg" type="number" step="0.1" value="65.5"><small>ppg (buoyancy)</small></div>
+                <div class="field"><label for="fluidLevelMd">Well fluid level MD</label><input id="fluidLevelMd" type="number" step="0.01" value="0"><small>items below this are buoyed</small></div>
               </div>
             </article>
             <article class="card span-12">
@@ -339,7 +346,7 @@
                 <div class="field"><label for="itemBox">Box (top conn)</label><input id="itemBox" placeholder="3-1/2 VAM BOX"></div>
                 <div class="field"><label for="itemPin">Pin (bottom conn)</label><input id="itemPin" placeholder="3-1/2 VAM PIN"></div>
                 <div class="field"><label for="itemSerial">Serial #</label><input id="itemSerial"></div>
-                <div class="field"><label for="itemWeight">Weight</label><input id="itemWeight" type="number" step="0.1"><small>lb (optional)</small></div>
+                <div class="field"><label for="itemWeight">Dry weight override</label><input id="itemWeight" type="number" step="0.1"><small>lb in air (optional — else from OD/ID)</small></div>
                 <div class="field" style="grid-column:1/-1"><label for="itemNotes">Notes</label><textarea id="itemNotes"></textarea></div>
               </div>
               <div class="actions" style="margin-top:var(--space-3)">
@@ -406,6 +413,38 @@
                 <thead><tr><th>Joint</th><th>Upper pin</th><th>Lower box</th><th>Status</th></tr></thead>
                 <tbody></tbody>
               </table>
+            </article>
+          </div>
+        </section>
+
+        <!-- Weight / WIR -->
+        <section class="tab-panel" id="tab-weight">
+          <div class="grid">
+            <article class="card span-12">
+              <h2>Buoyed weight &amp; cumulative WIR</h2>
+              <p class="muted">Hook load in well fluid while RIH — metal weight with buoyancy, not air weight. Cumulative sum from surface downward as each item enters the brine.</p>
+              <div class="formula muted" style="font-family:ui-monospace,monospace;padding:.75rem;background:var(--color-bg);border-radius:var(--radius-md);margin:.75rem 0">
+                Dry (lb) = 2.670 × (OD² − ID²) × L<sub>ft</sub> &nbsp;|&nbsp;
+                BF = 1 − (fluid ppg ÷ steel ppg) &nbsp;|&nbsp;
+                Buoyed = Dry × BF × submerged fraction &nbsp;|&nbsp;
+                WIR<sub>cum</sub> = Σ buoyed
+              </div>
+              <table id="wirSummaryTable"><tbody></tbody></table>
+            </article>
+            <article class="card span-12">
+              <h2>RIH weight schedule</h2>
+              <p class="muted">Expected weight indicator reading after each component is in the hole (buoyed in <span id="wirPpgLabel">17.2</span> ppg fluid).</p>
+              <div class="scroll">
+                <table id="wirTable">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Description</th><th>OD</th><th>ID</th><th>Len</th><th>Bot MD</th>
+                      <th>Sub%</th><th>Buoyed (lb)</th><th>Buoyed (klbf)</th><th>Cum WIR (klbf)</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </article>
           </div>
         </section>
@@ -482,6 +521,8 @@
     const FT_PER_M = 3.280839895;
     const CAP_CONST = 1029.4;
     const HYD_CONST = 0.052;
+    const PIPE_LB_PER_FT = 2.670; // steel: lb/ft = 2.670 × (OD² − ID²), inches
+    const STEEL_PPG_DEFAULT = 65.5;
 
     const TOOL_LIBRARY = [
       { name: 'Lubricator valve', cat: 'Valve', length: 1.52, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
@@ -504,6 +545,7 @@
       well: {
         name: '', customer: '', field: '', rig: '', formation: '', dstRun: '', engineer: '', date: '',
         objective: '', fluidPpg: 17.2, datumElev: 0, hangoff: 0, depthMode: 'imported',
+        steelPpg: STEEL_PPG_DEFAULT, fluidLevelMd: 0,
         casingOd: '', tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
       },
       items: [],
@@ -541,6 +583,27 @@
     }
     function lenToDisplay(lenFt, unit) { return unit === 'm' ? lenFt / FT_PER_M : lenFt; }
     function dispUnit() { return state.well.displayUnit; }
+    function toKlbf(lb) { return (Number(lb) || 0) / 1000; }
+
+    function dryWeightLb(lenFt, odIn, idIn, overrideLb) {
+      if (overrideLb != null && !isNaN(overrideLb) && overrideLb > 0) return overrideLb;
+      const od = parseInch(odIn), id = parseInch(idIn);
+      if (od <= 0 || lenFt <= 0) return 0;
+      return PIPE_LB_PER_FT * (od * od - id * id) * lenFt;
+    }
+
+    function buoyancyFactor(fluidPpg, steelPpg) {
+      const s = steelPpg || STEEL_PPG_DEFAULT;
+      return Math.max(0, 1 - (fluidPpg || 0) / s);
+    }
+
+    /** Fraction of item length submerged below well fluid level MD */
+    function submergedFraction(topMd, botMd, lenMd, fluidLevelMd) {
+      if (lenMd <= 0) return 0;
+      if (botMd <= fluidLevelMd) return 0;
+      if (topMd >= fluidLevelMd) return 1;
+      return Math.max(0, Math.min(1, (botMd - fluidLevelMd) / lenMd));
+    }
 
     function guessCat(name) {
       const n = (name || '').toLowerCase();
@@ -579,7 +642,9 @@
     function computedRows() {
       const mdU = dispUnit();
       const useImported = state.well.depthMode === 'imported';
-      let topCalc = Number(state.well.hangoff) || 0, cumVol = 0;
+      const fluidLevel = Number(state.well.fluidLevelMd) || 0;
+      const bf = buoyancyFactor(state.well.fluidPpg, state.well.steelPpg);
+      let topCalc = Number(state.well.hangoff) || 0, cumVol = 0, cumWirLb = 0;
       return state.items.map((x, i) => {
         const lenFt = toFt(x.length, x.unit || 'm');
         const lenMd = mdU === 'm' ? lenFt / FT_PER_M : lenFt;
@@ -596,8 +661,13 @@
           botMd = topCalc + lenMd;
           topCalc = botMd;
         }
+        const dryLb = dryWeightLb(lenFt, x.od, x.id, x.weight);
+        const subPct = submergedFraction(topMd, botMd, lenMd, fluidLevel);
+        const buoyedLb = dryLb * bf * subPct;
+        cumWirLb += buoyedLb;
         return {
           ...x, idx: i + 1, lenFt, lenMd, cap, vol, cumVol, topMd, botMd, mdUnit: mdU,
+          dryLb, buoyedLb, cumWirLb, subPct, bf,
           thread: [x.box, x.pin].filter(Boolean).join(' x ')
         };
       });
@@ -608,6 +678,7 @@
       rows.forEach((r, i) => {
         if (!r.lenFt || r.lenFt <= 0) w.push(`Row ${r.idx}: missing or zero length — ${r.name}`);
         if (r.id && parseInch(r.id) <= 0 && r.cat !== 'Other') w.push(`Row ${r.idx}: invalid ID — ${r.name}`);
+        if (!r.weight && parseInch(r.od) <= 0 && r.lenFt > 0) w.push(`Row ${r.idx}: no OD — buoyed weight = 0 — ${r.name}`);
         if (i > 0) {
           const up = rows[i - 1], low = r;
           if (!threadsMatch(up.pin, low.box)) {
@@ -636,6 +707,8 @@
       state.well.tubingNom = $('tubingNom').value.trim();
       state.well.displayUnit = $('displayUnit').value;
       state.well.hydBasis = $('hydBasis').value;
+      state.well.steelPpg = Number($('steelPpg').value) || STEEL_PPG_DEFAULT;
+      state.well.fluidLevelMd = Number($('fluidLevelMd').value) || 0;
       state.well.notes = $('jobNotes').value.trim();
     }
 
@@ -657,8 +730,11 @@
       $('tubingNom').value = state.well.tubingNom;
       $('displayUnit').value = state.well.displayUnit;
       $('hydBasis').value = state.well.hydBasis;
+      $('steelPpg').value = state.well.steelPpg ?? STEEL_PPG_DEFAULT;
+      $('fluidLevelMd').value = state.well.fluidLevelMd ?? 0;
       $('jobNotes').value = state.well.notes;
       $('hydPpgLabel').textContent = state.well.fluidPpg;
+      if ($('wirPpgLabel')) $('wirPpgLabel').textContent = state.well.fluidPpg;
     }
 
     function readItemForm() {
@@ -715,6 +791,8 @@
       $('kpiVol').textContent = fmt(totalVol, 3) + ' bbl';
       $('kpiDeep').textContent = fmt(deepest, 2) + ' ' + unit;
       $('kpiHyd').textContent = fmt(hydroPsi(hydDepth, state.well.fluidPpg, unit), 1) + ' psi';
+      const totalWirKlbf = toKlbf(rows.at(-1)?.cumWirLb || 0);
+      $('kpiWir').textContent = fmt(totalWirKlbf, 2) + ' klbf';
       $('kpiWarn').textContent = warnings.length;
       $('kpiWarnWrap').hidden = warnings.length === 0;
 
@@ -776,6 +854,28 @@
           const ok = threadsMatch(up.pin, r.box);
           return `<tr><td>${up.idx} → ${r.idx}</td><td>${esc(up.pin)}</td><td>${esc(r.box)}</td><td class="${ok ? 'ok' : 'danger'}">${ok ? 'OK' : 'CHECK'}</td></tr>`;
         }).join('');
+
+      const bf = rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg);
+      $('wirSummaryTable').querySelector('tbody').innerHTML = [
+        ['Well fluid weight', `${state.well.fluidPpg} ppg`],
+        ['Steel density (buoyancy)', `${state.well.steelPpg ?? STEEL_PPG_DEFAULT} ppg`],
+        ['Buoyancy factor (BF)', fmt(bf, 4)],
+        ['Well fluid level MD', `${fmt(state.well.fluidLevelMd ?? 0, 2)} ${unit}`],
+        ['Total buoyed string weight', `${fmt(rows.at(-1)?.cumWirLb || 0, 0)} lb (${fmt(totalWirKlbf, 2)} klbf)`],
+        ['Items with OD missing (0 lb calc)', `${rows.filter(r => !parseInch(r.od)).length}`]
+      ].map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
+
+      $('wirTable').querySelector('tbody').innerHTML = rows.length ? rows.map(r => `<tr>
+        <td>${r.idx}</td>
+        <td>${esc(r.name)}</td>
+        <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
+        <td>${fmt(r.lenMd, 2)} ${unit}</td>
+        <td>${fmt(r.botMd, 2)}</td>
+        <td>${fmt(r.subPct * 100, 0)}%</td>
+        <td>${fmt(r.buoyedLb, 0)}</td>
+        <td>${fmt(toKlbf(r.buoyedLb), 3)}</td>
+        <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
+      </tr>`).join('') : '<tr><td colspan="10" class="muted">No items</td></tr>';
 
       drawDiagram(rows, unit);
       $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items }, null, 2);
@@ -1041,11 +1141,11 @@
     function exportCsv() {
       const rows = computedRows();
       const u = dispUnit();
-      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Serial','Notes'];
+      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
       const lines = [header.join(',')].concat(rows.map(r => [
         r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
         fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
-        fmt(r.cap, 4), fmt(r.vol, 3), fmt(r.cumVol, 3), qq(r.serial), qq(r.notes)
+        fmt(r.cap, 4), fmt(r.vol, 3), fmt(r.cumVol, 3), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
       ].join(',')));
       dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
     }
@@ -1059,16 +1159,19 @@
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
         ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
-        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Serial','Notes']
+        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
       ];
       rows.forEach(r => aoa.push([
         r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
         Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
-        Number(fmt(r.cap, 4)), Number(fmt(r.vol, 3)), Number(fmt(r.cumVol, 3)), r.serial || '', r.notes || ''
+        Number(fmt(r.cap, 4)), Number(fmt(r.vol, 3)), Number(fmt(r.cumVol, 3)),
+        Number(fmt(r.buoyedLb, 1)), Number(fmt(toKlbf(r.cumWirLb), 3)), r.serial || '', r.notes || ''
       ]));
       aoa.push([], ['Total length', fmt(rows.reduce((a, b) => a + b.lenMd, 0), 3) + ' ' + u]);
       aoa.push(['End of BHA MD', fmt(rows.at(-1)?.botMd || 0, 3) + ' ' + u]);
       aoa.push(['Total volume (bbl)', fmt(rows.at(-1)?.cumVol || 0, 3)]);
+      aoa.push(['Total buoyed WIR (klbf)', fmt(toKlbf(rows.at(-1)?.cumWirLb || 0), 2)]);
+      aoa.push(['Buoyancy factor', fmt(rows[0]?.bf ?? buoyancyFactor(w.fluidPpg, w.steelPpg), 4)]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'BHA Tally');
@@ -1312,7 +1415,7 @@
       switchTab('builder');
     };
 
-    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
+    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','steelPpg','fluidLevelMd','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
       $(id).addEventListener('input', render);
       $(id).addEventListener('change', render);
     });
