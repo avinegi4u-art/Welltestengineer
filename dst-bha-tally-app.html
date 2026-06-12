@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DST BHA Tally — Welltest Engineer</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=general-sans@500,600,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+      --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
+      --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9;
+      --color-surface-offset: #edeae5; --color-border: #d4d1ca; --color-divider: #dcd9d5;
+      --color-text: #28251d; --color-text-muted: #6f6d67; --color-primary: #01696f;
+      --color-primary-hover: #0c4e54; --color-primary-highlight: #dcebea;
+      --color-warning: #964219; --color-error: #a12c3c; --color-success: #437a22;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem;
+      --radius-xl: 1rem; --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px rgba(40,37,29,.06); --shadow-md: 0 8px 24px rgba(40,37,29,.08);
+      --font-body: 'Satoshi', sans-serif; --font-display: 'General Sans', sans-serif;
+      --cat-tree: #0c4e54; --cat-valve: #437a22; --cat-packer: #964219;
+      --cat-tubing: #3d5a80; --cat-gun: #a12c3c; --cat-sub: #6a4fb5; --cat-other: #6f6d67;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #1c1b19; --color-surface-2: #201f1d;
+      --color-surface-offset: #22211f; --color-border: #393836; --color-divider: #262523;
+      --color-text: #cdccca; --color-text-muted: #9a9892; --color-primary: #4f98a3;
+      --color-primary-hover: #227f8b; --color-primary-highlight: #2c383a;
+      --color-warning: #bb653b; --color-error: #d06a76; --color-success: #6daa45;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.2); --shadow-md: 0 10px 30px rgba(0,0,0,.28);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100dvh; font-family: var(--font-body); font-size: var(--text-base);
+      line-height: 1.55; background: var(--color-bg); color: var(--color-text);
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .app { max-width: 1480px; margin: 0 auto; padding: var(--space-4); }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: var(--space-3); }
+    .logo {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--color-primary), transparent), var(--color-surface-offset);
+      display: grid; place-items: center; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);
+    }
+    .logo svg { width: 24px; height: 24px; }
+    h1 { font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.1; }
+    h2 { font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: .25rem; }
+    h3 { font-size: 1rem; margin-bottom: .5rem; }
+    .sub { color: var(--color-text-muted); font-size: var(--text-sm); max-width: 72ch; }
+    .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+    .btn {
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      padding: .75rem 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+    }
+    .btn:hover { border-color: var(--color-primary); }
+    .btn.primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+    .btn.primary:hover { background: var(--color-primary-hover); }
+    .btn.danger { color: var(--color-error); }
+    .btn.sm { padding: .45rem .7rem; font-size: var(--text-sm); }
+    .panel {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl); box-shadow: var(--shadow-md); margin-bottom: var(--space-4);
+    }
+    .tabs {
+      display: flex; gap: var(--space-2); padding: var(--space-3);
+      border-bottom: 1px solid var(--color-divider); flex-wrap: wrap;
+    }
+    .tab {
+      padding: .65rem 1rem; border-radius: var(--radius-full); background: transparent;
+      border: 1px solid transparent; color: var(--color-text-muted);
+    }
+    .tab.active {
+      background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
+    }
+    .content { padding: var(--space-4); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-4); }
+    .card {
+      grid-column: span 12; background: var(--color-surface-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4);
+    }
+    .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .fields {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: var(--space-3); margin-top: var(--space-3);
+    }
+    .field { display: flex; flex-direction: column; gap: .35rem; }
+    .field label { font-size: var(--text-sm); font-weight: 600; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: .75rem .85rem; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-bg);
+    }
+    .field textarea { min-height: 88px; resize: vertical; }
+    .field small { color: var(--color-text-muted); font-size: var(--text-xs); }
+    .kpi-wrap {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space-3); margin-bottom: var(--space-4);
+    }
+    .kpi {
+      padding: var(--space-4); border-radius: var(--radius-lg);
+      background: var(--color-bg); border: 1px solid var(--color-border);
+    }
+    .kpi .label {
+      font-size: var(--text-xs); letter-spacing: .03em; text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+    .kpi .value { font-size: 1.45rem; font-weight: 700; margin-top: .35rem; }
+    .kpi.warn .value { color: var(--color-warning); }
+    table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    th, td { padding: .65rem .55rem; border-bottom: 1px solid var(--color-divider); text-align: left; vertical-align: top; }
+    th { color: var(--color-text-muted); font-weight: 600; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
+    .scroll { overflow: auto; max-height: 62vh; }
+    .chip {
+      display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-full);
+      font-size: var(--text-xs); font-weight: 700; color: #fff;
+    }
+    .chip-tree { background: var(--cat-tree); }
+    .chip-valve { background: var(--cat-valve); }
+    .chip-packer { background: var(--cat-packer); }
+    .chip-tubing { background: var(--cat-tubing); }
+    .chip-gun { background: var(--cat-gun); }
+    .chip-sub { background: var(--cat-sub); }
+    .chip-other { background: var(--cat-other); }
+    .row-note {
+      margin-top: var(--space-3); padding: var(--space-3);
+      border-left: 3px solid var(--color-primary); background: var(--color-primary-highlight);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0; font-size: var(--text-sm);
+    }
+    .warn-note { border-left-color: var(--color-warning); background: color-mix(in oklab, var(--color-warning) 12%, var(--color-bg)); }
+    .lib-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3);
+    }
+    .lib-item {
+      padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg); cursor: pointer;
+    }
+    .lib-item:hover { border-color: var(--color-primary); }
+    .lib-item .t { font-weight: 700; font-size: var(--text-sm); }
+    .lib-item .d { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .25rem; }
+    .diagram-wrap { overflow: auto; padding: var(--space-2); }
+    .diagram-wrap svg { min-width: 720px; }
+    .save-dot {
+      font-size: var(--text-xs); color: var(--color-text-muted); padding: .35rem .6rem;
+      border-radius: var(--radius-full); background: var(--color-surface-offset);
+    }
+    .save-dot.live { color: var(--color-success); }
+    dialog {
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      padding: var(--space-4); background: var(--color-surface); color: var(--color-text);
+      box-shadow: var(--shadow-md); max-width: 720px; width: calc(100% - 2rem);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.35); }
+    .dialog-actions { display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4); }
+    .tr-actions { display: flex; gap: .25rem; flex-wrap: wrap; }
+    @media (min-width: 900px) {
+      .span-8 { grid-column: span 8; }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+    }
+    @media (max-width: 720px) {
+      .app { padding: var(--space-3); }
+      .content { padding: var(--space-3); }
+      .scroll { max-height: none; }
+    }
+    @media print {
+      .topbar .actions, .tabs, .no-print { display: none !important; }
+      .tab-panel { display: block !important; }
+      .panel { box-shadow: none; break-inside: avoid; }
+      body { background: #fff; color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 3v18M8 7h8M7 12h10M8 17h8" />
+          </svg>
+        </div>
+        <div>
+          <h1>DST BHA Tally Builder</h1>
+          <p class="sub">Build, verify, and export DST / completion string tallies with thread connections, internal volumes, cumulative depths, and hydrostatics — aligned to field BHA worksheets.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <span class="save-dot" id="saveStatus">Draft</span>
+        <button class="btn" id="themeToggle" type="button">Dark mode</button>
+        <button class="btn no-print" id="saveBtn" type="button">Save project</button>
+        <button class="btn no-print" id="loadBtn" type="button">Load project</button>
+        <input type="file" id="loadFile" accept=".json" hidden>
+        <button class="btn primary" id="printBtn" type="button">Print / PDF</button>
+      </div>
+    </header>
+
+    <section class="kpi-wrap" aria-label="String summary">
+      <div class="kpi"><div class="label">Items</div><div class="value" id="kpiItems">0</div></div>
+      <div class="kpi"><div class="label">String length</div><div class="value" id="kpiLen">0 ft</div></div>
+      <div class="kpi"><div class="label">Internal volume</div><div class="value" id="kpiVol">0 bbl</div></div>
+      <div class="kpi"><div class="label">Deepest MD</div><div class="value" id="kpiDeep">0 ft</div></div>
+      <div class="kpi"><div class="label">Hydrostatic @ datum</div><div class="value" id="kpiHyd">0 psi</div></div>
+      <div class="kpi" id="kpiWarnWrap" hidden><div class="label">Warnings</div><div class="value warn" id="kpiWarn">0</div></div>
+    </section>
+
+    <section class="panel">
+      <nav class="tabs" aria-label="BHA sections">
+        <button class="tab active" data-tab="well" type="button">Well &amp; job</button>
+        <button class="tab" data-tab="builder" type="button">String builder</button>
+        <button class="tab" data-tab="tally" type="button">Tally table</button>
+        <button class="tab" data-tab="hydraulics" type="button">Volumes &amp; hydraulics</button>
+        <button class="tab" data-tab="diagram" type="button">Diagram</button>
+        <button class="tab" data-tab="import" type="button">Import / export</button>
+        <button class="tab" data-tab="library" type="button">Tool library</button>
+      </nav>
+
+      <div class="content">
+        <!-- Well & job -->
+        <section class="tab-panel active" id="tab-well">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Well identification</h2>
+              <p class="muted">Header fields print on the tally export — match your BHA worksheet.</p>
+              <div class="fields">
+                <div class="field"><label for="wellName">Well name</label><input id="wellName" placeholder="e.g. Chetna D_33"></div>
+                <div class="field"><label for="fieldName">Field / block</label><input id="fieldName" placeholder="e.g. GD"></div>
+                <div class="field"><label for="dstRun">DST / run #</label><input id="dstRun" placeholder="e.g. DST-3"></div>
+                <div class="field"><label for="engineer">Engineer</label><input id="engineer" placeholder="Name"></div>
+                <div class="field"><label for="jobDate">Date</label><input id="jobDate" type="date"></div>
+                <div class="field"><label for="objective">Test objective</label><input id="objective" placeholder="e.g. DST flow test"></div>
+              </div>
+            </article>
+            <article class="card span-6">
+              <h2>String &amp; fluid reference</h2>
+              <p class="muted">Used for volume basis, depth reference, and hydrostatic calculations.</p>
+              <div class="fields">
+                <div class="field"><label for="fluidPpg">Fluid weight</label><input id="fluidPpg" type="number" step="0.1" value="16.5"><small>ppg</small></div>
+                <div class="field"><label for="datumElev">Datum / RKB elevation</label><input id="datumElev" type="number" step="0.1" value="0"><small>ft</small></div>
+                <div class="field"><label for="hangoff">Hang-off / reference MD</label><input id="hangoff" type="number" step="0.01" value="0"><small>ft from surface</small></div>
+                <div class="field"><label for="casingOd">Casing ID (annulus ref)</label><input id="casingOd" placeholder="e.g. 8.681"><small>in</small></div>
+                <div class="field"><label for="tubingNom">Nominal tubing</label><input id="tubingNom" placeholder="e.g. 3-1/2"></div>
+                <div class="field"><label for="displayUnit">Display units</label>
+                  <select id="displayUnit"><option value="ft">Feet (ft)</option><option value="m">Metres (m)</option></select>
+                </div>
+                <div class="field"><label for="hydBasis">Hydrostatic basis</label>
+                  <select id="hydBasis"><option value="bottom">Bottom of string</option><option value="top">Top of string</option><option value="datum">At datum MD</option></select>
+                </div>
+              </div>
+            </article>
+            <article class="card span-12">
+              <h2>Job notes</h2>
+              <div class="field"><label for="jobNotes">Remarks</label><textarea id="jobNotes" placeholder="Special handling, test sequence, pressure limits…"></textarea></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- String builder -->
+        <section class="tab-panel" id="tab-builder">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Add component</h2>
+              <p class="muted">Items stack from surface downward. Use qty for repeated tubing joints.</p>
+              <div class="fields">
+                <div class="field" style="grid-column:1/-1"><label for="itemName">Description</label><input id="itemName" placeholder="e.g. 3-1/2 VAM tubing joint"></div>
+                <div class="field"><label for="itemCat">Category</label>
+                  <select id="itemCat">
+                    <option>Tree</option><option>Valve</option><option>Sub</option><option>X-over</option>
+                    <option>Packer</option><option>Tubing</option><option>Gun</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="field"><label for="itemQty">Qty</label><input id="itemQty" type="number" min="1" value="1"></div>
+                <div class="field"><label for="itemLen">Length</label><input id="itemLen" type="number" step="0.001"></div>
+                <div class="field"><label for="itemLenUnit">Length unit</label>
+                  <select id="itemLenUnit"><option value="m">m</option><option value="ft">ft</option></select>
+                </div>
+                <div class="field"><label for="itemOd">OD</label><input id="itemOd" placeholder="3.500"><small>in</small></div>
+                <div class="field"><label for="itemId">ID</label><input id="itemId" placeholder="2.992"><small>in</small></div>
+                <div class="field"><label for="itemBox">Box (top conn)</label><input id="itemBox" placeholder="3-1/2 VAM BOX"></div>
+                <div class="field"><label for="itemPin">Pin (bottom conn)</label><input id="itemPin" placeholder="3-1/2 VAM PIN"></div>
+                <div class="field"><label for="itemSerial">Serial #</label><input id="itemSerial"></div>
+                <div class="field"><label for="itemWeight">Weight</label><input id="itemWeight" type="number" step="0.1"><small>lb (optional)</small></div>
+                <div class="field" style="grid-column:1/-1"><label for="itemNotes">Notes</label><textarea id="itemNotes"></textarea></div>
+              </div>
+              <div class="actions" style="margin-top:var(--space-3)">
+                <button class="btn primary" id="addItemBtn" type="button">Add to string</button>
+                <button class="btn" id="clearFormBtn" type="button">Clear form</button>
+                <button class="btn" id="loadSampleBtn" type="button">Load DST-3 sample</button>
+              </div>
+            </article>
+            <article class="card span-6">
+              <h2>String list</h2>
+              <p class="muted">Reorder or edit items. First item = surface / lubricator end.</p>
+              <div id="stringList" class="scroll" style="max-height:52vh"></div>
+              <div class="actions no-print" style="margin-top:var(--space-3)">
+                <button class="btn danger" id="clearAllBtn" type="button">Clear string</button>
+                <button class="btn" id="reverseBtn" type="button">Reverse order</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Tally table -->
+        <section class="tab-panel" id="tab-tally">
+          <article class="card">
+            <h2>Field tally</h2>
+            <p class="muted">Cumulative MD from surface, thread connections, and internal volume per item.</p>
+            <div id="warnBox"></div>
+            <div class="scroll">
+              <table id="tallyTable">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+                    <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
+                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th class="no-print">Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- Hydraulics -->
+        <section class="tab-panel" id="tab-hydraulics">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Volume summary</h2>
+              <div class="formula muted" style="font-family:ui-monospace,monospace;padding:.75rem;background:var(--color-bg);border-radius:var(--radius-md);margin:.75rem 0">
+                Capacity (bbl/ft) = ID² ÷ 1029.4 &nbsp;|&nbsp; Volume (bbl) = capacity × length (ft)
+              </div>
+              <table id="volSummaryTable"><tbody></tbody></table>
+            </article>
+            <article class="card span-6">
+              <h2>Hydrostatic profile</h2>
+              <p class="muted">Pressure = TVD × fluid weight × 0.052 (psi). Assumes vertical column at <span id="hydPpgLabel">16.5</span> ppg.</p>
+              <table id="hydTable">
+                <thead><tr><th>Item</th><th>Bottom MD</th><th>Pressure</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </article>
+            <article class="card span-12">
+              <h2>Connection check</h2>
+              <p class="muted">Flags adjacent pin/box mismatches — verify before running in hole.</p>
+              <table id="connTable">
+                <thead><tr><th>Joint</th><th>Upper pin</th><th>Lower box</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+        <!-- Diagram -->
+        <section class="tab-panel" id="tab-diagram">
+          <article class="card">
+            <h2>Vertical string sketch</h2>
+            <p class="muted">Length and width scaled proportionally by item length and OD.</p>
+            <div class="diagram-wrap" id="diagram"></div>
+          </article>
+        </section>
+
+        <!-- Import / export -->
+        <section class="tab-panel" id="tab-import">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Import from file</h2>
+              <div class="fields">
+                <div class="field"><label for="fileUp">Excel or PDF</label><input id="fileUp" type="file" accept=".xlsx,.xls,.pdf"></div>
+                <div class="field" id="sheetField" hidden><label for="sheetPick">Worksheet</label><select id="sheetPick"></select></div>
+              </div>
+              <div class="actions" style="margin-top:var(--space-3)">
+                <button class="btn primary" id="parseFileBtn" type="button">Parse file</button>
+              </div>
+              <p class="row-note" style="margin-top:var(--space-3)">Excel: auto-detects headers (description, length, OD, ID, box, pin, top/bottom, volume). PDF: extracts text rows with dimensions and thread keywords.</p>
+            </article>
+            <article class="card span-6">
+              <h2>JSON paste</h2>
+              <div class="field"><label for="jsonArea">Items array or full project JSON</label><textarea id="jsonArea" style="min-height:140px"></textarea></div>
+              <div class="actions" style="margin-top:var(--space-3)">
+                <button class="btn" id="importJsonBtn" type="button">Import JSON</button>
+                <button class="btn" id="copyJsonBtn" type="button">Copy JSON</button>
+              </div>
+            </article>
+            <article class="card span-12">
+              <h2>Export</h2>
+              <div class="actions">
+                <button class="btn primary" id="exportXlsxBtn" type="button">Download Excel (.xlsx)</button>
+                <button class="btn" id="exportCsvBtn" type="button">Download CSV</button>
+                <button class="btn" id="exportProjectBtn" type="button">Download project (.json)</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Tool library -->
+        <section class="tab-panel" id="tab-library">
+          <article class="card">
+            <h2>Common DST / completion components</h2>
+            <p class="muted">Click to pre-fill the builder form. Adjust length and serial before adding.</p>
+            <div class="lib-grid" id="toolLibrary"></div>
+          </article>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="editDialog">
+    <h2>Edit component</h2>
+    <div class="fields" id="editFields"></div>
+    <div class="dialog-actions">
+      <button class="btn" id="editCancel" type="button">Cancel</button>
+      <button class="btn primary" id="editSave" type="button">Save</button>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+
+    const STORAGE_KEY = 'dst-bha-tally-v2';
+    const FT_PER_M = 3.280839895;
+    const CAP_CONST = 1029.4;
+    const HYD_CONST = 0.052;
+
+    const TOOL_LIBRARY = [
+      { name: 'Lubricator valve', cat: 'Valve', length: 1.52, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
+      { name: 'X-over (7 x 5-3/4 SA)', cat: 'X-over', length: 0.21, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
+      { name: 'Handling sub', cat: 'Sub', length: 1.10, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+      { name: 'Surface test tree', cat: 'Tree', length: 2.12, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+      { name: 'DST circulating valve', cat: 'Valve', length: 1.85, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+      { name: 'Hydraulic jar', cat: 'Sub', length: 2.40, unit: 'm', od: '5.000', id: '2.500', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+      { name: 'RTTS packer (5-3/4)', cat: 'Packer', length: 3.20, unit: 'm', od: '5.750', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
+      { name: 'X-over (5-3/4 x 3-1/2 VAM)', cat: 'X-over', length: 0.35, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
+      { name: '3-1/2 VAM tubing joint', cat: 'Tubing', length: 9.14, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+      { name: 'Blast joint', cat: 'Tubing', length: 3.05, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+      { name: 'Perforating gun (3-3/8)', cat: 'Gun', length: 1.52, unit: 'm', od: '3.375', id: '2.250', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+      { name: 'Bull plug', cat: 'Other', length: 0.30, unit: 'm', od: '3.500', id: '0', box: '3-1/2 VAM BOX', pin: '—' },
+      { name: 'Gauge carrier', cat: 'Sub', length: 0.90, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+      { name: 'Slotted liner sub', cat: 'Sub', length: 1.20, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' }
+    ];
+
+    const state = {
+      well: {
+        name: '', field: '', dstRun: '', engineer: '', date: '',
+        objective: '', fluidPpg: 16.5, datumElev: 0, hangoff: 0,
+        casingOd: '', tubingNom: '3-1/2', displayUnit: 'ft', hydBasis: 'bottom', notes: ''
+      },
+      items: [],
+      pendingWorkbook: null
+    };
+
+    let editIndex = -1;
+    let saveTimer = null;
+
+    const $ = id => document.getElementById(id);
+    const fmt = (n, d = 3) => (Math.round((Number(n) || 0) * Math.pow(10, d)) / Math.pow(10, d)).toString();
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const qq = v => '"' + String(v ?? '').replaceAll('"', '""') + '"';
+    const toNum = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? n : 0; };
+    const toFt = (n, u) => u === 'm' ? Number(n) * FT_PER_M : Number(n);
+
+    function parseInch(v) {
+      v = String(v ?? '').trim().toLowerCase().replace(/["']/g, '').replace(/-/g, ' ').replace(/\s+/g, ' ');
+      if (!v || v === 'na' || v === '—' || v === '-') return 0;
+      if (/^[+-]?(\d+(\.\d+)?)$/.test(v)) return parseFloat(v);
+      const parts = v.split(' ');
+      let whole = 0, frac = '';
+      if (parts.length === 2) { whole = parseFloat(parts[0]); frac = parts[1]; }
+      else frac = parts[0];
+      const m = frac.match(/^(\d+)\/(\d+)$/);
+      if (!m) return toNum(v);
+      return (isNaN(whole) ? 0 : whole) + parseFloat(m[1]) / parseFloat(m[2]);
+    }
+
+    function capacityBblFt(idIn) { const id = parseInch(idIn); return id > 0 ? (id * id) / CAP_CONST : 0; }
+    function volumeBbl(lenFt, idIn) { return capacityBblFt(idIn) * lenFt; }
+    function hydroPsi(depthFt, ppg) { return depthFt * ppg * HYD_CONST; }
+    function dispLen(ft, unit) { return unit === 'm' ? ft / FT_PER_M : ft; }
+    function dispUnit() { return state.well.displayUnit; }
+
+    function guessCat(name) {
+      const n = (name || '').toLowerCase();
+      if (/packer|rtts|bridge/i.test(n)) return 'Packer';
+      if (/valve|lubricator|circul/i.test(n)) return 'Valve';
+      if (/gun|perf/i.test(n)) return 'Gun';
+      if (/tubing|joint|blast/i.test(n)) return 'Tubing';
+      if (/tree|stt/i.test(n)) return 'Tree';
+      if (/x-?over|crossover/i.test(n)) return 'X-over';
+      if (/sub|jar|carrier/i.test(n)) return 'Sub';
+      return 'Other';
+    }
+
+    function chipClass(cat) {
+      const c = (cat || '').toLowerCase();
+      if (c.includes('tree')) return 'chip-tree';
+      if (c.includes('valve')) return 'chip-valve';
+      if (c.includes('packer')) return 'chip-packer';
+      if (c.includes('tubing')) return 'chip-tubing';
+      if (c.includes('gun')) return 'chip-gun';
+      if (c.includes('sub') || c.includes('x-over')) return 'chip-sub';
+      return 'chip-other';
+    }
+
+    function normThread(s) {
+      return String(s || '').toUpperCase().replace(/[^A-Z0-9/\- ]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function threadsMatch(a, b) {
+      if (!a || !b) return true;
+      const A = normThread(a), B = normThread(b);
+      if (!A || !B) return true;
+      return A === B || A.includes(B) || B.includes(A);
+    }
+
+    function computedRows() {
+      const hang = Number(state.well.hangoff) || 0;
+      let top = hang, cumVol = 0;
+      return state.items.map((x, i) => {
+        const lenFt = toFt(x.length, x.unit || 'm');
+        const cap = capacityBblFt(x.id);
+        const vol = volumeBbl(lenFt, x.id);
+        cumVol += vol;
+        const row = {
+          ...x, idx: i + 1, lenFt, cap, vol, cumVol,
+          topMd: top, botMd: top + lenFt,
+          thread: [x.box, x.pin].filter(Boolean).join(' x ')
+        };
+        top = row.botMd;
+        return row;
+      });
+    }
+
+    function collectWarnings(rows) {
+      const w = [];
+      rows.forEach((r, i) => {
+        if (!r.lenFt || r.lenFt <= 0) w.push(`Row ${r.idx}: missing or zero length — ${r.name}`);
+        if (r.id && parseInch(r.id) <= 0 && r.cat !== 'Other') w.push(`Row ${r.idx}: invalid ID — ${r.name}`);
+        if (i > 0) {
+          const up = rows[i - 1], low = r;
+          if (!threadsMatch(up.pin, low.box)) {
+            w.push(`Connection ${up.idx}→${low.idx}: pin "${up.pin || '?'}" may not match box "${low.box || '?'}"`);
+          }
+        }
+      });
+      return w;
+    }
+
+    function readWellFromDom() {
+      state.well.name = $('wellName').value.trim();
+      state.well.field = $('fieldName').value.trim();
+      state.well.dstRun = $('dstRun').value.trim();
+      state.well.engineer = $('engineer').value.trim();
+      state.well.date = $('jobDate').value;
+      state.well.objective = $('objective').value.trim();
+      state.well.fluidPpg = Number($('fluidPpg').value) || 16.5;
+      state.well.datumElev = Number($('datumElev').value) || 0;
+      state.well.hangoff = Number($('hangoff').value) || 0;
+      state.well.casingOd = $('casingOd').value.trim();
+      state.well.tubingNom = $('tubingNom').value.trim();
+      state.well.displayUnit = $('displayUnit').value;
+      state.well.hydBasis = $('hydBasis').value;
+      state.well.notes = $('jobNotes').value.trim();
+    }
+
+    function writeWellToDom() {
+      $('wellName').value = state.well.name;
+      $('fieldName').value = state.well.field;
+      $('dstRun').value = state.well.dstRun;
+      $('engineer').value = state.well.engineer;
+      $('jobDate').value = state.well.date || '';
+      $('objective').value = state.well.objective;
+      $('fluidPpg').value = state.well.fluidPpg;
+      $('datumElev').value = state.well.datumElev;
+      $('hangoff').value = state.well.hangoff;
+      $('casingOd').value = state.well.casingOd;
+      $('tubingNom').value = state.well.tubingNom;
+      $('displayUnit').value = state.well.displayUnit;
+      $('hydBasis').value = state.well.hydBasis;
+      $('jobNotes').value = state.well.notes;
+      $('hydPpgLabel').textContent = state.well.fluidPpg;
+    }
+
+    function readItemForm() {
+      return {
+        name: $('itemName').value.trim(),
+        cat: $('itemCat').value,
+        length: Number($('itemLen').value) || 0,
+        unit: $('itemLenUnit').value,
+        od: $('itemOd').value.trim(),
+        id: $('itemId').value.trim(),
+        box: $('itemBox').value.trim(),
+        pin: $('itemPin').value.trim(),
+        serial: $('itemSerial').value.trim(),
+        weight: $('itemWeight').value ? Number($('itemWeight').value) : null,
+        notes: $('itemNotes').value.trim()
+      };
+    }
+
+    function fillItemForm(item) {
+      $('itemName').value = item.name || '';
+      $('itemCat').value = item.cat || 'Other';
+      $('itemLen').value = item.length ?? '';
+      $('itemLenUnit').value = item.unit || 'm';
+      $('itemOd').value = item.od || '';
+      $('itemId').value = item.id || '';
+      $('itemBox').value = item.box || '';
+      $('itemPin').value = item.pin || '';
+      $('itemSerial').value = item.serial || '';
+      $('itemWeight').value = item.weight ?? '';
+      $('itemNotes').value = item.notes || '';
+    }
+
+    function clearItemForm() {
+      ['itemName','itemOd','itemId','itemBox','itemPin','itemSerial','itemWeight','itemNotes'].forEach(id => $(id).value = '');
+      $('itemLen').value = '';
+      $('itemQty').value = '1';
+      $('itemCat').value = 'Tubing';
+    }
+
+    function render() {
+      readWellFromDom();
+      const rows = computedRows();
+      const warnings = collectWarnings(rows);
+      const unit = dispUnit();
+      const totalLen = rows.reduce((a, b) => a + b.lenFt, 0);
+      const totalVol = rows.at(-1)?.cumVol || 0;
+      const deepest = rows.at(-1)?.botMd || state.well.hangoff || 0;
+      let hydDepth = deepest;
+      if (state.well.hydBasis === 'top') hydDepth = rows[0]?.topMd || state.well.hangoff || 0;
+      if (state.well.hydBasis === 'datum') hydDepth = Number(state.well.datumElev) || 0;
+
+      $('kpiItems').textContent = rows.length;
+      $('kpiLen').textContent = fmt(dispLen(totalLen, unit), 2) + ' ' + unit;
+      $('kpiVol').textContent = fmt(totalVol, 3) + ' bbl';
+      $('kpiDeep').textContent = fmt(dispLen(deepest, unit), 2) + ' ' + unit;
+      $('kpiHyd').textContent = fmt(hydroPsi(deepest, state.well.fluidPpg), 1) + ' psi';
+      $('kpiWarn').textContent = warnings.length;
+      $('kpiWarnWrap').hidden = warnings.length === 0;
+
+      $('warnBox').innerHTML = warnings.length
+        ? `<div class="row-note warn-note"><strong>${warnings.length} warning(s)</strong><ul style="margin:.5rem 0 0 1rem">${warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`
+        : '';
+
+      $('stringList').innerHTML = rows.length ? rows.map(r => `
+        <div style="padding:.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:.5rem;background:var(--color-bg)">
+          <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start">
+            <div><strong>${r.idx}. ${esc(r.name)}</strong> <span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></div>
+            <div class="tr-actions no-print">
+              <button class="btn sm" data-act="up" data-i="${r.idx - 1}" type="button">↑</button>
+              <button class="btn sm" data-act="down" data-i="${r.idx - 1}" type="button">↓</button>
+              <button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button>
+              <button class="btn sm danger" data-act="del" data-i="${r.idx - 1}" type="button">×</button>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:.35rem;font-size:var(--text-xs)">
+            ${esc(r.box || '')}${r.box && r.pin ? ' × ' : ''}${esc(r.pin || '')} ·
+            Len ${fmt(dispLen(r.lenFt, unit), 2)} ${unit} · MD ${fmt(dispLen(r.topMd, unit), 2)}–${fmt(dispLen(r.botMd, unit), 2)} ${unit} · Vol ${fmt(r.vol, 3)} bbl
+          </div>
+        </div>`).join('') : '<p class="muted">No items — add from builder, library, or import.</p>';
+
+      const tb = $('tallyTable').querySelector('tbody');
+      tb.innerHTML = rows.map(r => `<tr>
+        <td>${r.idx}</td>
+        <td>${esc(r.name)}${r.serial ? `<div class="muted">S/N ${esc(r.serial)}</div>` : ''}</td>
+        <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
+        <td>${esc(r.box)}</td><td>${esc(r.pin)}</td>
+        <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
+        <td>${fmt(dispLen(r.lenFt, unit), 3)}</td>
+        <td>${fmt(dispLen(r.topMd, unit), 3)}</td>
+        <td>${fmt(dispLen(r.botMd, unit), 3)}</td>
+        <td>${fmt(r.cap, 4)}</td>
+        <td>${fmt(r.vol, 3)}</td>
+        <td>${fmt(r.cumVol, 3)}</td>
+        <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
+      </tr>`).join('');
+
+      const byCat = {};
+      rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
+      $('volSummaryTable').querySelector('tbody').innerHTML = [
+        ['Total string length', `${fmt(dispLen(totalLen, unit), 3)} ${unit}`],
+        ['Total internal volume', `${fmt(totalVol, 3)} bbl`],
+        ['Fluid weight', `${state.well.fluidPpg} ppg`],
+        ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg), 1)} psi`],
+        ...Object.entries(byCat).map(([k, v]) => [`Volume — ${k}`, `${fmt(v, 3)} bbl`])
+      ].map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
+
+      $('hydTable').querySelector('tbody').innerHTML = rows.map(r =>
+        `<tr><td>${esc(r.name)}</td><td>${fmt(dispLen(r.botMd, unit), 2)} ${unit}</td><td>${fmt(hydroPsi(r.botMd, state.well.fluidPpg), 1)} psi</td></tr>`
+      ).join('') || '<tr><td colspan="3" class="muted">No items</td></tr>';
+
+      $('connTable').querySelector('tbody').innerHTML = rows.length < 2 ? '<tr><td colspan="4" class="muted">Need at least 2 items</td></tr>' :
+        rows.slice(1).map((r, i) => {
+          const up = rows[i];
+          const ok = threadsMatch(up.pin, r.box);
+          return `<tr><td>${up.idx} → ${r.idx}</td><td>${esc(up.pin)}</td><td>${esc(r.box)}</td><td class="${ok ? 'ok' : 'danger'}">${ok ? 'OK' : 'CHECK'}</td></tr>`;
+        }).join('');
+
+      drawDiagram(rows, unit);
+      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items }, null, 2);
+      scheduleSave();
+    }
+
+    function drawDiagram(rows, unit) {
+      const el = $('diagram');
+      if (!rows.length) { el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>'; return; }
+      const totalLen = rows.at(-1).botMd - (rows[0]?.topMd || 0) || 1;
+      const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
+      const scaleY = Math.min(1.2, 520 / totalLen);
+      const cx = 180;
+      let y = 30;
+      const parts = [];
+      const colors = ['#01696f','#437a22','#964219','#3d5a80','#a12c3c','#6a4fb5'];
+      parts.push(`<line x1="${cx}" y1="20" x2="${cx}" y2="9999" stroke="currentColor" opacity=".15" stroke-width="2"/>`);
+      parts.push(`<text x="20" y="24" font-size="12" fill="currentColor" opacity=".7">Surface / lubricator</text>`);
+      rows.forEach((r, i) => {
+        const h = Math.max(14, r.lenFt * scaleY);
+        const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
+        const col = colors[i % colors.length];
+        parts.push(`<rect x="${cx - w/2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
+        parts.push(`<line x1="${cx + w/2 + 8}" y1="${y}" x2="340" y2="${y}" stroke="${col}" stroke-dasharray="3 3" opacity=".6"/>`);
+        parts.push(`<text x="350" y="${y + 14}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
+        parts.push(`<text x="350" y="${y + 28}" font-size="11" fill="currentColor" opacity=".75">${fmt(dispLen(r.topMd, unit), 1)}–${fmt(dispLen(r.botMd, unit), 1)} ${unit} · OD ${esc(r.od)} · ${fmt(r.vol, 2)} bbl</text>`);
+        y += h + 4;
+      });
+      el.innerHTML = `<svg viewBox="0 0 920 ${y + 30}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, y + 30)}px">${parts.join('')}</svg>`;
+    }
+
+    function findHeaderRow(rows) {
+      const keys = ['description','tool','item','length','od','id','box','pin','volume','top','bottom'];
+      for (let i = 0; i < Math.min(rows.length, 25); i++) {
+        const line = (rows[i] || []).map(c => String(c).toLowerCase());
+        const hits = keys.filter(k => line.some(h => h.includes(k))).length;
+        if (hits >= 3) return i;
+      }
+      return 0;
+    }
+
+    function extractRowsFromSheet(rows) {
+      const hi = findHeaderRow(rows);
+      const header = (rows[hi] || []).map(x => String(x).toLowerCase().replace(/[^a-z0-9 ]/g, ' '));
+      const pick = arr => { for (const k of arr) { const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; } return -1; };
+      const nameI = pick(['tool description', 'description', 'component', 'tool name', 'item', 'tool']);
+      const boxI = pick(['box', 'top conn', 'upper conn']);
+      const pinI = pick(['pin', 'bottom conn', 'lower conn']);
+      const odI = pick(['od', 'outer dia', 'o d']);
+      const idI = pick(['id', 'inner dia', 'i d']);
+      const lenI = pick(['length', 'len', 'item length']);
+      const topI = pick(['top of tool', 'top md', 'top depth', 'top']);
+      const botI = pick(['bottom of tool', 'bottom md', 'bottom depth', 'bottom']);
+      const volI = pick(['volume', 'vol', 'internal vol']);
+      const serialI = pick(['serial', 's n', 'serial no']);
+      const catI = pick(['category', 'type']);
+      const out = [];
+      for (const r of rows.slice(hi + 1)) {
+        const cells = r.map(v => String(v ?? '').trim());
+        const name = (cells[nameI] || cells[0] || '').trim();
+        if (!name || /^(total|subtotal|page|sheet|bha|dst|remarks|note)/i.test(name)) continue;
+        const length = toNum(cells[lenI]);
+        if (!length && !cells[odI] && !cells[idI]) continue;
+        const box = cells[boxI] || '';
+        const pin = cells[pinI] || '';
+        out.push({
+          name,
+          cat: cells[catI] || guessCat(name),
+          length: length || 0,
+          unit: 'm',
+          od: cells[odI] || '',
+          id: cells[idI] || '',
+          box, pin,
+          serial: cells[serialI] || '',
+          notes: [cells[topI] && `Top: ${cells[topI]}`, cells[botI] && `Bot: ${cells[botI]}`, cells[volI] && `Ref vol: ${cells[volI]}`].filter(Boolean).join(' | ')
+        });
+      }
+      return out.filter(x => x.length > 0 || x.od || x.id);
+    }
+
+    function extractTextLines(lines) {
+      const out = [];
+      for (const line of lines) {
+        const t = line.replace(/\s+/g, ' ').trim();
+        if (!t || t.length < 8) continue;
+        if (!/\d/.test(t)) continue;
+        const lenM = t.match(/(\d+(?:\.\d+)?)\s*m\b/i);
+        const lenFt = t.match(/(\d+(?:\.\d+)?)\s*ft\b/i);
+        const length = lenM ? parseFloat(lenM[1]) : lenFt ? parseFloat(lenFt[1]) / FT_PER_M : 0;
+        if (!length || length > 500) continue;
+        const thread = (t.match(/(?:BOX|PIN|ACME|EUE|VAM|IF|CAS|BGT|VAS|SA|BOWEN|BXP|XHP|CHAMP|RTTS)[^\n]*/i) || [''])[0].slice(0, 90).trim();
+        const odM = t.match(/OD\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+        const idM = t.match(/ID\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+        const name = t.replace(/\s+\d+(?:\.\d+)?\s*(?:m|ft)\b/i, '').slice(0, 100).trim();
+        if (!name) continue;
+        const parts = thread.split(/\s+x\s+/i);
+        out.push({
+          name, cat: guessCat(name), length, unit: 'm',
+          od: odM ? odM[1] : '', id: idM ? idM[1] : '',
+          box: parts[0] || '', pin: parts[1] || thread
+        });
+      }
+      return out;
+    }
+
+    async function parseExcelFile(file, sheetName) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      state.pendingWorkbook = wb;
+      const names = wb.SheetNames;
+      $('sheetField').hidden = names.length < 2;
+      $('sheetPick').innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      const sn = sheetName || names[0];
+      $('sheetPick').value = sn;
+      const ws = wb.Sheets[sn];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      return extractRowsFromSheet(rows);
+    }
+
+    async function parsePdfFile(file) {
+      const buf = await file.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      let text = '';
+      for (let i = 1; i <= doc.numPages; i++) {
+        const pg = await doc.getPage(i);
+        const tc = await pg.getTextContent();
+        text += tc.items.map(x => x.str).join(' ') + '\n';
+      }
+      return extractTextLines(text.split(/\n+/).map(s => s.trim()).filter(Boolean));
+    }
+
+    function loadSample() {
+      state.well = {
+        name: 'Chetna D_33', field: 'GD', dstRun: 'DST-3', engineer: '',
+        date: new Date().toISOString().slice(0, 10), objective: 'DST flow test @ 16.5 ppg',
+        fluidPpg: 16.5, datumElev: 0, hangoff: 0, casingOd: '8.681',
+        tubingNom: '3-1/2', displayUnit: 'ft', hydBasis: 'bottom', notes: 'Reference layout — verify lengths/serials against final BHA sheet.'
+      };
+      state.items = [
+        { name: 'Lubricator valve', cat: 'Valve', length: 1.52, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
+        { name: 'X-over', cat: 'X-over', length: 0.21, unit: 'm', od: '7.000', id: '3.000', box: '7 Bowen BOX', pin: '5-3/4 SA PIN' },
+        { name: 'Handling sub', cat: 'Sub', length: 1.10, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+        { name: 'Surface test tree', cat: 'Tree', length: 2.12, unit: 'm', od: '5.000', id: '3.000', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+        { name: 'DST circulating valve', cat: 'Valve', length: 1.85, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+        { name: 'Hydraulic jar', cat: 'Sub', length: 2.40, unit: 'm', od: '5.000', id: '2.500', box: '5-3/4 SA BOX', pin: '5-3/4 SA PIN' },
+        { name: 'RTTS packer', cat: 'Packer', length: 3.20, unit: 'm', od: '5.750', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
+        { name: 'X-over (5-3/4 x 3-1/2 VAM)', cat: 'X-over', length: 0.35, unit: 'm', od: '5.000', id: '2.750', box: '5-3/4 SA BOX', pin: '3-1/2 VAM PIN' },
+        { name: '3-1/2 VAM tubing joint', cat: 'Tubing', length: 9.14, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+        { name: '3-1/2 VAM tubing joint', cat: 'Tubing', length: 9.14, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+        { name: 'Blast joint', cat: 'Tubing', length: 3.05, unit: 'm', od: '3.500', id: '2.992', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+        { name: 'Gauge carrier', cat: 'Sub', length: 0.90, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+        { name: 'Perforating gun', cat: 'Gun', length: 1.52, unit: 'm', od: '3.375', id: '2.250', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
+        { name: 'Bull plug', cat: 'Other', length: 0.30, unit: 'm', od: '3.500', id: '0', box: '3-1/2 VAM BOX', pin: '—' }
+      ];
+      writeWellToDom();
+      render();
+    }
+
+    function exportCsv() {
+      const rows = computedRows();
+      const u = dispUnit();
+      const header = ['No','Description','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Volume_bbl','Cum_Vol_bbl','Serial','Notes'];
+      const lines = [header.join(',')].concat(rows.map(r => [
+        r.idx, qq(r.name), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
+        fmt(dispLen(r.lenFt, u)), fmt(dispLen(r.topMd, u)), fmt(dispLen(r.botMd, u)),
+        fmt(r.cap, 4), fmt(r.vol, 3), fmt(r.cumVol, 3), qq(r.serial), qq(r.notes)
+      ].join(',')));
+      dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
+    }
+
+    function exportXlsx() {
+      const rows = computedRows();
+      const u = dispUnit();
+      const w = state.well;
+      const aoa = [
+        ['DST BHA TALLY'], [],
+        ['Well', w.name], ['Field', w.field], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
+        ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
+        ['No','Tool Description','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Volume (bbl)','Cum Vol (bbl)','Serial','Notes']
+      ];
+      rows.forEach(r => aoa.push([
+        r.idx, r.name, r.cat, r.box, r.pin, r.od, r.id,
+        Number(fmt(dispLen(r.lenFt, u))), Number(fmt(dispLen(r.topMd, u))), Number(fmt(dispLen(r.botMd, u))),
+        Number(fmt(r.cap, 4)), Number(fmt(r.vol, 3)), Number(fmt(r.cumVol, 3)), r.serial || '', r.notes || ''
+      ]));
+      aoa.push([], ['Total length', fmt(dispLen(rows.reduce((a,b)=>a+b.lenFt,0), u), 3) + ' ' + u]);
+      aoa.push(['Total volume (bbl)', fmt(rows.at(-1)?.cumVol || 0, 3)]);
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'BHA Tally');
+      XLSX.writeFile(wb, `${(w.dstRun || 'dst').replace(/\s+/g,'-')}-bha-tally.xlsx`);
+    }
+
+    function exportProject() {
+      readWellFromDom();
+      dlBlob(JSON.stringify({ well: state.well, items: state.items }, null, 2), 'dst-bha-project.json', 'application/json');
+    }
+
+    function dlBlob(text, name, type) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type }));
+      a.download = name;
+      a.click();
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      $('saveStatus').textContent = 'Saving…';
+      saveTimer = setTimeout(() => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ well: state.well, items: state.items }));
+          $('saveStatus').textContent = 'Saved locally';
+          $('saveStatus').classList.add('live');
+        } catch (e) {
+          $('saveStatus').textContent = 'Save failed';
+        }
+      }, 400);
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (data.well) state.well = { ...state.well, ...data.well };
+        if (Array.isArray(data.items)) state.items = data.items;
+        writeWellToDom();
+        return true;
+      } catch (e) { return false; }
+    }
+
+    function openEditDialog(i) {
+      editIndex = i;
+      const item = state.items[i];
+      $('editFields').innerHTML = `
+        <div class="field" style="grid-column:1/-1"><label>Description</label><input id="eName" value="${esc(item.name)}"></div>
+        <div class="field"><label>Category</label><input id="eCat" value="${esc(item.cat)}"></div>
+        <div class="field"><label>Length</label><input id="eLen" type="number" step="0.001" value="${item.length}"></div>
+        <div class="field"><label>Unit</label><select id="eUnit"><option value="m" ${item.unit==='m'?'selected':''}>m</option><option value="ft" ${item.unit==='ft'?'selected':''}>ft</option></select></div>
+        <div class="field"><label>OD</label><input id="eOd" value="${esc(item.od)}"></div>
+        <div class="field"><label>ID</label><input id="eId" value="${esc(item.id)}"></div>
+        <div class="field"><label>Box</label><input id="eBox" value="${esc(item.box)}"></div>
+        <div class="field"><label>Pin</label><input id="ePin" value="${esc(item.pin)}"></div>
+        <div class="field"><label>Serial</label><input id="eSerial" value="${esc(item.serial || '')}"></div>
+        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="eNotes">${esc(item.notes || '')}</textarea></div>`;
+      $('editDialog').showModal();
+    }
+
+    function saveEdit() {
+      if (editIndex < 0) return;
+      state.items[editIndex] = {
+        ...state.items[editIndex],
+        name: $('eName').value.trim(),
+        cat: $('eCat').value.trim(),
+        length: Number($('eLen').value) || 0,
+        unit: $('eUnit').value,
+        od: $('eOd').value.trim(),
+        id: $('eId').value.trim(),
+        box: $('eBox').value.trim(),
+        pin: $('ePin').value.trim(),
+        serial: $('eSerial').value.trim(),
+        notes: $('eNotes').value.trim()
+      };
+      editIndex = -1;
+      $('editDialog').close();
+      render();
+    }
+
+    function handleListAction(e) {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const i = +btn.dataset.i, act = btn.dataset.act;
+      if (act === 'del') state.items.splice(i, 1);
+      if (act === 'up' && i > 0) [state.items[i - 1], state.items[i]] = [state.items[i], state.items[i - 1]];
+      if (act === 'down' && i < state.items.length - 1) [state.items[i + 1], state.items[i]] = [state.items[i], state.items[i + 1]];
+      if (act === 'edit') openEditDialog(i);
+      render();
+    }
+
+    function renderLibrary() {
+      $('toolLibrary').innerHTML = TOOL_LIBRARY.map((t, i) => `
+        <div class="lib-item" data-li="${i}">
+          <div class="t">${esc(t.name)}</div>
+          <div class="d">${esc(t.cat)} · ${t.length} ${t.unit} · OD ${esc(t.od)} · ID ${esc(t.id)}</div>
+          <div class="d">${esc(t.box)} × ${esc(t.pin)}</div>
+        </div>`).join('');
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        $('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    $('themeToggle').onclick = () => {
+      const d = document.documentElement;
+      d.dataset.theme = d.dataset.theme === 'dark' ? 'light' : 'dark';
+      $('themeToggle').textContent = d.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
+    };
+
+    $('addItemBtn').onclick = () => {
+      const item = readItemForm();
+      if (!item.name) return alert('Enter a description');
+      const qty = Math.max(1, Number($('itemQty').value) || 1);
+      for (let i = 0; i < qty; i++) state.items.push({ ...item });
+      render();
+    };
+
+    $('clearFormBtn').onclick = clearItemForm;
+    $('loadSampleBtn').onclick = loadSample;
+    $('clearAllBtn').onclick = () => { if (confirm('Clear entire string?')) { state.items = []; render(); } };
+    $('reverseBtn').onclick = () => { state.items.reverse(); render(); };
+    $('stringList').onclick = handleListAction;
+    $('tallyTable').onclick = handleListAction;
+    $('editCancel').onclick = () => $('editDialog').close();
+    $('editSave').onclick = saveEdit;
+
+    $('parseFileBtn').onclick = async () => {
+      const f = $('fileUp').files[0];
+      if (!f) return alert('Choose a file first');
+      try {
+        let items;
+        if (/xlsx?|xls$/i.test(f.name)) {
+          items = await parseExcelFile(f, $('sheetPick').value);
+        } else if (/pdf$/i.test(f.name)) {
+          items = await parsePdfFile(f);
+        } else return alert('Unsupported file type');
+        if (!items.length) return alert('No tally rows detected — check sheet layout or add manually.');
+        if (state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) return;
+        state.items = items;
+        render();
+        alert(`Imported ${items.length} items.`);
+      } catch (err) {
+        alert('Parse error: ' + err.message);
+      }
+    };
+
+    $('sheetPick').onchange = async () => {
+      const f = $('fileUp').files[0];
+      if (!f || !state.pendingWorkbook) return;
+      const ws = state.pendingWorkbook.Sheets[$('sheetPick').value];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      if (state.items.length && !confirm('Re-parse selected sheet and replace current string?')) return;
+      state.items = extractRowsFromSheet(rows);
+      render();
+    };
+
+    $('importJsonBtn').onclick = () => {
+      try {
+        const data = JSON.parse($('jsonArea').value);
+        if (Array.isArray(data)) state.items = data;
+        else {
+          if (data.well) state.well = { ...state.well, ...data.well };
+          if (Array.isArray(data.items)) state.items = data.items;
+        }
+        writeWellToDom();
+        render();
+      } catch (e) { alert('Invalid JSON'); }
+    };
+
+    $('copyJsonBtn').onclick = () => navigator.clipboard.writeText($('jsonArea').value);
+    $('exportCsvBtn').onclick = exportCsv;
+    $('exportXlsxBtn').onclick = exportXlsx;
+    $('exportProjectBtn').onclick = exportProject;
+    $('printBtn').onclick = () => window.print();
+    $('saveBtn').onclick = exportProject;
+    $('loadBtn').onclick = () => $('loadFile').click();
+    $('loadFile').onchange = e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (data.well) state.well = { ...state.well, ...data.well };
+          if (Array.isArray(data.items)) state.items = data.items;
+          writeWellToDom();
+          render();
+        } catch (err) { alert('Invalid project file'); }
+      };
+      reader.readAsText(f);
+    };
+
+    $('toolLibrary').onclick = e => {
+      const card = e.target.closest('.lib-item');
+      if (!card) return;
+      fillItemForm(TOOL_LIBRARY[+card.dataset.li]);
+      document.querySelector('.tab[data-tab="builder"]').click();
+    };
+
+    ['wellName','fieldName','dstRun','engineer','jobDate','objective','fluidPpg','datumElev','hangoff','casingOd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
+      $(id).addEventListener('input', render);
+      $(id).addEventListener('change', render);
+    });
+
+    renderLibrary();
+    if (!loadFromStorage()) loadSample();
+    else render();
+  </script>
+</body>
+</html>
