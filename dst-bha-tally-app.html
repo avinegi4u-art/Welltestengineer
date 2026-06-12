@@ -198,11 +198,36 @@
       .content { padding: var(--space-3); }
       .scroll { max-height: none; }
     }
+    .print-only { display: none !important; }
     @media print {
-      .topbar .actions, .tabs, .no-print { display: none !important; }
-      .tab-panel { display: block !important; }
-      .panel { box-shadow: none; break-inside: avoid; }
-      body { background: #fff; color: #000; }
+      @page { size: landscape; margin: 10mm 12mm; }
+      body { background: #fff !important; color: #000 !important; font-size: 9pt; }
+      .app { max-width: none; padding: 0; }
+      .no-print, .tabs, .topbar .actions, .topbar .sub, #startBanner, .kpi-wrap, .save-dot { display: none !important; }
+      .print-only { display: block !important; }
+      .topbar { margin-bottom: 6px; padding: 0; }
+      .topbar .brand h1 { font-size: 13pt; }
+      .panel { border: none; box-shadow: none; margin: 0; }
+      .content { padding: 0; }
+      .tab-panel { display: none !important; }
+      #tab-tally, #tab-diagram { display: block !important; }
+      #tab-tally { page-break-after: auto; }
+      #tab-diagram { page-break-before: always; }
+      .scroll { max-height: none !important; overflow: visible !important; }
+      .card { border: none; box-shadow: none; padding: 0; margin-bottom: 10px; background: #fff !important; }
+      .card .hd .muted, .card > .muted, .card h2 + .muted { display: none !important; }
+      .card h2 { font-size: 11pt; margin: 0 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+      table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+      th, td { border: 1px solid #bbb; padding: 2px 4px; vertical-align: top; }
+      th { background: #e8e8e8 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .chip { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #aaa; font-size: 6.5pt; padding: 1px 4px; }
+      .muted { color: #444 !important; font-size: 6.5pt; }
+      .diagram-wrap { overflow: visible; padding: 0; }
+      .diagram-wrap svg { width: 100% !important; height: auto !important; min-width: 0 !important; max-height: 680px; }
+      #printHeader { border-bottom: 2px solid #000; margin-bottom: 8px; padding-bottom: 6px; }
+      #printHeader .print-title { font-size: 15pt; font-weight: 700; }
+      #printHeader .print-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; font-size: 8.5pt; margin-top: 6px; }
+      #printHeader .print-totals { margin-top: 6px; font-size: 9pt; font-weight: 700; }
     }
   </style>
 </head>
@@ -250,6 +275,12 @@
       <div class="kpi"><div class="label">Buoyed WIR (total)</div><div class="value" id="kpiWir">0 klbf</div></div>
       <div class="kpi" id="kpiWarnWrap" hidden><div class="label">Warnings</div><div class="value warn" id="kpiWarn">0</div></div>
     </section>
+
+    <div id="printHeader" class="print-only">
+      <div class="print-title">DST BHA Tally &amp; String Diagram</div>
+      <div class="print-grid" id="printMeta"></div>
+      <div class="print-totals" id="printTotals"></div>
+    </div>
 
     <section class="panel" id="mainPanel">
       <input type="radio" name="bha-tab" id="rtab-well" class="tab-radio" checked>
@@ -371,15 +402,15 @@
         <section class="tab-panel" id="tab-tally">
           <article class="card">
             <h2>Field tally</h2>
-            <p class="muted">Cumulative MD from surface, thread connections, and internal volume per item.</p>
-            <div id="warnBox"></div>
+            <p class="muted">Cumulative MD, internal volume, and buoyed WIR (klbf) while RIH in well fluid.</p>
+            <div id="warnBox" class="no-print"></div>
             <div class="scroll">
               <table id="tallyTable">
                 <thead>
                   <tr>
                     <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
                     <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
-                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th class="no-print">Actions</th>
+                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Buoyed<br>(klbf)</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -830,8 +861,19 @@
         <td>${fmt(r.cap, 4)}</td>
         <td>${fmt(r.vol, 3)}</td>
         <td>${fmt(r.cumVol, 3)}</td>
+        <td>${fmt(toKlbf(r.buoyedLb), 3)}</td>
+        <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
         <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
       </tr>`).join('');
+
+      $('printMeta').innerHTML = [
+        ['Well', state.well.name || '—'], ['Client', state.well.customer || '—'],
+        ['Rig', state.well.rig || '—'], ['DST', state.well.dstRun || '—'],
+        ['Formation', state.well.formation || '—'], ['Date', state.well.date || '—'],
+        ['Fluid', `${state.well.fluidPpg} ppg`], ['Engineer', state.well.engineer || '—']
+      ].map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
+      $('printTotals').textContent =
+        `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmt(totalVol, 2)} bbl  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
 
       const byCat = {};
       rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
@@ -1389,7 +1431,11 @@
     $('exportCsvBtn').onclick = exportCsv;
     $('exportXlsxBtn').onclick = exportXlsx;
     $('exportProjectBtn').onclick = exportProject;
-    $('printBtn').onclick = () => window.print();
+    $('printBtn').onclick = () => {
+      readWellFromDom();
+      render();
+      window.print();
+    };
     $('saveBtn').onclick = exportProject;
     $('loadBtn').onclick = () => $('loadFile').click();
     $('loadFile').onchange = e => {
