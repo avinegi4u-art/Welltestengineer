@@ -146,6 +146,36 @@
     th, td { padding: .65rem .55rem; border-bottom: 1px solid var(--color-divider); text-align: left; vertical-align: top; }
     th { color: var(--color-text-muted); font-weight: 600; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
     .scroll { overflow: auto; max-height: 62vh; }
+    .tally-layout {
+      display: flex; flex-direction: column; gap: var(--space-3);
+      min-height: calc(100vh - 260px);
+    }
+    .tally-scroll {
+      flex: 1 1 auto; overflow: auto;
+      min-height: 55vh; max-height: calc(100vh - 200px);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg);
+    }
+    .tally-scroll table { font-size: var(--text-sm); }
+    .tally-scroll th { position: sticky; top: 0; z-index: 2; }
+    .tally-warnings-panel {
+      flex: 0 0 auto; max-height: 7.5rem; overflow-y: auto;
+      border: 1px solid color-mix(in oklab, var(--color-warning) 35%, var(--color-border));
+      border-radius: var(--radius-md);
+      background: color-mix(in oklab, var(--color-warning) 8%, var(--color-bg));
+      font-size: var(--text-xs); color: var(--color-text-muted);
+    }
+    .tally-warnings-panel[hidden] { display: none !important; }
+    .tally-warn-hd {
+      position: sticky; top: 0; z-index: 1;
+      padding: .35rem .65rem; font-size: var(--text-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em;
+      color: var(--color-warning);
+      background: color-mix(in oklab, var(--color-warning) 14%, var(--color-bg));
+      border-bottom: 1px solid color-mix(in oklab, var(--color-warning) 25%, var(--color-border));
+    }
+    .tally-warn-list { margin: 0; padding: .35rem .65rem .5rem 1.5rem; }
+    .tally-warn-list li { margin: .2rem 0; line-height: 1.35; }
     .chip {
       display: inline-block; padding: .2rem .55rem; border-radius: var(--radius-full);
       font-size: var(--text-xs); font-weight: 700; color: #fff;
@@ -197,6 +227,9 @@
       .app { padding: var(--space-3); }
       .content { padding: var(--space-3); }
       .scroll { max-height: none; }
+      .tally-layout { min-height: 0; }
+      .tally-scroll { min-height: 45vh; max-height: 65vh; }
+      .tally-warnings-panel { max-height: 5.5rem; }
     }
     .print-only { display: none !important; }
     .casing-table input { width: 100%; min-width: 4.5rem; padding: .25rem .35rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
@@ -219,7 +252,8 @@
       #tab-tally, #tab-diagram { display: block !important; }
       #tab-tally { page-break-after: auto; }
       #tab-diagram { page-break-before: always; }
-      .scroll { max-height: none !important; overflow: visible !important; }
+      .scroll, .tally-scroll { max-height: none !important; overflow: visible !important; min-height: 0 !important; }
+      .tally-layout { min-height: 0 !important; }
       .card { border: none; box-shadow: none; padding: 0; margin-bottom: 10px; background: #fff !important; }
       .card .hd .muted, .card > .muted, .card h2 + .muted { display: none !important; }
       .card h2 { font-size: 11pt; margin: 0 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
@@ -434,19 +468,21 @@
           <article class="card">
             <h2>Field tally</h2>
             <p class="muted">Cumulative MD, internal volume, and cumulative WIR (klbf) while RIH in well fluid.</p>
-            <div class="scroll">
-              <table id="tallyTable">
-                <thead>
-                  <tr>
-                    <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
-                    <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
-                    <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
+            <div class="tally-layout">
+              <div class="scroll tally-scroll">
+                <table id="tallyTable">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+                      <th>OD</th><th>ID</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
+                      <th>Cap</th><th>Vol</th><th>Cum vol</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div id="warnBox" class="tally-warnings-panel no-print" hidden></div>
             </div>
-            <div id="warnBox" class="no-print" style="margin-top:var(--space-3)"></div>
           </article>
         </section>
 
@@ -916,9 +952,14 @@
       $('kpiWarn').textContent = warnings.length;
       $('kpiWarnWrap').hidden = warnings.length === 0;
 
-      $('warnBox').innerHTML = warnings.length
-        ? `<div class="row-note warn-note"><strong>${warnings.length} warning(s)</strong><ul style="margin:.5rem 0 0 1rem">${warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`
-        : '';
+      const warnEl = $('warnBox');
+      if (warnings.length) {
+        warnEl.hidden = false;
+        warnEl.innerHTML = `<div class="tally-warn-hd">${warnings.length} warning${warnings.length === 1 ? '' : 's'}</div><ul class="tally-warn-list">${warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`;
+      } else {
+        warnEl.hidden = true;
+        warnEl.innerHTML = '';
+      }
 
       $('stringList').innerHTML = rows.length ? rows.map(r => `
         <div style="padding:.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:.5rem;background:var(--color-bg)">
