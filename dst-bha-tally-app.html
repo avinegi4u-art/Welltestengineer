@@ -189,6 +189,8 @@
       margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-align: center;
     }
+    #tallyTable tr.irdv-vol-row td { background: var(--color-primary-highlight); }
+    #tallyTable tr.irdv-vol-row .tally-name { color: var(--color-primary); }
     .tally-warnings-panel {
       flex: 0 0 8.5rem; max-height: 8.5rem; overflow-y: auto;
       border: 1px solid color-mix(in oklab, var(--color-warning) 35%, var(--color-border));
@@ -399,6 +401,7 @@
       <div class="kpi"><div class="label">Items</div><div class="value" id="kpiItems">0</div></div>
       <div class="kpi"><div class="label">String length</div><div class="value" id="kpiLen">0 ft</div></div>
       <div class="kpi"><div class="label">Internal volume</div><div class="value" id="kpiVol">0 bbl</div></div>
+      <div class="kpi" id="kpiIrdvWrap" hidden><div class="label">Vol to IRDV-BA</div><div class="value" id="kpiIrdvVol">—</div></div>
       <div class="kpi"><div class="label">Deepest MD</div><div class="value" id="kpiDeep">0 ft</div></div>
       <div class="kpi"><div class="label">Hydrostatic @ datum</div><div class="value" id="kpiHyd">0 psi</div></div>
       <div class="kpi"><div class="label">Buoyed WIR (total)</div><div class="value" id="kpiWir">0 klbf</div></div>
@@ -551,7 +554,7 @@
         <section class="tab-panel" id="tab-tally">
           <article class="card">
             <h2>Field tally</h2>
-            <p class="muted">Cumulative MD, internal volume, and cumulative WIR (klbf) while RIH in well fluid.</p>
+            <p class="muted">Cumulative MD and internal volume (valve, sub, packer &amp; other excluded). Cum vol to <strong>IRIS Dual Valve IRDV-BA</strong> highlighted when present.</p>
             <div class="tally-layout">
               <div class="tally-scroll">
                 <table id="tallyTable">
@@ -576,7 +579,8 @@
             <article class="card span-6">
               <h2>Volume summary</h2>
               <div class="formula muted" style="font-family:ui-monospace,monospace;padding:.75rem;background:var(--color-bg);border-radius:var(--radius-md);margin:.75rem 0">
-                Capacity (bbl/ft) = ID² ÷ 1029.4 &nbsp;|&nbsp; Volume (bbl) = capacity × length (ft)
+                Capacity (bbl/ft) = ID² ÷ 1029.4 &nbsp;|&nbsp; Volume (bbl) = capacity × length (ft)<br>
+                <span style="font-family:var(--font-body)">Valve, sub, packer &amp; other — zero volume. Tubing, tree, gun, x-over count toward cum vol to IRIS Dual Valve IRDV-BA.</span>
               </div>
               <table id="volSummaryTable"><tbody></tbody></table>
             </article>
@@ -903,6 +907,24 @@
       return 'chip-other';
     }
 
+    const VOLUME_EXCLUDED_CATS = new Set(['other', 'valve', 'sub', 'packer']);
+    const IRDV_VOLUME_MARKER = /iris\s+dual\s+valve/i;
+
+    function itemCountsForVolume(item) {
+      const cat = String(item.cat || guessCat(item.name) || 'Other').toLowerCase();
+      return !VOLUME_EXCLUDED_CATS.has(cat);
+    }
+
+    function isIrdvVolumeMarker(name) {
+      const n = String(name || '');
+      return IRDV_VOLUME_MARKER.test(n) && /irdv-?ba/i.test(n);
+    }
+
+    function findCumVolToIrdv(rows) {
+      const hit = rows.find(r => isIrdvVolumeMarker(r.name));
+      return hit ? hit.cumVol : null;
+    }
+
     function normThread(s) {
       return String(s || '').toUpperCase().replace(/[^A-Z0-9/\- ]/g, '').replace(/\s+/g, ' ').trim();
     }
@@ -925,7 +947,8 @@
         const lenMd = mdU === 'm' ? lenFt / FT_PER_M : lenFt;
         const cap = capacityBblFt(x.id);
         const calcVol = volumeBbl(lenFt, x.id);
-        const vol = x.refVol != null && !isNaN(x.refVol) ? x.refVol : calcVol;
+        const volRaw = x.refVol != null && !isNaN(x.refVol) ? x.refVol : calcVol;
+        const vol = itemCountsForVolume(x) ? volRaw : 0;
         cumVol += vol;
         let topMd, botMd;
         if (useImported && x.topMd != null && x.botMd != null) {
@@ -941,7 +964,8 @@
         const buoyedLb = dryLb * bf * subPct;
         cumWirLb += buoyedLb;
         return {
-          ...x, idx: i + 1, lenFt, lenMd, cap, vol, cumVol, topMd, botMd, mdUnit: mdU,
+          ...x, idx: i + 1, lenFt, lenMd, cap, vol, volRaw, countsVol: itemCountsForVolume(x),
+          cumVol, isIrdvMarker: isIrdvVolumeMarker(x.name), topMd, botMd, mdUnit: mdU,
           dryLb, buoyedLb, cumWirLb, subPct, bf,
           thread: [x.box, x.pin].filter(Boolean).join(' x ')
         };
@@ -1058,6 +1082,7 @@
       if ($('casingUnitLabel')) $('casingUnitLabel').textContent = unit;
       const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       const totalVol = rows.at(-1)?.cumVol || 0;
+      const cumVolToIrdv = findCumVolToIrdv(rows);
       const deepest = rows.at(-1)?.botMd ?? state.well.hangoff ?? 0;
       let hydDepth = deepest;
       if (state.well.hydBasis === 'top') hydDepth = rows[0]?.topMd ?? state.well.hangoff ?? 0;
@@ -1066,6 +1091,15 @@
       $('kpiItems').textContent = rows.length;
       $('kpiLen').textContent = fmt(totalLen, 2) + ' ' + unit;
       $('kpiVol').textContent = fmt(totalVol, 3) + ' bbl';
+      const irdvWrap = $('kpiIrdvWrap');
+      if (irdvWrap) {
+        if (cumVolToIrdv != null) {
+          irdvWrap.hidden = false;
+          $('kpiIrdvVol').textContent = fmt(cumVolToIrdv, 3) + ' bbl';
+        } else {
+          irdvWrap.hidden = true;
+        }
+      }
       $('kpiDeep').textContent = fmt(deepest, 2) + ' ' + unit;
       $('kpiHyd').textContent = fmt(hydroPsi(hydDepth, state.well.fluidPpg, unit), 1) + ' psi';
       const totalWirKlbf = toKlbf(rows.at(-1)?.cumWirLb || 0);
@@ -1102,7 +1136,7 @@
         <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR (klbf)</th><th class="no-print">Actions</th>
       </tr>`;
       const tb = $('tallyTable').querySelector('tbody');
-      tb.innerHTML = rows.map(r => `<tr>
+      tb.innerHTML = rows.map(r => `<tr${r.isIrdvMarker ? ' class="irdv-vol-row"' : ''}>
         <td>${r.idx}</td>
         <td class="tally-desc"><div class="tally-name">${esc(r.name)}</div>${(r.company || r.toolNo || r.serial) ? `<div class="tally-sub">${[r.company, r.toolNo, r.serial ? 'S/N ' + r.serial : ''].filter(Boolean).join(' · ')}</div>` : ''}</td>
         <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
@@ -1128,7 +1162,7 @@
         ['Casing', casingMeta || '—']
       ].map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
       $('printTotals').textContent =
-        `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmt(totalVol, 2)} bbl  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
+        `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmt(totalVol, 2)} bbl${cumVolToIrdv != null ? `  |  Vol to IRDV-BA: ${fmt(cumVolToIrdv, 2)} bbl` : ''}  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
       const casings = migrateCasings(state.well);
       const casingLine = casings.filter(c => c.name || c.od || c.id).map(c =>
         `${c.name || 'Casing'}: ${c.od || '—'}" OD / ${c.id || '—'}" ID (${fmt(c.topMd ?? 0, 0)}–${fmt(c.shoeMd ?? deepest, 0)} ${unit})`
@@ -1142,15 +1176,18 @@
       }
 
       const byCat = {};
-      rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
-      $('volSummaryTable').querySelector('tbody').innerHTML = [
+      rows.forEach(r => { if (r.countsVol) byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
+      const volSummaryRows = [
         ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
         ['Total internal volume', `${fmt(totalVol, 3)} bbl`],
+        ...(cumVolToIrdv != null ? [['Cum vol to IRIS Dual Valve IRDV-BA', `${fmt(cumVolToIrdv, 3)} bbl`]] : []),
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
         ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
         ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`],
-        ...Object.entries(byCat).map(([k, v]) => [`Volume — ${k}`, `${fmt(v, 3)} bbl`])
-      ].map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
+        ...Object.entries(byCat).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => [`Volume — ${k}`, `${fmt(v, 3)} bbl`])
+      ];
+      $('volSummaryTable').querySelector('tbody').innerHTML = volSummaryRows
+        .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
 
       $('hydTable').querySelector('tbody').innerHTML = rows.map(r =>
         `<tr><td>${esc(r.name)}</td><td>${fmt(r.botMd, 2)} ${unit}</td><td>${fmt(hydroPsi(r.botMd, state.well.fluidPpg, unit), 1)} psi</td></tr>`
@@ -1738,6 +1775,8 @@
       aoa.push([], ['Total length', fmt(rows.reduce((a, b) => a + b.lenMd, 0), 3) + ' ' + u]);
       aoa.push(['End of BHA MD', fmt(rows.at(-1)?.botMd || 0, 3) + ' ' + u]);
       aoa.push(['Total volume (bbl)', fmt(rows.at(-1)?.cumVol || 0, 3)]);
+      const irdvVol = findCumVolToIrdv(rows);
+      if (irdvVol != null) aoa.push(['Cum vol to IRIS Dual Valve IRDV-BA (bbl)', fmt(irdvVol, 3)]);
       aoa.push(['Total buoyed WIR (klbf)', fmt(toKlbf(rows.at(-1)?.cumWirLb || 0), 2)]);
       aoa.push(['Buoyancy factor', fmt(rows[0]?.bf ?? buoyancyFactor(w.fluidPpg, w.steelPpg), 4)]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
