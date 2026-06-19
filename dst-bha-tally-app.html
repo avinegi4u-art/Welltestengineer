@@ -264,8 +264,8 @@
     .lib-item:hover { border-color: var(--color-primary); }
     .lib-item .t { font-weight: 700; font-size: var(--text-sm); }
     .lib-item .d { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .25rem; }
-    .diagram-wrap { overflow: auto; padding: var(--space-2); }
-    .diagram-wrap svg { min-width: 720px; }
+    .diagram-wrap { overflow: auto; padding: var(--space-2); max-height: 85vh; }
+    .diagram-wrap svg { min-width: 720px; display: block; }
     .save-dot {
       font-size: var(--text-xs); color: var(--color-text-muted); padding: .35rem .6rem;
       border-radius: var(--radius-full); background: var(--color-surface-offset);
@@ -639,7 +639,8 @@
         <section class="tab-panel" id="tab-diagram">
           <article class="card">
             <h2>Vertical string sketch</h2>
-            <p class="muted">BHA string by item length; casing aligned to string depths. Columns: casing (left), string, bot MD, description.</p>
+            <p class="muted">BHA string by item length; casing aligned to string depths. Scroll for long strings — every tally row is drawn.</p>
+            <p class="muted" id="diagramMeta" style="margin-top:.35rem"></p>
             <div class="diagram-wrap" id="diagram"></div>
           </article>
         </section>
@@ -1232,13 +1233,32 @@
 
     function mdToFt(md, unit) { return unit === 'm' ? md * FT_PER_M : md; }
 
-    function buildStringDepthMap(rows, scaleY, startY = 30) {
+    function diagramDesc(name, maxLen = 48) {
+      const s = String(name || '').trim();
+      return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
+    }
+
+    function diagramStringLayout(rows) {
+      const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
+      const n = rows.length;
+      const targetPlotH = Math.min(3600, Math.max(520, n * 16));
+      return {
+        totalLen,
+        scaleY: targetPlotH / totalLen,
+        minItemH: n > 60 ? 6 : n > 35 ? 7 : 8,
+        itemGap: n > 60 ? 2 : 4,
+        labelSize: n > 60 ? 10 : n > 35 ? 11 : 12
+      };
+    }
+
+    function buildStringDepthMap(rows, scaleY, opts = {}) {
+      const { minItemH = 8, itemGap = 4, startY = 30 } = opts;
       const segments = [];
       let y = startY;
       rows.forEach(r => {
-        const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
+        const h = Math.max(minItemH, r.lenMd * scaleY);
         segments.push({ topMd: r.topMd, botMd: r.botMd, y1: y, y2: y + h, h });
-        y += h + 4;
+        y += h + itemGap;
       });
       const mapY = md => {
         if (!segments.length) return startY;
@@ -1330,15 +1350,16 @@
       const depthTextX = hasCasing ? 528 : stringCx - 72;
       const labelX = hasCasing ? 598 : 350;
       const svgW = hasCasing ? 1040 : 920;
-      const bhaLabelUsed = [];
       const casingLabelUsed = [];
 
       if (rows.length) {
-        const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
-        const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
-        const scaleY = Math.min(1.2, 520 / totalLen);
-        const { mapY, totalY } = buildStringDepthMap(rows, scaleY);
+        const layout = diagramStringLayout(rows);
+        const { scaleY, minItemH, itemGap, labelSize } = layout;
+        const { mapY, totalY } = buildStringDepthMap(rows, scaleY, { minItemH, itemGap });
         totalH = Math.max(totalH, totalY);
+        if ($('diagramMeta')) {
+          $('diagramMeta').textContent = `${rows.length} tally items · diagram height ${Math.round(totalH)} px — scroll vertically if needed`;
+        }
 
         if (hasCasing) {
           parts.push(`<text x="${casingTextX}" y="24" font-size="11" text-anchor="start" fill="currentColor" opacity=".75">Casing · shoe (ft)</text>`);
@@ -1358,25 +1379,29 @@
         }
 
         let y = 30;
+        const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
         rows.forEach((r, i) => {
-          const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
+          const h = Math.max(minItemH, r.lenMd * scaleY);
           const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
           const col = colors[i % colors.length];
           const botFt = mdToFt(r.botMd, unit);
-          parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
-          const labelY = reserveDiagramLabelY(y + Math.min(h / 2 + 4, 14), bhaLabelUsed);
+          const labelY = y + Math.max(4, Math.min(h - 1, h / 2 + 4));
+          parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"><title>${esc(r.name)} (#${r.idx})</title></rect>`);
+          if (h >= 10) {
+            parts.push(`<text x="${stringCx}" y="${y + 9}" text-anchor="middle" font-size="8" fill="currentColor" opacity=".55">${r.idx}</text>`);
+          }
           if (hasCasing) {
             parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${labelY}" x2="${depthTextX + 6}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
             parts.push(`<text x="${depthTextX}" y="${labelY + 4}" font-size="11" text-anchor="end" fill="currentColor" opacity=".85">${fmt(botFt, 2)}</text>`);
             parts.push(`<line x1="${depthTextX + 12}" y1="${labelY}" x2="${labelX - 4}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
-            parts.push(`<text x="${labelX}" y="${labelY + 4}" font-size="12" font-weight="700" text-anchor="start" fill="currentColor">${esc(r.name)}</text>`);
+            parts.push(`<text x="${labelX}" y="${labelY + 4}" font-size="${labelSize}" font-weight="700" text-anchor="start" fill="currentColor">${esc(diagramDesc(r.name))}</text>`);
           } else {
             parts.push(`<line x1="${depthTextX + 4}" y1="${labelY}" x2="${stringCx - w / 2 - 6}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
             parts.push(`<text x="${depthTextX}" y="${labelY + 4}" font-size="11" text-anchor="end" fill="currentColor" opacity=".85">${fmt(botFt, 2)}</text>`);
             parts.push(`<line x1="${stringCx + w / 2 + 8}" y1="${labelY}" x2="${labelX}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".55"/>`);
-            parts.push(`<text x="${labelX + 10}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
+            parts.push(`<text x="${labelX + 10}" y="${labelY + 4}" font-size="${labelSize}" font-weight="700" fill="currentColor">${esc(diagramDesc(r.name))}</text>`);
           }
-          y += h + 4;
+          y += h + itemGap;
         });
       } else if (hasCasing) {
         const minMd = Math.min(0, ...casings.map(c => Number(c.topMd) || 0));
@@ -1393,7 +1418,7 @@
         totalH = padTop + plotH + 32;
       }
 
-      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, totalH)}px">${parts.join('')}</svg>`;
+      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${totalH}px;width:100%">${parts.join('')}</svg>`;
     }
 
     function normHeaderCell(v) {
