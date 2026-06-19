@@ -400,8 +400,7 @@
     <section class="kpi-wrap" aria-label="String summary">
       <div class="kpi"><div class="label">Items</div><div class="value" id="kpiItems">0</div></div>
       <div class="kpi"><div class="label">String length</div><div class="value" id="kpiLen">0 ft</div></div>
-      <div class="kpi"><div class="label">Internal volume</div><div class="value" id="kpiVol">0 bbl</div></div>
-      <div class="kpi" id="kpiIrdvWrap" hidden><div class="label">Vol to IRDV-BA</div><div class="value" id="kpiIrdvVol">—</div></div>
+      <div class="kpi"><div class="label" id="kpiVolLabel">Internal volume</div><div class="value" id="kpiVol">0 bbl</div></div>
       <div class="kpi"><div class="label">Deepest MD</div><div class="value" id="kpiDeep">0 ft</div></div>
       <div class="kpi"><div class="label">Hydrostatic @ datum</div><div class="value" id="kpiHyd">0 psi</div></div>
       <div class="kpi"><div class="label">Buoyed WIR (total)</div><div class="value" id="kpiWir">0 klbf</div></div>
@@ -906,22 +905,52 @@
       return 'chip-other';
     }
 
+    const fmtVol = n => fmt(n, 3);
+
     const VOLUME_EXCLUDED_CATS = new Set(['other', 'valve', 'sub', 'packer']);
     const IRDV_VOLUME_MARKER = /iris\s+dual\s+valve/i;
 
     function itemCountsForVolume(item) {
-      const cat = String(item.cat || guessCat(item.name) || 'Other').toLowerCase();
-      return !VOLUME_EXCLUDED_CATS.has(cat);
+      const name = String(item.name || '');
+      const cat = String(item.cat || guessCat(name) || 'Other').toLowerCase();
+      if (VOLUME_EXCLUDED_CATS.has(cat)) return false;
+      if (/packer|rtts|champ-v|bridge\s*plug/i.test(name)) return false;
+      if (/valve|irdv|lubricator|circulat/i.test(name)) return false;
+      if (/\bsub\b|saver\s*sub|handling\s*sub|gauge\s*carrier|slip\s*joint/i.test(name)) return false;
+      return true;
     }
 
     function isIrdvVolumeMarker(name) {
       const n = String(name || '');
-      return IRDV_VOLUME_MARKER.test(n) && /irdv-?ba/i.test(n);
+      if (/irdv-?ba/i.test(n)) return true;
+      return IRDV_VOLUME_MARKER.test(n) && /irdv/i.test(n);
+    }
+
+    function findIrdvRow(rows) {
+      return rows.find(r => isIrdvVolumeMarker(r.name)) || null;
     }
 
     function findCumVolToIrdv(rows) {
-      const hit = rows.find(r => isIrdvVolumeMarker(r.name));
+      const hit = findIrdvRow(rows);
       return hit ? hit.cumVol : null;
+    }
+
+    function reportVolume(rows) {
+      const irdv = findCumVolToIrdv(rows);
+      return irdv != null ? irdv : (rows.at(-1)?.cumVol || 0);
+    }
+
+    function volumeRows(rows) {
+      const irdv = findIrdvRow(rows);
+      if (!irdv) return rows;
+      return rows.filter(r => r.idx <= irdv.idx);
+    }
+
+    function displayCumVolCell(r, rows) {
+      const irdv = findIrdvRow(rows);
+      if (!irdv) return fmtVol(r.cumVol);
+      if (r.idx > irdv.idx) return '—';
+      return fmtVol(r.cumVol);
     }
 
     function normThread(s) {
@@ -946,7 +975,7 @@
         const lenMd = mdU === 'm' ? lenFt / FT_PER_M : lenFt;
         const cap = capacityBblFt(x.id);
         const calcVol = volumeBbl(lenFt, x.id);
-        const volRaw = x.refVol != null && !isNaN(x.refVol) ? x.refVol : calcVol;
+        const volRaw = calcVol > 0 ? calcVol : (x.refVol != null && !isNaN(x.refVol) ? x.refVol : 0);
         const vol = itemCountsForVolume(x) ? volRaw : 0;
         cumVol += vol;
         let topMd, botMd;
@@ -1082,6 +1111,7 @@
       const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       const totalVol = rows.at(-1)?.cumVol || 0;
       const cumVolToIrdv = findCumVolToIrdv(rows);
+      const reportedVol = reportVolume(rows);
       const deepest = rows.at(-1)?.botMd ?? state.well.hangoff ?? 0;
       let hydDepth = deepest;
       if (state.well.hydBasis === 'top') hydDepth = rows[0]?.topMd ?? state.well.hangoff ?? 0;
@@ -1089,16 +1119,10 @@
 
       $('kpiItems').textContent = rows.length;
       $('kpiLen').textContent = fmt(totalLen, 2) + ' ' + unit;
-      $('kpiVol').textContent = fmt(totalVol, 3) + ' bbl';
-      const irdvWrap = $('kpiIrdvWrap');
-      if (irdvWrap) {
-        if (cumVolToIrdv != null) {
-          irdvWrap.hidden = false;
-          $('kpiIrdvVol').textContent = fmt(cumVolToIrdv, 3) + ' bbl';
-        } else {
-          irdvWrap.hidden = true;
-        }
+      if ($('kpiVolLabel')) {
+        $('kpiVolLabel').textContent = cumVolToIrdv != null ? 'Vol to IRDV-BA' : 'Internal volume';
       }
+      $('kpiVol').textContent = fmtVol(reportedVol) + ' bbl';
       $('kpiDeep').textContent = fmt(deepest, 2) + ' ' + unit;
       $('kpiHyd').textContent = fmt(hydroPsi(hydDepth, state.well.fluidPpg, unit), 1) + ' psi';
       const totalWirKlbf = toKlbf(rows.at(-1)?.cumWirLb || 0);
@@ -1145,7 +1169,7 @@
         <td>${fmt(r.topMd, 3)}</td>
         <td>${fmt(r.botMd, 3)}</td>
         <td>${fmt(r.cap, 4)}</td>
-        <td>${fmt(r.cumVol, 3)}</td>
+        <td>${displayCumVolCell(r, rows)}</td>
         <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
         <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
       </tr>`).join('');
@@ -1161,7 +1185,7 @@
         ['Casing', casingMeta || '—']
       ].map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
       $('printTotals').textContent =
-        `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmt(totalVol, 2)} bbl${cumVolToIrdv != null ? `  |  Vol to IRDV-BA: ${fmt(cumVolToIrdv, 2)} bbl` : ''}  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
+        `Items: ${rows.length}  |  Length: ${fmt(totalLen, 2)} ${unit}  |  End MD: ${fmt(deepest, 2)} ${unit}  |  Cum vol: ${fmtVol(reportedVol)} bbl  |  Cum WIR: ${fmt(totalWirKlbf, 2)} klbf  |  BF: ${fmt(rows[0]?.bf ?? buoyancyFactor(state.well.fluidPpg, state.well.steelPpg), 3)}`;
       const casings = migrateCasings(state.well);
       const casingLine = casings.filter(c => c.name || c.od || c.id).map(c =>
         `${c.name || 'Casing'}: ${c.od || '—'}" OD / ${c.id || '—'}" ID (${fmt(c.topMd ?? 0, 0)}–${fmt(c.shoeMd ?? deepest, 0)} ${unit})`
@@ -1174,12 +1198,14 @@
         ].filter(Boolean).join('  —  ');
       }
 
+      const volRows = volumeRows(rows);
       const byCat = {};
-      rows.forEach(r => { if (r.countsVol) byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
+      volRows.forEach(r => { if (r.countsVol) byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
       const volSummaryRows = [
         ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
-        ['Total internal volume', `${fmt(totalVol, 3)} bbl`],
-        ...(cumVolToIrdv != null ? [['Cum vol to IRIS Dual Valve IRDV-BA', `${fmt(cumVolToIrdv, 3)} bbl`]] : []),
+        [cumVolToIrdv != null ? 'Cum vol to IRIS Dual Valve IRDV-BA' : 'Total internal volume', `${fmtVol(reportedVol)} bbl`],
+        ...(cumVolToIrdv != null && Math.abs(totalVol - reportedVol) > 0.0005
+          ? [['Full string volume (below IRDV excluded)', `${fmtVol(totalVol)} bbl`]] : []),
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
         ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
         ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`],
@@ -1770,13 +1796,14 @@
       const lines = [header.join(',')].concat(rows.map(r => [
         r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
         fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
-        fmt(r.cap, 4), fmt(r.cumVol, 3), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
+        fmt(r.cap, 4), fmtVol(r.cumVol), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
       ].join(',')));
       dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
     }
 
     function exportXlsx() {
       const rows = computedRows();
+      const cumVolToIrdv = findCumVolToIrdv(rows);
       const u = dispUnit();
       const w = state.well;
       const aoa = [
@@ -1789,14 +1816,15 @@
       rows.forEach(r => aoa.push([
         r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
         Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
-        Number(fmt(r.cap, 4)), Number(fmt(r.cumVol, 3)),
+        Number(fmt(r.cap, 4)), Number(fmtVol(r.cumVol)),
         Number(fmt(r.buoyedLb, 1)), Number(fmt(toKlbf(r.cumWirLb), 3)), r.serial || '', r.notes || ''
       ]));
       aoa.push([], ['Total length', fmt(rows.reduce((a, b) => a + b.lenMd, 0), 3) + ' ' + u]);
       aoa.push(['End of BHA MD', fmt(rows.at(-1)?.botMd || 0, 3) + ' ' + u]);
-      aoa.push(['Total volume (bbl)', fmt(rows.at(-1)?.cumVol || 0, 3)]);
-      const irdvVol = findCumVolToIrdv(rows);
-      if (irdvVol != null) aoa.push(['Cum vol to IRIS Dual Valve IRDV-BA (bbl)', fmt(irdvVol, 3)]);
+      aoa.push([cumVolToIrdv != null ? 'Cum vol to IRIS Dual Valve IRDV-BA (bbl)' : 'Total volume (bbl)', fmtVol(reportVolume(rows))]);
+      if (cumVolToIrdv != null && Math.abs((rows.at(-1)?.cumVol || 0) - cumVolToIrdv) > 0.0005) {
+        aoa.push(['Full string volume (bbl)', fmtVol(rows.at(-1)?.cumVol || 0)]);
+      }
       aoa.push(['Total buoyed WIR (klbf)', fmt(toKlbf(rows.at(-1)?.cumWirLb || 0), 2)]);
       aoa.push(['Buoyancy factor', fmt(rows[0]?.bf ?? buoyancyFactor(w.fluidPpg, w.steelPpg), 4)]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
