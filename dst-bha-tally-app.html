@@ -635,7 +635,7 @@
         <section class="tab-panel" id="tab-diagram">
           <article class="card">
             <h2>Vertical string sketch</h2>
-            <p class="muted">BHA string by item length; casing aligned to string depths. Casing shoe (ft) left of string; names on the right.</p>
+            <p class="muted">BHA string by item length; casing aligned to string depths. Casing shoe and name beside the casing sketch.</p>
             <div class="diagram-wrap" id="diagram"></div>
           </article>
         </section>
@@ -1238,7 +1238,7 @@
 
     function appendCasingDiagram(parts, casings, opts) {
       const {
-        mapY, casingBarX, casingDepthX, casingLabelX, maxCasingOd, deepestMd, unit, casingColors, casingLabelUsed
+        mapY, casingBarX, casingTextX, maxCasingOd, deepestMd, unit, casingColors, casingLabelUsed
       } = opts;
       [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id))).forEach((c, i) => {
         const topMd = Number(c.topMd) || 0;
@@ -1253,17 +1253,15 @@
         const shoeFt = mdToFt(shoeMd, unit);
         const labelY = reserveDiagramLabelY(y2, casingLabelUsed);
         const name = formatCasingDisplayName(c);
-        const tickX = casingBarX + w / 2 + 6;
+        const barRight = casingBarX + w / 2;
 
         parts.push(`<rect x="${casingBarX - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}18" stroke="${col}" stroke-width="1.75" rx="4"/>`);
         parts.push(`<line x1="${casingBarX - w / 2}" y1="${y2}" x2="${casingBarX + w / 2}" y2="${y2}" stroke="${col}" stroke-width="1.25" opacity=".7"/>`);
         if (Math.abs(labelY - y2) > 1) {
-          parts.push(`<line x1="${tickX}" y1="${y2}" x2="${tickX}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".35"/>`);
+          parts.push(`<line x1="${barRight + 4}" y1="${y2}" x2="${barRight + 4}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".35"/>`);
         }
-        parts.push(`<line x1="${tickX}" y1="${labelY}" x2="${casingDepthX + 4}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
-        parts.push(`<line x1="${casingDepthX + 10}" y1="${labelY}" x2="${casingLabelX - 6}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
-        parts.push(`<text x="${casingDepthX}" y="${labelY + 4}" font-size="11" text-anchor="end" fill="currentColor" opacity=".85">${fmt(shoeFt, 1)}</text>`);
-        parts.push(`<text x="${casingLabelX}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(name)}</text>`);
+        parts.push(`<line x1="${barRight + 4}" y1="${labelY}" x2="${casingTextX - 4}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
+        parts.push(`<text x="${casingTextX}" y="${labelY + 4}" font-size="12" fill="currentColor"><tspan opacity=".8" font-size="11">${fmt(shoeFt, 1)} ft</tspan><tspan dx="8" font-weight="700">${esc(name)}</tspan></text>`);
       });
     }
 
@@ -1281,13 +1279,12 @@
       const casingColors = ['#6b7280', '#78716c', '#57534e'];
       let totalH = 60;
 
-      const stringCx = hasCasing ? 300 : 180;
+      const casingBarX = 48;
+      const casingTextX = 96;
+      const stringCx = hasCasing ? 268 : 180;
       const depthTextX = stringCx - 72;
-      const labelX = hasCasing ? 380 : 350;
-      const casingBarX = 58;
-      const casingDepthX = 142;
-      const casingLabelX = hasCasing ? 640 : 0;
-      const svgW = hasCasing ? 980 : 920;
+      const labelX = hasCasing ? 348 : 350;
+      const svgW = hasCasing ? 900 : 920;
       const bhaLabelUsed = [];
       const casingLabelUsed = [];
 
@@ -1302,8 +1299,7 @@
         parts.push(`<text x="${stringCx - 30}" y="24" font-size="12" fill="currentColor" opacity=".75">${hasCasing ? 'BHA string' : 'Surface / lubricator'}</text>`);
         parts.push(`<text x="${labelX + 10}" y="24" font-size="11" fill="currentColor" opacity=".75">Description</text>`);
         if (hasCasing) {
-          parts.push(`<text x="${casingDepthX}" y="24" font-size="11" text-anchor="end" fill="currentColor" opacity=".75">Shoe (ft)</text>`);
-          parts.push(`<text x="${casingLabelX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing</text>`);
+          parts.push(`<text x="${casingTextX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing · shoe (ft)</text>`);
         }
         parts.push(`<line x1="${stringCx}" y1="20" x2="${stringCx}" y2="${totalY}" stroke="currentColor" opacity=".12" stroke-width="2"/>`);
 
@@ -1311,9 +1307,9 @@
           const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
           const deepestMd = rows.at(-1)?.botMd ?? 0;
           appendCasingDiagram(parts, casings, {
-            mapY, casingBarX, casingDepthX, casingLabelX, maxCasingOd, deepestMd, unit, casingColors, casingLabelUsed
+            mapY, casingBarX, casingTextX, maxCasingOd, deepestMd, unit, casingColors, casingLabelUsed
           });
-          parts.push(`<line x1="168" y1="20" x2="168" y2="${totalY}" stroke="currentColor" opacity=".08" stroke-width="1"/>`);
+          parts.push(`<line x1="${stringCx - 44}" y1="20" x2="${stringCx - 44}" y2="${totalY}" stroke="currentColor" opacity=".08" stroke-width="1"/>`);
         }
 
         let y = 30;
@@ -1338,10 +1334,9 @@
         const padTop = 36;
         const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
         const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
-        parts.push(`<text x="${casingDepthX}" y="24" font-size="11" text-anchor="end" fill="currentColor" opacity=".75">Shoe (ft)</text>`);
-        parts.push(`<text x="${casingLabelX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing</text>`);
+        parts.push(`<text x="${casingTextX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing · shoe (ft)</text>`);
         appendCasingDiagram(parts, casings, {
-          mapY: mdY, casingBarX, casingDepthX, casingLabelX, maxCasingOd, deepestMd: maxMd, unit, casingColors, casingLabelUsed
+          mapY: mdY, casingBarX, casingTextX, maxCasingOd, deepestMd: maxMd, unit, casingColors, casingLabelUsed
         });
         totalH = padTop + plotH + 32;
       }
