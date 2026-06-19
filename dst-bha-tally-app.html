@@ -917,6 +917,17 @@
       return calcVol > 0 ? calcVol : (refVol != null && !isNaN(refVol) ? Number(refVol) : 0);
     }
 
+    function isIrdvSlbMarker(name) {
+      const n = String(name || '').toLowerCase().replace(/\s+/g, ' ');
+      if (!/iris/.test(n) || !/irdv/.test(n)) return false;
+      return /dual\s*valve/.test(n) || /irdv-?ba/.test(n);
+    }
+
+    function findCumVolToIrdvSlb(rows) {
+      const hit = rows.find(r => isIrdvSlbMarker(r.name));
+      return hit ? { cumVol: hit.cumVol, label: hit.name.trim() } : null;
+    }
+
     function normThread(s) {
       return String(s || '').toUpperCase().replace(/[^A-Z0-9/\- ]/g, '').replace(/\s+/g, ' ').trim();
     }
@@ -1158,6 +1169,10 @@
       const volSummaryRows = [
         ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
         ['Cum vol @ string shoe', `${fmtVol(totalVol)} bbl`],
+        ...(() => {
+          const irdv = findCumVolToIrdvSlb(rows);
+          return irdv ? [['Cum vol @ IRIS Dual Valve IRDV-BA (SLB)', `${fmtVol(irdv.cumVol)} bbl`]] : [];
+        })(),
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
         ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
         ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`]
