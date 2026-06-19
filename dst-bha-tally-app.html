@@ -551,7 +551,7 @@
         <section class="tab-panel" id="tab-tally">
           <article class="card">
             <h2>Field tally</h2>
-            <p class="muted">Cumulative MD and internal volume by depth to string shoe. Valve, sub, packer &amp; other = zero item volume; cum vol increases through tubing, tree, gun &amp; x-over.</p>
+            <p class="muted">Cumulative MD and internal volume by depth to string shoe. Item vol = Cap × length (ft); cum vol increases each row.</p>
             <div class="tally-layout">
               <div class="tally-scroll">
                 <table id="tallyTable">
@@ -577,7 +577,7 @@
               <h2>Volume summary</h2>
               <div class="formula muted" style="font-family:ui-monospace,monospace;padding:.75rem;background:var(--color-bg);border-radius:var(--radius-md);margin:.75rem 0">
                 Capacity (bbl/ft) = ID² ÷ 1029.4 &nbsp;|&nbsp; Volume (bbl) = capacity × length (ft)<br>
-                <span style="font-family:var(--font-body)">Volume from ID × length using imported top/bottom MD when available. Valve, sub, packer &amp; other excluded.</span>
+                <span style="font-family:var(--font-body)">Item volume = Cap (bbl/ft) × length (ft), length from imported top/bottom MD when set.</span>
               </div>
               <table id="volSummaryTable"><tbody></tbody></table>
             </article>
@@ -905,13 +905,6 @@
 
     const fmtVol = n => fmt(n, 3);
 
-    const VOLUME_EXCLUDED_CATS = new Set(['other', 'valve', 'sub', 'packer']);
-
-    function itemCountsForVolume(item) {
-      const cat = String(item.cat || guessCat(item.name) || 'Other').toLowerCase();
-      return !VOLUME_EXCLUDED_CATS.has(cat);
-    }
-
     function itemLengthFromDepth(x, mdU, useImported, topMd, botMd) {
       if (useImported && topMd != null && botMd != null) {
         const lenMd = Math.abs(botMd - topMd);
@@ -922,6 +915,11 @@
       const lenFt = toFt(x.length, x.unit || 'm');
       const lenMd = mdU === 'm' ? lenFt / FT_PER_M : lenFt;
       return { lenMd, lenFt };
+    }
+
+    function itemVolumeBbl(cap, lenFt, refVol) {
+      const calcVol = cap > 0 && lenFt > 0 ? cap * lenFt : 0;
+      return calcVol > 0 ? calcVol : (refVol != null && !isNaN(refVol) ? Number(refVol) : 0);
     }
 
     function normThread(s) {
@@ -955,17 +953,14 @@
         }
         const { lenMd, lenFt } = itemLengthFromDepth(x, mdU, useImported, topMd, botMd);
         const cap = capacityBblFt(x.id);
-        const calcVol = volumeBbl(lenFt, x.id);
-        const volRaw = calcVol > 0 ? calcVol : (x.refVol != null && !isNaN(x.refVol) ? x.refVol : 0);
-        const vol = itemCountsForVolume(x) ? volRaw : 0;
+        const vol = itemVolumeBbl(cap, lenFt, x.refVol);
         cumVol += vol;
         const dryLb = dryWeightLb(lenFt, x.od, x.id, x.weight);
         const subPct = submergedFraction(topMd, botMd, lenMd, fluidLevel);
         const buoyedLb = dryLb * bf * subPct;
         cumWirLb += buoyedLb;
         return {
-          ...x, idx: i + 1, lenFt, lenMd, cap, vol, volRaw, countsVol: itemCountsForVolume(x),
-          cumVol, topMd, botMd, mdUnit: mdU,
+          ...x, idx: i + 1, lenFt, lenMd, cap, vol, cumVol, topMd, botMd, mdUnit: mdU,
           dryLb, buoyedLb, cumWirLb, subPct, bf,
           thread: [x.box, x.pin].filter(Boolean).join(' x ')
         };
@@ -1166,7 +1161,7 @@
       }
 
       const byCat = {};
-      rows.forEach(r => { if (r.countsVol) byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
+      rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
       const volSummaryRows = [
         ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
         ['Cum vol @ string shoe', `${fmtVol(totalVol)} bbl`],
