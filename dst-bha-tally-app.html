@@ -1160,15 +1160,12 @@
         ].filter(Boolean).join('  —  ');
       }
 
-      const byCat = {};
-      rows.forEach(r => { byCat[r.cat] = (byCat[r.cat] || 0) + r.vol; });
       const volSummaryRows = [
         ['Total string length', `${fmt(totalLen, 3)} ${unit}`],
         ['Cum vol @ string shoe', `${fmtVol(totalVol)} bbl`],
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
         ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
-        ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`],
-        ...Object.entries(byCat).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => [`Volume — ${k}`, `${fmt(v, 3)} bbl`])
+        ['End of BHA MD', `${fmt(deepest, 3)} ${unit}`]
       ];
       $('volSummaryTable').querySelector('tbody').innerHTML = volSummaryRows
         .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('');
