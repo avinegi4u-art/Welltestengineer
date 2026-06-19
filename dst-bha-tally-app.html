@@ -189,6 +189,16 @@
       margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-align: center;
     }
+    #tallyTable tr.tally-clearance-warn td {
+      background: color-mix(in oklab, tomato 20%, var(--color-surface));
+    }
+    #tallyTable tr.tally-packer-row td {
+      background: color-mix(in oklab, var(--cat-packer) 24%, var(--color-surface));
+    }
+    #tallyTable tr.tally-packer-row.tally-clearance-warn td {
+      background: color-mix(in oklab, tomato 26%, var(--color-surface));
+      box-shadow: inset 0 0 0 2px tomato;
+    }
     .tally-warnings-panel {
       flex: 0 0 8.5rem; max-height: 8.5rem; overflow-y: auto;
       border: 1px solid color-mix(in oklab, var(--color-warning) 35%, var(--color-border));
@@ -340,6 +350,16 @@
         overflow: visible !important; font-weight: 600;
       }
       #tallyTable .tally-sub { font-size: 6.5pt !important; }
+      #tallyTable tr.tally-clearance-warn td,
+      #tallyTable tr.tally-packer-row td {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      #tallyTable tr.tally-clearance-warn td { background: #ffe0d6 !important; }
+      #tallyTable tr.tally-packer-row td { background: #f5e6dc !important; }
+      #tallyTable tr.tally-packer-row.tally-clearance-warn td {
+        background: #ffd4c4 !important;
+        box-shadow: inset 0 0 0 1.5px tomato;
+      }
       th, td { border: 1px solid #bbb; padding: 2px 4px; vertical-align: top; }
       th { background: #e8e8e8 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; }
       .chip { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #aaa; font-size: 6.5pt; padding: 1px 4px; }
@@ -887,6 +907,54 @@
       return 'Other';
     }
 
+    function isPackerRow(item) {
+      const cat = String(item.cat || guessCat(item.name) || '').toLowerCase();
+      return cat.includes('packer') || /packer|rtts|champ-v|bridge\s*plug/i.test(String(item.name || ''));
+    }
+
+    function casingAtMd(casings, md) {
+      const hits = casings.filter(c => {
+        const id = parseInch(c.id);
+        const top = Number(c.topMd) || 0;
+        const shoe = Number(c.shoeMd);
+        return id > 0 && Number.isFinite(shoe) && md >= top && md <= shoe;
+      });
+      if (!hits.length) return null;
+      return hits.reduce((best, c) => (!best || parseInch(c.id) < parseInch(best.id)) ? c : best, null);
+    }
+
+    function stringCasingClearanceIn(item, casings, md) {
+      const casing = casingAtMd(casings, md);
+      if (!casing) return null;
+      const casingId = parseInch(casing.id);
+      const strOd = parseInch(item.od);
+      if (casingId <= 0 || strOd <= 0) return null;
+      return casingId - strOd;
+    }
+
+    function minStringCasingClearanceIn(item, casings) {
+      const samples = [item.topMd, item.botMd, (Number(item.topMd) + Number(item.botMd)) / 2];
+      let min = null;
+      for (const md of samples) {
+        const clr = stringCasingClearanceIn(item, casings, md);
+        if (clr == null) continue;
+        min = min == null ? clr : Math.min(min, clr);
+      }
+      return min;
+    }
+
+    function tallyRowHighlight(item, casings) {
+      const classes = [];
+      const clearance = minStringCasingClearanceIn(item, casings);
+      const tight = clearance != null && clearance < 0.3;
+      if (tight) classes.push('tally-clearance-warn');
+      if (isPackerRow(item)) classes.push('tally-packer-row');
+      const title = tight
+        ? `Casing ID − string OD = ${fmt(clearance, 3)} in (< 0.3 in clearance)`
+        : (isPackerRow(item) ? 'Packer' : '');
+      return { className: classes.join(' '), title, clearance };
+    }
+
     function chipClass(cat) {
       const c = (cat || '').toLowerCase();
       if (c.includes('tree')) return 'chip-tree';
@@ -1031,6 +1099,11 @@
             w.push(`Connection ${up.idx}→${low.idx}: pin "${up.pin || '?'}" may not match box "${low.box || '?'}"`);
           }
         }
+        const casings = migrateCasings(state.well);
+        const clr = minStringCasingClearanceIn(r, casings);
+        if (clr != null && clr < 0.3) {
+          w.push(`Row ${r.idx}: casing clearance ${fmt(clr, 3)} in (< 0.3 in) — ${r.name}`);
+        }
       });
       return w;
     }
@@ -1173,7 +1246,14 @@
         <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR (klbf)</th><th class="no-print">Actions</th>
       </tr>`;
       const tb = $('tallyTable').querySelector('tbody');
-      tb.innerHTML = rows.map(r => `<tr>
+      const casingForTally = migrateCasings(state.well);
+      tb.innerHTML = rows.map(r => {
+        const hi = tallyRowHighlight(r, casingForTally);
+        const trAttr = [
+          hi.className ? `class="${hi.className}"` : '',
+          hi.title ? `title="${esc(hi.title)}"` : ''
+        ].filter(Boolean).join(' ');
+        return `<tr${trAttr ? ' ' + trAttr : ''}>
         <td>${r.idx}</td>
         <td class="tally-desc"><div class="tally-name">${esc(r.name)}</div>${(r.company || r.toolNo || r.serial) ? `<div class="tally-sub">${[r.company, r.toolNo, r.serial ? 'S/N ' + r.serial : ''].filter(Boolean).join(' · ')}</div>` : ''}</td>
         <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
@@ -1186,7 +1266,8 @@
         <td>${fmtVol(r.cumVol)}</td>
         <td><strong>${fmt(toKlbf(r.cumWirLb), 2)}</strong></td>
         <td class="no-print"><button class="btn sm" data-act="edit" data-i="${r.idx - 1}" type="button">Edit</button></td>
-      </tr>`).join('');
+      </tr>`;
+      }).join('');
 
       const casingMeta = migrateCasings(state.well).filter(c => c.name || c.od || c.id)
         .map(c => `${c.name || 'Casing'} ${c.od || '—'}"×${c.id || '—'}" (${fmt(c.topMd ?? 0, 0)}–${fmt(c.shoeMd ?? deepest, 0)} ${unit})`)
