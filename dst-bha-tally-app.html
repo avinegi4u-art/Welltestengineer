@@ -93,6 +93,7 @@
     #rtab-weight:checked ~ nav .tab[for="rtab-weight"],
     #rtab-diagram:checked ~ nav .tab[for="rtab-diagram"],
     #rtab-import:checked ~ nav .tab[for="rtab-import"],
+    #rtab-reference:checked ~ nav .tab[for="rtab-reference"],
     #rtab-library:checked ~ nav .tab[for="rtab-library"] {
       background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
     }
@@ -103,6 +104,7 @@
     #rtab-weight:checked ~ .content #tab-weight,
     #rtab-diagram:checked ~ .content #tab-diagram,
     #rtab-import:checked ~ .content #tab-import,
+    #rtab-reference:checked ~ .content #tab-reference,
     #rtab-library:checked ~ .content #tab-library { display: block; }
     #bootError {
       margin-bottom: var(--space-4); padding: var(--space-4);
@@ -292,7 +294,14 @@
     .print-only { display: none !important; }
     .casing-table input { width: 100%; min-width: 4.5rem; padding: .25rem .35rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
     .casing-table th, .casing-table td { vertical-align: middle; }
-    .print-hint { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 14rem; line-height: 1.35; text-align: right; }
+    .ref-file-list { margin-top: var(--space-3); max-height: 220px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); }
+    .ref-file-item {
+      display: flex; justify-content: space-between; align-items: center; gap: var(--space-2);
+      padding: .55rem .75rem; border-bottom: 1px solid var(--color-divider); font-size: var(--text-sm);
+    }
+    .ref-file-item:last-child { border-bottom: none; }
+    .ref-file-item:hover { background: var(--color-primary-highlight); }
+    .ref-source { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); }
     @media print {
       @page portrait-page { size: portrait; margin: 12mm 10mm 22mm 10mm; }
       @page landscape-page { size: landscape; margin: 10mm 12mm 20mm 12mm; }
@@ -381,8 +390,8 @@
     </header>
 
     <div class="row-note" id="startBanner" style="margin-bottom:var(--space-4);display:none">
-      <strong>Get started:</strong> Click <button class="btn sm primary" id="bannerLoadBtn" type="button">Load DST-2 reference</button>
-      or open the <label for="rtab-import" class="btn sm" style="display:inline-block;cursor:pointer">Import / export</label> tab and select your BHA .xlsx file.
+      <strong>Get started:</strong> Open <label for="rtab-reference" class="btn sm primary" style="display:inline-block;cursor:pointer">Load BHA reference</label>
+      to pick any Excel from your folder, or use <label for="rtab-import" class="btn sm" style="display:inline-block;cursor:pointer">Import / export</label>.
       <br><small>Download the repo folder and open in <strong>Chrome/Edge</strong> — do not use GitHub’s file preview (JavaScript won’t run).</small>
     </div>
 
@@ -410,6 +419,7 @@
       <input type="radio" name="bha-tab" id="rtab-hydraulics" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-weight" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-diagram" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-reference" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-import" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-library" class="tab-radio">
       <nav class="tabs" aria-label="BHA sections">
@@ -419,6 +429,7 @@
         <label class="tab" for="rtab-hydraulics" data-tab="hydraulics">Volumes &amp; hydraulics</label>
         <label class="tab" for="rtab-weight" data-tab="weight">Weight / WIR</label>
         <label class="tab" for="rtab-diagram" data-tab="diagram">Diagram</label>
+        <label class="tab" for="rtab-reference" data-tab="reference">Load BHA reference</label>
         <label class="tab" for="rtab-import" data-tab="import">Import / export</label>
         <label class="tab" for="rtab-library" data-tab="library">Tool library</label>
       </nav>
@@ -521,7 +532,7 @@
               <div class="actions" style="margin-top:var(--space-3)">
                 <button class="btn primary" id="addItemBtn" type="button">Add to string</button>
                 <button class="btn" id="clearFormBtn" type="button">Clear form</button>
-                <button class="btn" id="loadSampleBtn" type="button">Load DST-2 reference (Chetna)</button>
+                <button class="btn" id="loadSampleBtn" type="button">Load bundled sample (if available)</button>
               </div>
             </article>
             <article class="card span-6 string-list-card">
@@ -624,9 +635,43 @@
         <section class="tab-panel" id="tab-diagram">
           <article class="card">
             <h2>Vertical string sketch</h2>
-            <p class="muted">BHA string scaled by item length; casing shown separately on the left when entered in Well &amp; job.</p>
+            <p class="muted">BHA string by item length; casing aligned to string depths. Shoe depths in ft on the right.</p>
             <div class="diagram-wrap" id="diagram"></div>
           </article>
+        </section>
+
+        <!-- Load BHA reference -->
+        <section class="tab-panel" id="tab-reference">
+          <div class="grid">
+            <article class="card span-6">
+              <h2>Load from Excel file</h2>
+              <p class="muted">Works with any Halliburton-style BHA worksheet — Description, Box/Pin, OD/ID, Length, Top/Bottom MD.</p>
+              <div class="fields">
+                <div class="field" style="grid-column:1/-1"><label for="refFileUp">Select workbook (.xlsx / .xls)</label><input id="refFileUp" type="file" accept=".xlsx,.xls,.xlsm"></div>
+                <div class="field" id="refSheetField" hidden style="grid-column:1/-1"><label for="refSheetPick">Worksheet</label><select id="refSheetPick"></select></div>
+              </div>
+              <div class="actions" style="margin-top:var(--space-3)">
+                <button class="btn primary" id="refLoadFileBtn" type="button">Load selected file</button>
+              </div>
+              <p class="muted" id="refFileStatus" style="margin-top:var(--space-2)">Choose a BHA Excel file from your computer.</p>
+            </article>
+            <article class="card span-6">
+              <h2>Load from folder</h2>
+              <p class="muted">Pick a folder on your PC — all Excel files are listed. Click a file to load it as the active tally.</p>
+              <div class="actions">
+                <button class="btn primary" id="pickFolderBtn" type="button">Browse folder</button>
+                <button class="btn" id="loadBundledBtn" type="button">Load bundled sample</button>
+                <input type="file" id="folderUp" webkitdirectory directory multiple hidden>
+              </div>
+              <p class="muted" id="folderFileStatus" style="margin-top:var(--space-2)">No folder selected.</p>
+              <div class="ref-file-list" id="folderFileList"></div>
+            </article>
+            <article class="card span-12">
+              <h2>Active reference</h2>
+              <p class="ref-source" id="refSourceLine">No BHA loaded yet.</p>
+              <p class="muted">After loading, the tally, diagram, and tool library update from this workbook. Well header fields are filled automatically when found in the sheet.</p>
+            </article>
+          </div>
         </section>
 
         <!-- Import / export -->
@@ -666,8 +711,8 @@
         <!-- Tool library -->
         <section class="tab-panel" id="tab-library">
           <article class="card">
-            <h2>Common DST / completion components</h2>
-            <p class="muted">Click to pre-fill the builder form. Adjust length and serial before adding.</p>
+            <h2>Tool library</h2>
+            <p class="muted" id="librarySubtitle">Load a BHA tally to populate tools from your worksheet.</p>
             <div class="lib-grid" id="toolLibrary"></div>
           </article>
         </section>
@@ -720,11 +765,14 @@
         casingOd: '', casings: [], tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
       },
       items: [],
-      pendingWorkbook: null
+      pendingWorkbook: null,
+      refSource: '',
+      folderFiles: []
     };
 
     let editIndex = -1;
     let saveTimer = null;
+    let activeLibrary = [];
 
     const $ = id => document.getElementById(id);
     const fmt = (n, d = 3) => (Math.round((Number(n) || 0) * Math.pow(10, d)) / Math.pow(10, d)).toString();
@@ -1138,72 +1186,100 @@
       </tr>`).join('') : '<tr><td colspan="10" class="muted">No items</td></tr>';
 
       drawDiagram(rows, unit);
+      renderLibrary();
+      updateRefSourceLine();
       $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items }, null, 2);
       updateStartBanner();
       scheduleSave();
     }
 
+    function mdToFt(md, unit) { return unit === 'm' ? md * FT_PER_M : md; }
+
+    function buildStringDepthMap(rows, scaleY, startY = 30) {
+      const segments = [];
+      let y = startY;
+      rows.forEach(r => {
+        const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
+        segments.push({ topMd: r.topMd, botMd: r.botMd, y1: y, y2: y + h, h });
+        y += h + 4;
+      });
+      const mapY = md => {
+        if (!segments.length) return startY;
+        for (const s of segments) {
+          if (md >= s.topMd && md <= s.botMd) {
+            const span = s.botMd - s.topMd || 1;
+            return s.y1 + ((md - s.topMd) / span) * (s.y2 - s.y1);
+          }
+        }
+        if (md < segments[0].topMd) return segments[0].y1;
+        return segments.at(-1).y2;
+      };
+      return { segments, mapY, totalY: y + 30 };
+    }
+
     function drawDiagram(rows, unit) {
       const el = $('diagram');
       const casings = migrateCasings(state.well).filter(c => parseInch(c.od) > 0 || parseInch(c.id) > 0);
-      if (!rows.length && !casings.length) {
+      const hasCasing = casings.length > 0;
+      if (!rows.length && !hasCasing) {
         el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>';
         return;
       }
-      const hasCasing = casings.length > 0;
-      const parts = [];
-      let totalH = 60;
-      const casingLaneW = hasCasing ? 210 : 0;
-      const stringCx = hasCasing ? 400 : 180;
-      const labelX = hasCasing ? 500 : 350;
-      const svgW = hasCasing ? 1020 : 920;
 
-      if (hasCasing) {
-        const rowMaxMd = rows.length ? Math.max(...rows.map(r => r.botMd)) : 0;
-        const casingMaxMd = casings.reduce((a, c) => Math.max(a, Number(c.shoeMd) || 0, Number(c.topMd) || 0), 0);
-        const minMd = Math.min(rows.length ? Math.min(...rows.map(r => r.topMd)) : 0, 0, ...casings.map(c => Number(c.topMd) || 0));
-        const maxMd = Math.max(rowMaxMd, casingMaxMd, minMd + 1);
-        const spanMd = maxMd - minMd || 1;
-        const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
-        const plotH = Math.min(640, Math.max(420, spanMd * 0.11));
-        const padTop = 36;
-        const cxCas = 105;
-        const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
-        parts.push(`<text x="12" y="22" font-size="11" fill="currentColor" opacity=".75">Casing (MD ${unit})</text>`);
-        parts.push(`<line x1="${casingLaneW}" y1="18" x2="${casingLaneW}" y2="${padTop + plotH + 20}" stroke="currentColor" opacity=".15" stroke-width="1.5"/>`);
-        [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id))).forEach((c, i) => {
-          const top = Number(c.topMd) || 0;
-          const shoe = Number(c.shoeMd) || maxMd;
-          if (shoe <= top) return;
-          const y1 = mdY(top);
-          const y2 = mdY(shoe);
-          const h = Math.max(8, y2 - y1);
-          const od = parseInch(c.od) || parseInch(c.id) * 1.08;
-          const w = Math.max(22, (od / maxCasingOd) * 72);
-          const col = ['#6b7280', '#78716c', '#57534e'][i % 3];
-          parts.push(`<rect x="${cxCas - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}18" stroke="${col}" stroke-width="2" rx="2"/>`);
-          parts.push(`<text x="${cxCas - w / 2 - 6}" y="${y1 + 12}" font-size="9" text-anchor="end" fill="${col}" font-weight="700">${esc(c.name || 'Casing')}</text>`);
-          parts.push(`<text x="${cxCas - w / 2 - 6}" y="${y1 + 22}" font-size="8" text-anchor="end" fill="currentColor" opacity=".65">${esc(c.od || '—')}" / ${esc(c.id || '—')}"</text>`);
-        });
-        totalH = Math.max(totalH, padTop + plotH + 32);
-      }
+      const parts = [];
+      const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
+      const casingColors = ['#6b7280', '#78716c', '#57534e'];
+      let totalH = 60;
+
+      const stringCx = hasCasing ? 340 : 180;
+      const depthTextX = stringCx - 72;
+      const labelX = hasCasing ? 430 : 350;
+      const casingBarX = 58;
+      const casingLabelX = hasCasing ? 720 : 0;
+      const svgW = hasCasing ? 1040 : 920;
 
       if (rows.length) {
         const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
         const maxOd = Math.max(...rows.map(r => parseInch(r.od) || 3.5), 5);
         const scaleY = Math.min(1.2, 520 / totalLen);
-        const colors = ['#01696f', '#437a22', '#964219', '#3d5a80', '#a12c3c', '#6a4fb5'];
+        const { mapY, totalY } = buildStringDepthMap(rows, scaleY);
+        totalH = Math.max(totalH, totalY);
+
+        parts.push(`<text x="${depthTextX}" y="24" font-size="11" text-anchor="end" fill="currentColor" opacity=".75">Bot MD (ft)</text>`);
+        parts.push(`<text x="${stringCx - 30}" y="24" font-size="12" fill="currentColor" opacity=".75">${hasCasing ? 'BHA string' : 'Surface / lubricator'}</text>`);
+        parts.push(`<text x="${labelX + 10}" y="24" font-size="11" fill="currentColor" opacity=".75">Description</text>`);
+        if (hasCasing) parts.push(`<text x="${casingLabelX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing shoe (ft)</text>`);
+        parts.push(`<line x1="${stringCx}" y1="20" x2="${stringCx}" y2="${totalY}" stroke="currentColor" opacity=".12" stroke-width="2"/>`);
+
+        if (hasCasing) {
+          const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
+          const deepestMd = rows.at(-1)?.botMd ?? 0;
+          [...casings].sort((a, b) => (parseInch(b.od) || parseInch(b.id)) - (parseInch(a.od) || parseInch(a.id))).forEach((c, i) => {
+            const topMd = Number(c.topMd) || 0;
+            const shoeMd = Number(c.shoeMd) || deepestMd;
+            if (shoeMd <= topMd) return;
+            const y1 = mapY(topMd);
+            const y2 = mapY(shoeMd);
+            const h = Math.max(10, y2 - y1);
+            const od = parseInch(c.od) || parseInch(c.id) * 1.08;
+            const w = Math.max(20, (od / maxCasingOd) * 56);
+            const col = casingColors[i % casingColors.length];
+            const labelY = y1 + Math.min(h / 2 + 4, 14);
+            const shoeFt = mdToFt(shoeMd, unit);
+            parts.push(`<rect x="${casingBarX - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}22" stroke="${col}" stroke-width="2" rx="3"/>`);
+            parts.push(`<line x1="${casingBarX + w / 2 + 6}" y1="${labelY}" x2="${casingLabelX - 8}" y2="${labelY}" stroke="${col}" stroke-dasharray="4 3" opacity=".55"/>`);
+            parts.push(`<text x="${casingLabelX}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(c.name || 'Casing')}</text>`);
+            parts.push(`<text x="${casingLabelX}" y="${labelY + 17}" font-size="11" fill="currentColor" opacity=".8">Shoe ${fmt(shoeFt, 1)} ft · ${esc(c.od || '—')}" OD</text>`);
+          });
+          parts.push(`<line x1="115" y1="20" x2="115" y2="${totalY}" stroke="currentColor" opacity=".1" stroke-width="1"/>`);
+        }
+
         let y = 30;
-        const depthTextX = hasCasing ? stringCx - 100 : stringCx - 72;
-        parts.push(`<text x="${depthTextX}" y="24" font-size="11" text-anchor="end" fill="currentColor" opacity=".7">Bot MD (ft)</text>`);
-        parts.push(`<text x="${stringCx - 40}" y="24" font-size="12" fill="currentColor" opacity=".75">${hasCasing ? 'BHA string' : 'Surface / lubricator'}</text>`);
-        parts.push(`<text x="${labelX + 10}" y="24" font-size="11" fill="currentColor" opacity=".7">Description</text>`);
-        parts.push(`<line x1="${stringCx}" y1="20" x2="${stringCx}" y2="9999" stroke="currentColor" opacity=".12" stroke-width="2"/>`);
         rows.forEach((r, i) => {
           const h = Math.max(8, Math.min(80, r.lenMd * scaleY));
           const w = Math.max(18, (parseInch(r.od) || 3) / maxOd * 90);
           const col = colors[i % colors.length];
-          const botFt = unit === 'm' ? r.botMd * FT_PER_M : r.botMd;
+          const botFt = mdToFt(r.botMd, unit);
           parts.push(`<rect x="${stringCx - w / 2}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}22" stroke="${col}" stroke-width="1.5"/>`);
           const labelY = y + Math.min(h / 2 + 4, 14);
           parts.push(`<line x1="${depthTextX + 4}" y1="${labelY}" x2="${stringCx - w / 2 - 6}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".45"/>`);
@@ -1212,7 +1288,33 @@
           parts.push(`<text x="${labelX + 10}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(r.name)}</text>`);
           y += h + 4;
         });
-        totalH = Math.max(totalH, y + 30);
+      } else if (hasCasing) {
+        const minMd = Math.min(0, ...casings.map(c => Number(c.topMd) || 0));
+        const maxMd = Math.max(...casings.map(c => Number(c.shoeMd) || 0), minMd + 1);
+        const spanMd = maxMd - minMd || 1;
+        const plotH = 420;
+        const padTop = 36;
+        const mdY = md => padTop + ((md - minMd) / spanMd) * plotH;
+        const maxCasingOd = Math.max(...casings.map(c => parseInch(c.od) || parseInch(c.id) || 5), 5);
+        parts.push(`<text x="${casingLabelX}" y="24" font-size="11" fill="currentColor" opacity=".75">Casing shoe (ft)</text>`);
+        casings.forEach((c, i) => {
+          const topMd = Number(c.topMd) || 0;
+          const shoeMd = Number(c.shoeMd) || maxMd;
+          if (shoeMd <= topMd) return;
+          const y1 = mdY(topMd);
+          const y2 = mdY(shoeMd);
+          const h = Math.max(10, y2 - y1);
+          const od = parseInch(c.od) || parseInch(c.id) * 1.08;
+          const w = Math.max(20, (od / maxCasingOd) * 56);
+          const col = casingColors[i % casingColors.length];
+          const labelY = y1 + Math.min(h / 2 + 4, 14);
+          const shoeFt = mdToFt(shoeMd, unit);
+          parts.push(`<rect x="${casingBarX - w / 2}" y="${y1}" width="${w}" height="${h}" fill="${col}22" stroke="${col}" stroke-width="2" rx="3"/>`);
+          parts.push(`<line x1="${casingBarX + w / 2 + 6}" y1="${labelY}" x2="${casingLabelX - 8}" y2="${labelY}" stroke="${col}" stroke-dasharray="4 3" opacity=".55"/>`);
+          parts.push(`<text x="${casingLabelX}" y="${labelY + 4}" font-size="12" font-weight="700" fill="currentColor">${esc(c.name || 'Casing')}</text>`);
+          parts.push(`<text x="${casingLabelX}" y="${labelY + 17}" font-size="11" fill="currentColor" opacity=".8">Shoe ${fmt(shoeFt, 1)} ft · ${esc(c.od || '—')}" OD</text>`);
+        });
+        totalH = padTop + plotH + 32;
       }
 
       el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${Math.min(720, totalH)}px">${parts.join('')}</svg>`;
@@ -1367,15 +1469,26 @@
       return XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
     }
 
+    function populateSheetPickers(wb, selectedName) {
+      const names = wb.SheetNames;
+      const sn = selectedName || pickBestSheet(names);
+      const opts = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      [['sheetPick', 'sheetField'], ['refSheetPick', 'refSheetField']].forEach(([pickId, fieldId]) => {
+        const pick = $(pickId);
+        if (!pick) return;
+        pick.innerHTML = opts;
+        pick.value = sn;
+        const field = $(fieldId);
+        if (field) field.hidden = names.length < 2;
+      });
+      return sn;
+    }
+
     async function parseExcelFile(file, sheetName) {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
       state.pendingWorkbook = wb;
-      const names = wb.SheetNames;
-      $('sheetField').hidden = names.length < 2;
-      $('sheetPick').innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-      const sn = sheetName || pickBestSheet(names);
-      $('sheetPick').value = sn;
+      const sn = populateSheetPickers(wb, sheetName);
       const rows = sheetRows(wb, sn);
       const meta = extractWellMeta(rows);
       if (meta.fluidPpg) state.well.fluidPpg = meta.fluidPpg;
@@ -1418,28 +1531,132 @@
       return extractTextLines(text.split(/\n+/).map(s => s.trim()).filter(Boolean));
     }
 
-    function applyProject(data) {
+    function applyProject(data, sourceLabel) {
       if (data.well) state.well = { ...state.well, ...data.well };
       migrateCasings(state.well);
-      if (!state.well.casings.length) state.well.casings = defaultCasings();
+      if (!state.well.casings.length && data.useDefaultCasings) state.well.casings = defaultCasings();
       if (Array.isArray(data.items)) state.items = data.items;
+      if (sourceLabel) state.refSource = sourceLabel;
       writeWellToDom();
       render();
     }
 
     async function loadSample() {
       if (window.DST2_REFERENCE) {
-        applyProject(window.DST2_REFERENCE);
-        return;
+        applyProject({ ...window.DST2_REFERENCE, useDefaultCasings: !window.DST2_REFERENCE?.well?.casings?.length }, 'Bundled sample (DST-2)');
+        return true;
       }
       try {
         const res = await fetch('dst-2-bha-reference.json');
         if (res.ok) {
-          applyProject(await res.json());
-          return;
+          const data = await res.json();
+          applyProject({ ...data, useDefaultCasings: !data?.well?.casings?.length }, 'Bundled sample (JSON)');
+          return true;
         }
       } catch (e) { /* file:// or offline */ }
-      alert('Reference file not found.\n\nDownload the full repo and keep these files together:\n• dst-bha-tally-app.html\n• dst-2-bha-reference.js\n\nOr use Import / export → select your BHA .xlsx');
+      return false;
+    }
+
+    function updateRefSourceLine() {
+      const el = $('refSourceLine');
+      if (!el) return;
+      const n = state.items.length;
+      if (!n) {
+        el.textContent = 'No BHA loaded yet.';
+        return;
+      }
+      const parts = [
+        state.refSource || 'Manual / saved project',
+        state.well.name ? `Well: ${state.well.name}` : '',
+        state.well.dstRun ? `Run: ${state.well.dstRun}` : '',
+        `${n} tally items`
+      ].filter(Boolean);
+      el.textContent = parts.join(' · ');
+    }
+
+    function libraryFromItems(items) {
+      const seen = new Set();
+      const lib = [];
+      for (const item of items) {
+        if (!item?.name) continue;
+        const key = [item.name, item.od, item.id, item.box, item.pin].map(v => String(v || '').trim().toLowerCase()).join('|');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        lib.push({
+          name: item.name,
+          cat: item.cat || guessCat(item.name),
+          length: item.length ?? 0,
+          unit: item.unit || dispUnit(),
+          od: item.od || '',
+          id: item.id || '',
+          box: item.box || '',
+          pin: item.pin || ''
+        });
+      }
+      return lib;
+    }
+
+    function getActiveLibrary() {
+      const fromTally = libraryFromItems(state.items);
+      return fromTally.length ? fromTally : TOOL_LIBRARY;
+    }
+
+    async function importReferenceFile(file, replaceConfirm, statusEl) {
+      if (!file) return alert('Choose a file first');
+      if (typeof XLSX === 'undefined' && /\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+        return alert('Excel library not loaded — check internet connection and refresh the page.');
+      }
+      const setStatus = (msg, ok) => {
+        if (statusEl) {
+          statusEl.textContent = msg;
+          statusEl.style.color = ok ? 'var(--color-success)' : ok === false ? 'var(--color-error)' : 'var(--color-text-muted)';
+        }
+      };
+      try {
+        setStatus('Parsing…');
+        let items;
+        if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+          const sheetEl = statusEl === $('refFileStatus') ? $('refSheetPick') : $('sheetPick');
+          items = await parseExcelFile(file, sheetEl?.value);
+        } else if (/\.pdf$/i.test(file.name)) {
+          items = await parsePdfFile(file);
+        } else {
+          setStatus('Unsupported file type.', false);
+          return alert('Unsupported file type');
+        }
+        if (!items.length) {
+          setStatus('No tally rows detected.', false);
+          return alert('No tally rows detected — check sheet layout or add manually.');
+        }
+        if (replaceConfirm && state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) {
+          setStatus('Import cancelled.', false);
+          return;
+        }
+        state.items = items;
+        state.refSource = file.name;
+        writeWellToDom();
+        render();
+        setStatus(`Loaded ${items.length} items from ${file.name}.`, true);
+        switchTab('tally');
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message, false);
+        alert('Parse error: ' + err.message);
+      }
+    }
+
+    function renderFolderFileList() {
+      const list = $('folderFileList');
+      if (!list) return;
+      if (!state.folderFiles.length) {
+        list.innerHTML = '<p class="muted" style="padding:.75rem">No Excel files in selected folder.</p>';
+        return;
+      }
+      list.innerHTML = state.folderFiles.map((f, i) => `
+        <div class="ref-file-item">
+          <span>${esc(f.name)}</span>
+          <button class="btn sm primary" type="button" data-folder-i="${i}">Load</button>
+        </div>`).join('');
     }
 
     function switchTab(tabName) {
@@ -1492,7 +1709,7 @@
 
     function exportProject() {
       readWellFromDom();
-      dlBlob(JSON.stringify({ well: state.well, items: state.items }, null, 2), 'dst-bha-project.json', 'application/json');
+      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource }, null, 2), 'dst-bha-project.json', 'application/json');
     }
 
     function dlBlob(text, name, type) {
@@ -1507,7 +1724,7 @@
       $('saveStatus').textContent = 'Saving…';
       saveTimer = setTimeout(() => {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ well: state.well, items: state.items }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource }));
           $('saveStatus').textContent = 'Saved locally';
           $('saveStatus').classList.add('live');
         } catch (e) {
@@ -1524,6 +1741,7 @@
         if (data.well) state.well = { ...state.well, ...data.well };
         if (Array.isArray(data.items) && data.items.length) {
           state.items = data.items;
+          if (data.refSource) state.refSource = data.refSource;
           writeWellToDom();
           return true;
         }
@@ -1585,12 +1803,20 @@
     }
 
     function renderLibrary() {
-      $('toolLibrary').innerHTML = TOOL_LIBRARY.map((t, i) => `
+      activeLibrary = getActiveLibrary();
+      const fromTally = state.items.length > 0 && libraryFromItems(state.items).length > 0;
+      const sub = $('librarySubtitle');
+      if (sub) {
+        sub.textContent = fromTally
+          ? `${activeLibrary.length} unique tool(s) from the current tally — click to pre-fill the builder.`
+          : 'No tally loaded — showing default templates. Load a BHA Excel on the Load BHA reference tab.';
+      }
+      $('toolLibrary').innerHTML = activeLibrary.length ? activeLibrary.map((t, i) => `
         <div class="lib-item" data-li="${i}">
           <div class="t">${esc(t.name)}</div>
-          <div class="d">${esc(t.cat)} · ${t.length} ${t.unit} · OD ${esc(t.od)} · ID ${esc(t.id)}</div>
+          <div class="d">${esc(t.cat)} · ${fmt(t.length, 2)} ${t.unit} · OD ${esc(t.od)} · ID ${esc(t.id)}</div>
           <div class="d">${esc(t.box)} × ${esc(t.pin)}</div>
-        </div>`).join('');
+        </div>`).join('') : '<p class="muted">Load a BHA reference to populate the library.</p>';
     }
 
     // Tabs — labels use CSS radio (work without JS); JS adds scroll-into-view
@@ -1599,7 +1825,7 @@
         setTimeout(() => switchTab(tab.dataset.tab), 0);
       });
     });
-    if ($('bannerLoadBtn')) $('bannerLoadBtn').onclick = () => { loadSample(); switchTab('tally'); };
+    if ($('bannerLoadBtn')) $('bannerLoadBtn').onclick = () => { switchTab('reference'); };
     if ($('bannerImportBtn')) $('bannerImportBtn').onclick = () => switchTab('import');
 
     $('themeToggle').onclick = () => {
@@ -1617,7 +1843,9 @@
     };
 
     $('clearFormBtn').onclick = clearItemForm;
-    $('loadSampleBtn').onclick = loadSample;
+    $('loadSampleBtn').onclick = async () => {
+      if (!(await loadSample())) alert('No bundled sample in this folder.\n\nUse Load BHA reference tab to pick any Excel workbook.');
+    };
     $('clearAllBtn').onclick = () => { if (confirm('Clear entire string?')) { state.items = []; render(); } };
     $('reverseBtn').onclick = () => { state.items.reverse(); render(); };
     $('stringList').onclick = handleListAction;
@@ -1633,39 +1861,43 @@
     }
 
     async function runFileImport(f, replaceConfirm) {
-      if (!f) return alert('Choose a file first');
-      if (typeof XLSX === 'undefined' && /\.(xlsx|xlsm|xls)$/i.test(f.name)) {
-        return alert('Excel library not loaded — check internet connection and refresh the page.');
-      }
-      try {
-        setParseStatus('Parsing…');
-        let items;
-        if (/\.(xlsx|xlsm|xls)$/i.test(f.name)) {
-          items = await parseExcelFile(f, $('sheetPick').value);
-        } else if (/\.pdf$/i.test(f.name)) {
-          items = await parsePdfFile(f);
-        } else {
-          setParseStatus('Unsupported file type.', false);
-          return alert('Unsupported file type');
-        }
-        if (!items.length) {
-          setParseStatus('No tally rows detected.', false);
-          return alert('No tally rows detected — check sheet layout or add manually.');
-        }
-        if (replaceConfirm && state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) {
-          setParseStatus('Import cancelled.', false);
-          return;
-        }
-        state.items = items;
-        writeWellToDom();
-        render();
-        setParseStatus(`Imported ${items.length} items.`, true);
-      } catch (err) {
-        console.error(err);
-        setParseStatus(err.message, false);
-        alert('Parse error: ' + err.message);
-      }
+      return importReferenceFile(f, replaceConfirm, $('parseStatus'));
     }
+
+    $('refLoadFileBtn').onclick = () => importReferenceFile($('refFileUp').files[0], true, $('refFileStatus'));
+    $('refFileUp').onchange = () => {
+      const f = $('refFileUp').files[0];
+      if (f) importReferenceFile(f, true, $('refFileStatus'));
+    };
+    $('refSheetPick').onchange = async () => {
+      if (!state.pendingWorkbook || !$('refFileUp').files[0]) return;
+      const rows = sheetRows(state.pendingWorkbook, $('refSheetPick').value);
+      const meta = extractWellMeta(rows);
+      Object.assign(state.well, meta, { displayUnit: 'm', depthMode: 'imported' });
+      if (state.items.length && !confirm('Re-parse selected sheet and replace current string?')) return;
+      state.items = extractRowsFromSheet(rows);
+      state.refSource = $('refFileUp').files[0].name + ' · ' + $('refSheetPick').value;
+      writeWellToDom();
+      render();
+    };
+    $('pickFolderBtn').onclick = () => $('folderUp').click();
+    $('folderUp').onchange = e => {
+      state.folderFiles = [...(e.target.files || [])].filter(f => /\.(xlsx|xlsm|xls)$/i.test(f.name)).sort((a, b) => a.name.localeCompare(b.name));
+      $('folderFileStatus').textContent = state.folderFiles.length
+        ? `${state.folderFiles.length} Excel file(s) found — click Load on a file.`
+        : 'No Excel files found in that folder.';
+      renderFolderFileList();
+    };
+    $('folderFileList').onclick = e => {
+      const btn = e.target.closest('[data-folder-i]');
+      if (!btn) return;
+      const f = state.folderFiles[+btn.dataset.folderI];
+      if (f) importReferenceFile(f, true, $('folderFileStatus'));
+    };
+    $('loadBundledBtn').onclick = async () => {
+      if (!(await loadSample())) alert('No bundled sample found. Keep dst-2-bha-reference.js in the same folder as this HTML file.');
+      else switchTab('tally');
+    };
 
     $('parseFileBtn').onclick = () => runFileImport($('fileUp').files[0], true);
     $('fileUp').onchange = () => {
@@ -1691,6 +1923,7 @@
         else {
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
+          if (data.refSource) state.refSource = data.refSource;
         }
         writeWellToDom();
         render();
@@ -1740,6 +1973,7 @@
           const data = JSON.parse(reader.result);
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
+          if (data.refSource) state.refSource = data.refSource;
           writeWellToDom();
           render();
         } catch (err) { alert('Invalid project file'); }
@@ -1750,7 +1984,7 @@
     $('toolLibrary').onclick = e => {
       const card = e.target.closest('.lib-item');
       if (!card) return;
-      fillItemForm(TOOL_LIBRARY[+card.dataset.li]);
+      fillItemForm(activeLibrary[+card.dataset.li]);
       switchTab('builder');
     };
 
@@ -1780,8 +2014,7 @@
       try {
         renderLibrary();
         if (loadFromStorage()) render();
-        else loadSample();
-        updateStartBanner();
+        else { render(); updateStartBanner(); }
       } catch (err) {
         console.error(err);
         const box = document.createElement('div');
