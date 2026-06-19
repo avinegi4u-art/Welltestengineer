@@ -928,6 +928,52 @@
       return hit ? { cumVol: hit.cumVol, label: hit.name.trim() } : null;
     }
 
+    function odCapacityBblFt(odIn) {
+      const od = parseInch(odIn);
+      return od > 0 ? (od * od) / CAP_CONST : 0;
+    }
+
+    function buildCasingVolumeSegments(casings, unit) {
+      return casings.map(c => {
+        const id = parseInch(c.id);
+        const topMd = Number(c.topMd);
+        const shoeMd = Number(c.shoeMd);
+        if (id <= 0 || !Number.isFinite(shoeMd) || !Number.isFinite(topMd) || shoeMd <= topMd) return null;
+        return { id, topMd, shoeMd, topFt: mdToFt(topMd, unit), shoeFt: mdToFt(shoeMd, unit) };
+      }).filter(Boolean).sort((a, b) => a.topMd - b.topMd);
+    }
+
+    function wellVolumeFromCasings(casingSegs) {
+      return casingSegs.reduce((sum, s) => sum + capacityBblFt(s.id) * Math.abs(s.shoeFt - s.topFt), 0);
+    }
+
+    /** Annulus bbl where DST string OD sits inside casing ID, by overlapping MD intervals */
+    function annulusVolumeInCasings(casingSegs, rows, unit) {
+      let total = 0;
+      for (const r of rows) {
+        const odCap = odCapacityBblFt(r.od);
+        if (odCap <= 0) continue;
+        const strTopFt = mdToFt(r.topMd, unit);
+        const strBotFt = mdToFt(r.botMd, unit);
+        for (const c of casingSegs) {
+          const overlapFt = Math.min(strBotFt, c.shoeFt) - Math.max(strTopFt, c.topFt);
+          if (overlapFt <= 0) continue;
+          const idCap = capacityBblFt(c.id);
+          total += Math.max(0, idCap - odCap) * overlapFt;
+        }
+      }
+      return total;
+    }
+
+    function computeWellVolumeSummary(casings, rows, unit) {
+      const segs = buildCasingVolumeSegments(casings, unit);
+      if (!segs.length) return null;
+      return {
+        wellVol: wellVolumeFromCasings(segs),
+        annulusVol: annulusVolumeInCasings(segs, rows, unit)
+      };
+    }
+
     function normThread(s) {
       return String(s || '').toUpperCase().replace(/[^A-Z0-9/\- ]/g, '').replace(/\s+/g, ' ').trim();
     }
@@ -1172,6 +1218,14 @@
         ...(() => {
           const irdv = findCumVolToIrdvSlb(rows);
           return irdv ? [['Cum vol @ IRIS Dual Valve IRDV-BA (SLB)', `${fmtVol(irdv.cumVol)} bbl`]] : [];
+        })(),
+        ...(() => {
+          const wv = computeWellVolumeSummary(migrateCasings(state.well), rows, unit);
+          if (!wv) return [];
+          return [
+            ['Well volume', `${fmtVol(wv.wellVol)} bbl`],
+            ['Annulus volume (string in hole)', `${fmtVol(wv.annulusVol)} bbl`]
+          ];
         })(),
         ['Fluid weight', `${state.well.fluidPpg} ppg`],
         ['Hydrostatic @ bottom', `${fmt(hydroPsi(deepest, state.well.fluidPpg, unit), 1)} psi`],
