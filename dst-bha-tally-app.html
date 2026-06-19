@@ -1335,6 +1335,7 @@
       const hasCasing = casings.length > 0;
       if (!rows.length && !hasCasing) {
         el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>';
+        if ($('diagramMeta')) $('diagramMeta').textContent = '';
         return;
       }
 
