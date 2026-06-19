@@ -1333,7 +1333,6 @@
       const hasCasing = casings.length > 0;
       if (!rows.length && !hasCasing) {
         el.innerHTML = '<p class="muted">Add string items to generate sketch.</p>';
-        if ($('diagramMeta')) $('diagramMeta').textContent = '';
         return;
       }
 
@@ -1356,9 +1355,6 @@
         const { scaleY, minItemH, itemGap, labelSize } = layout;
         const { mapY, totalY } = buildStringDepthMap(rows, scaleY, { minItemH, itemGap });
         totalH = Math.max(totalH, totalY);
-        if ($('diagramMeta')) {
-          $('diagramMeta').textContent = `${rows.length} tally items · diagram height ${Math.round(totalH)} px — scroll vertically if needed`;
-        }
 
         if (hasCasing) {
           parts.push(`<text x="${casingTextX}" y="24" font-size="11" text-anchor="start" fill="currentColor" opacity=".75">Casing · shoe (ft)</text>`);
