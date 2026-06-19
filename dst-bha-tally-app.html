@@ -1337,6 +1337,8 @@
       return 'Casing';
     }
 
+    const CEMENT_DIAGRAM_COLOR = 'tomato';
+
     function appendCasingDiagram(parts, casings, opts) {
       const {
         mapY, casingBarX, casingTextX, casingTextEnd, maxCasingOd, deepestMd, unit, casingColors, casingLabelUsed
@@ -1356,8 +1358,22 @@
         const name = formatCasingDisplayName(c);
         const barLeft = casingBarX - w / 2;
         const leadX = barLeft - 6;
+        const cementTopMd = c.cementTop === '' || c.cementTop == null ? NaN : Number(c.cementTop);
 
         parts.push(`<rect x="${barLeft}" y="${y1}" width="${w}" height="${h}" fill="${col}18" stroke="${col}" stroke-width="1.75" rx="4"/>`);
+        if (Number.isFinite(cementTopMd) && cementTopMd > topMd && cementTopMd < shoeMd) {
+          const yCem = mapY(cementTopMd);
+          const hCem = Math.max(1, y2 - yCem);
+          parts.push(`<rect x="${barLeft}" y="${yCem}" width="${w}" height="${hCem}" fill="${CEMENT_DIAGRAM_COLOR}" opacity="0.42" stroke="none"/>`);
+          parts.push(`<line x1="${barLeft}" y1="${yCem}" x2="${barLeft + w}" y2="${yCem}" stroke="${CEMENT_DIAGRAM_COLOR}" stroke-width="2.25"/>`);
+          const cementFt = mdToFt(cementTopMd, unit);
+          const cemLabelY = reserveDiagramLabelY(yCem, casingLabelUsed);
+          if (Math.abs(cemLabelY - yCem) > 1) {
+            parts.push(`<line x1="${leadX}" y1="${yCem}" x2="${leadX}" y2="${cemLabelY}" stroke="${CEMENT_DIAGRAM_COLOR}" stroke-dasharray="3 3" opacity=".5"/>`);
+          }
+          parts.push(`<line x1="${casingTextEnd}" y1="${cemLabelY}" x2="${leadX}" y2="${cemLabelY}" stroke="${CEMENT_DIAGRAM_COLOR}" stroke-dasharray="3 3" opacity=".55"/>`);
+          parts.push(`<text x="${casingTextX}" y="${cemLabelY + 4}" text-anchor="start" font-size="11" font-weight="700" fill="${CEMENT_DIAGRAM_COLOR}">Cement top ${fmt(cementFt, 1)} ft</text>`);
+        }
         parts.push(`<line x1="${barLeft}" y1="${y2}" x2="${barLeft + w}" y2="${y2}" stroke="${col}" stroke-width="1.25" opacity=".7"/>`);
         if (Math.abs(labelY - y2) > 1) {
           parts.push(`<line x1="${leadX}" y1="${y2}" x2="${leadX}" y2="${labelY}" stroke="${col}" stroke-dasharray="3 3" opacity=".35"/>`);
