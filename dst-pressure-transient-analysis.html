@@ -649,6 +649,7 @@
                 </label>
               </div>
               <div class="row" style="margin-top:0.7rem">
+                <button id="useLocalSimulator">Use local simulator</button>
                 <button id="pollOnce">Poll once</button>
                 <button id="togglePolling" class="primary">Start polling</button>
               </div>
@@ -1014,6 +1015,11 @@
       });
       document.getElementById("pollOnce").addEventListener("click", () => pollEndpoint());
       document.getElementById("togglePolling").addEventListener("click", togglePolling);
+      document.getElementById("useLocalSimulator").addEventListener("click", () => {
+        els.endpointUrl.value = "http://127.0.0.1:4180/dst/live?batch=8";
+        els.pollSeconds.value = 5;
+        setPollMessage("Local simulator selected. Run: python3 dst-live-data-simulator.py", false);
+      });
       document.getElementById("addManual").addEventListener("click", addManualRow);
       document.getElementById("useNow").addEventListener("click", setManualTimeNow);
       document.getElementById("recalculate").addEventListener("click", () => refresh("Recalculated analysis."));
