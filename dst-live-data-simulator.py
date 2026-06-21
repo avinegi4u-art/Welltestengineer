@@ -38,13 +38,10 @@ class SimulatorState:
     def next_rows(self, batch: int) -> list[dict[str, float | str]]:
         batch = max(1, min(batch, 200))
         if self.cursor >= len(self.rows):
-          return [self.rows[-1]]
+            return [self.rows[-1]]
         rows = self.rows[self.cursor : self.cursor + batch]
         self.cursor = min(len(self.rows), self.cursor + batch)
         return rows
-
-
-STATE = SimulatorState()
 
 
 def build_dst_rows() -> list[dict[str, float | str]]:
@@ -89,6 +86,9 @@ def build_dst_rows() -> list[dict[str, float | str]]:
         add(minutes, 7745 + buildup + storage + noise, 0, 0, 0, 500 - i * 0.8, 189 - i * 0.025)
 
     return rows
+
+
+STATE = SimulatorState()
 
 
 class Handler(BaseHTTPRequestHandler):
