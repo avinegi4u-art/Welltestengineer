@@ -1,0 +1,2569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DST Pressure Transient Analyzer - Welltest Engineer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #07111f;
+      --surface: #0d1b2d;
+      --surface-2: #122238;
+      --surface-3: #172b45;
+      --border: #29445f;
+      --text: #eef5ff;
+      --muted: #a9bad0;
+      --accent: #3dd7b6;
+      --accent-2: #63a7ff;
+      --warn: #ffba66;
+      --bad: #ff7b8a;
+      --good: #7ee787;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+      --radius-sm: 10px;
+      --space: 1rem;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(61, 215, 182, 0.16), transparent 34rem),
+        radial-gradient(circle at 90% 0%, rgba(99, 167, 255, 0.18), transparent 30rem),
+        linear-gradient(145deg, #050b14 0%, var(--bg) 48%, #091827 100%);
+      color: var(--text);
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      padding: 0.72rem 1rem;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--accent), #238fb5);
+      color: #03131b;
+      border: 0;
+      font-weight: 750;
+    }
+
+    button.warn {
+      color: #1b1000;
+      background: var(--warn);
+      border: 0;
+      font-weight: 700;
+    }
+
+    button.ghost {
+      background: transparent;
+    }
+
+    button.small {
+      padding: 0.42rem 0.72rem;
+      font-size: 0.85rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #09182a;
+      padding: 0.72rem 0.82rem;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 8rem;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 215, 182, 0.12);
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .app {
+      width: min(1540px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.25rem 0 2rem;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      gap: 0.9rem;
+      align-items: center;
+    }
+
+    .mark {
+      width: 3.1rem;
+      height: 3.1rem;
+      border-radius: 1.1rem;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(61, 215, 182, 0.28), rgba(99, 167, 255, 0.18));
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 0.25rem;
+      font-size: clamp(1.75rem, 1.2rem + 2vw, 3rem);
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+    }
+
+    h2 {
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .sub {
+      color: var(--muted);
+      max-width: 78ch;
+      margin-bottom: 0;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 0.55rem;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.48rem 0.74rem;
+      background: rgba(13, 27, 45, 0.88);
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 999px;
+      background: var(--muted);
+      box-shadow: 0 0 0 4px rgba(169, 186, 208, 0.12);
+    }
+
+    .dot.live {
+      background: var(--good);
+      box-shadow: 0 0 0 4px rgba(126, 231, 135, 0.12);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1rem;
+    }
+
+    .card {
+      grid-column: span 12;
+      background: rgba(13, 27, 45, 0.88);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-9 { grid-column: span 9; }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .kpi {
+      background: rgba(18, 34, 56, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0.95rem;
+      min-height: 6rem;
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+    }
+
+    .kpi .value {
+      margin-top: 0.4rem;
+      font-size: clamp(1.35rem, 1rem + 1vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .kpi .note {
+      margin-top: 0.2rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .tab {
+      border-radius: 999px;
+      padding: 0.62rem 0.85rem;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .tab.active {
+      color: #021019;
+      background: var(--accent);
+      border-color: transparent;
+      font-weight: 750;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .chart {
+      width: 100%;
+      min-height: 310px;
+      border-radius: 16px;
+      background: #071525;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .chart svg {
+      display: block;
+      width: 100%;
+      height: 310px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 0.55rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      margin-right: 0.32rem;
+      background: var(--c, var(--accent));
+      vertical-align: -0.05rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th, td {
+      padding: 0.62rem 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 650;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .scroll {
+      max-height: 390px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(7, 21, 37, 0.7);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.18rem 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    .badge.flow { color: var(--good); border-color: rgba(126, 231, 135, 0.38); }
+    .badge.shutin { color: var(--warn); border-color: rgba(255, 186, 102, 0.44); }
+    .badge.alert { color: var(--bad); border-color: rgba(255, 123, 138, 0.5); }
+    .badge.cleanup { color: #9be7ff; border-color: rgba(155, 231, 255, 0.45); }
+    .badge.restart { color: #c7a6ff; border-color: rgba(199, 166, 255, 0.45); }
+    .badge.afterflow { color: #ffd166; border-color: rgba(255, 209, 102, 0.5); }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-bottom: 1rem;
+    }
+
+    .step {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(18, 34, 56, 0.78);
+      padding: 0.7rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 0.15rem;
+    }
+
+    .step.ready { border-color: rgba(126, 231, 135, 0.42); }
+    .step.warn { border-color: rgba(255, 186, 102, 0.48); }
+
+    .confidence {
+      display: grid;
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .confidence-meter {
+      height: 0.65rem;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border);
+    }
+
+    .confidence-meter span {
+      display: block;
+      height: 100%;
+      width: var(--w, 0%);
+      background: linear-gradient(90deg, var(--bad), var(--warn), var(--good));
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.65rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 0.55rem;
+    }
+
+    .tight-select, .tight-input {
+      min-width: 8.5rem;
+      width: auto;
+      padding: 0.38rem 0.55rem;
+      border-radius: 10px;
+      font-size: 0.82rem;
+    }
+
+    .period-select {
+      min-width: 7.2rem;
+      padding: 0.34rem 0.48rem;
+      border-radius: 9px;
+      font-size: 0.8rem;
+    }
+
+    .event-list {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+    }
+
+    .event-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.65rem;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(7, 21, 37, 0.65);
+      padding: 0.52rem 0.65rem;
+      font-size: 0.84rem;
+    }
+
+    .callout {
+      border: 1px solid rgba(61, 215, 182, 0.35);
+      border-radius: 16px;
+      background: rgba(61, 215, 182, 0.08);
+      color: #dffcf7;
+      padding: 0.9rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .callout.warn {
+      border-color: rgba(255, 186, 102, 0.38);
+      background: rgba(255, 186, 102, 0.09);
+      color: #fff1dd;
+    }
+
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .right { text-align: right; }
+    .nowrap { white-space: nowrap; }
+    .hide { display: none !important; }
+
+    .report {
+      white-space: pre-wrap;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #071525;
+      padding: 1rem;
+      min-height: 22rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.52;
+    }
+
+    @media (max-width: 1180px) {
+      .span-3, .span-4, .span-5, .span-6, .span-7, .span-8, .span-9 { grid-column: span 12; }
+      .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .hero, .split { grid-template-columns: 1fr; }
+      .hero-actions { justify-content: flex-start; }
+    }
+
+    @media (max-width: 700px) {
+      .app { width: min(100% - 1rem, 1540px); }
+      .kpis { grid-template-columns: 1fr 1fr; }
+      .brand { align-items: flex-start; }
+      .mark { width: 2.6rem; height: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="31" height="31" viewBox="0 0 31 31" fill="none">
+            <path d="M6 24C9.5 10.5 12.2 7 15.5 7C18.8 7 21.5 10.5 25 24" stroke="#3dd7b6" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M5.5 21.8H25.5" stroke="#63a7ff" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="15.5" cy="7" r="2.8" fill="#eef5ff"/>
+          </svg>
+        </div>
+        <div>
+          <h1>DST Pressure Transient Analyzer</h1>
+          <p class="sub">Office dashboard for real-time bottomhole pressure, surface well-test rates, wellhead pressure, and temperature. Import CSV, paste rows, key in readings, or poll a JSON endpoint, then screen buildup, derivative, Horner, PI, mobility, and skin indicators while the job is running.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <span class="status-pill"><span id="liveDot" class="dot"></span><span id="liveStatus">Offline/local mode</span></span>
+        <button id="loadSample" class="primary">Load DST demo</button>
+        <button id="saveLocal">Save case</button>
+        <button id="clearData" class="ghost">Clear</button>
+      </div>
+    </section>
+
+    <section class="kpis" aria-label="Live DST indicators">
+      <div class="kpi"><div class="label">Last BHP</div><div id="kpiBhp" class="value">-</div><div id="kpiBhpNote" class="note">psi</div></div>
+      <div class="kpi"><div class="label">Surface rate</div><div id="kpiRate" class="value">-</div><div class="note">analysis bpd</div></div>
+      <div class="kpi"><div class="label">Current period</div><div id="kpiPeriod" class="value">-</div><div id="kpiPeriodNote" class="note">flow/shut-in</div></div>
+      <div class="kpi"><div class="label">Extrapolated pressure</div><div id="kpiPstar" class="value">-</div><div class="note">Horner p* psi</div></div>
+      <div class="kpi"><div class="label">Permeability</div><div id="kpiPerm" class="value">-</div><div class="note">screening md</div></div>
+      <div class="kpi"><div class="label">Confidence</div><div id="kpiConfidence" class="value">-</div><div id="kpiConfidenceNote" class="note">analysis state</div></div>
+    </section>
+
+    <section class="workflow" aria-label="PTA workflow status">
+      <div id="stepImport" class="step"><strong>1. Import</strong><span>No data loaded</span></div>
+      <div id="stepQc" class="step"><strong>2. QC</strong><span>Waiting for readings</span></div>
+      <div id="stepPeriods" class="step"><strong>3. Periods</strong><span>Auto-detect then correct</span></div>
+      <div id="stepAnalysis" class="step"><strong>4. Analysis</strong><span>Choose fit window</span></div>
+      <div id="stepReport" class="step"><strong>5. Report</strong><span>Export interpretation</span></div>
+    </section>
+
+    <nav class="tabs" aria-label="DST analyzer sections">
+      <button class="tab active" data-tab="connect">Data link</button>
+      <button class="tab" data-tab="analysis">Analysis</button>
+      <button class="tab" data-tab="diagnostics">Diagnostics</button>
+      <button class="tab" data-tab="reporting">Report</button>
+    </nav>
+
+    <section id="connect" class="tab-panel active">
+      <div class="grid">
+        <div class="card span-7">
+          <h2>Live and imported data</h2>
+          <div class="callout">
+            Expected columns are flexible: time/timestamp, bhp/bottomhole pressure, rate or oil/water/gas rates, whp/surface pressure, and temperature. The browser stores the case locally; no data leaves your machine unless you poll your own endpoint.
+          </div>
+          <div class="fields" style="margin-bottom:0.75rem">
+            <label>Pressure unit
+              <select id="pressureUnit">
+                <option value="psi">psi</option>
+                <option value="kpa">kPa</option>
+                <option value="bar">bar</option>
+                <option value="mpa">MPa</option>
+              </select>
+            </label>
+            <label>Liquid rate unit
+              <select id="rateUnit">
+                <option value="bpd">bpd</option>
+                <option value="m3d">m3/d</option>
+                <option value="stbd">STB/d</option>
+              </select>
+            </label>
+            <label>Gas rate unit
+              <select id="gasUnit">
+                <option value="mscfd">Mscf/d</option>
+                <option value="scfd">scf/d</option>
+                <option value="e3m3d">e3 m3/d</option>
+              </select>
+            </label>
+            <label>Temperature unit
+              <select id="tempUnit">
+                <option value="f">F</option>
+                <option value="c">C</option>
+                <option value="k">K</option>
+              </select>
+            </label>
+          </div>
+          <div class="split">
+            <div>
+              <h3>CSV file or pasted rows</h3>
+              <div class="fields">
+                <label>Import CSV file
+                  <input id="csvFile" type="file" accept=".csv,text/csv" />
+                </label>
+                <label>Time zone treatment
+                  <select id="timeMode">
+                    <option value="local">Treat timestamps as local office time</option>
+                    <option value="utc">Treat timestamps as UTC when no zone is supplied</option>
+                  </select>
+                </label>
+              </div>
+              <label style="margin-top:0.75rem">Paste CSV rows
+                <textarea id="csvPaste" placeholder="timestamp,bhp_psi,rate_bpd,whp_psi,temp_f&#10;2026-06-21 08:00,8420,0,520,186"></textarea>
+              </label>
+              <div class="row" style="margin-top:0.7rem">
+                <button id="parsePaste" class="primary">Import pasted rows</button>
+                <button id="appendSampleRows">Append 15 min demo rows</button>
+              </div>
+            </div>
+            <div>
+              <h3>Endpoint polling</h3>
+              <p class="muted">Use this when your rig data historian, WITSML bridge, or well-test package exposes a CORS-enabled JSON endpoint. Supported response shapes: one row object, an array of rows, or <span class="mono">{ "rows": [...] }</span>.</p>
+              <div class="fields">
+                <label>JSON endpoint URL
+                  <input id="endpointUrl" type="url" placeholder="https://office-proxy.example.com/dst/live" />
+                </label>
+                <label>Poll interval, sec
+                  <input id="pollSeconds" type="number" min="5" step="1" value="30" />
+                </label>
+              </div>
+              <div class="row" style="margin-top:0.7rem">
+                <button id="pollOnce">Poll once</button>
+                <button id="togglePolling" class="primary">Start polling</button>
+              </div>
+              <p id="pollMessage" class="muted" style="margin-top:0.6rem">Polling is stopped.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card span-5">
+          <h2>Manual reading</h2>
+          <div class="fields">
+            <label>Time
+              <input id="manualTime" type="datetime-local" />
+            </label>
+            <label>BHP, psi
+              <input id="manualBhp" type="number" step="0.1" placeholder="8420" />
+            </label>
+            <label>Oil rate, bpd
+              <input id="manualOil" type="number" step="0.1" placeholder="520" />
+            </label>
+            <label>Water rate, bpd
+              <input id="manualWater" type="number" step="0.1" placeholder="0" />
+            </label>
+            <label>Gas rate, Mscf/d
+              <input id="manualGas" type="number" step="0.1" placeholder="0" />
+            </label>
+            <label>WHP, psi
+              <input id="manualWhp" type="number" step="0.1" placeholder="580" />
+            </label>
+            <label>Temperature, F
+              <input id="manualTemp" type="number" step="0.1" placeholder="186" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:0.8rem">
+            <button id="addManual" class="primary">Add reading</button>
+            <button id="useNow">Use current time</button>
+          </div>
+          <div class="callout warn" style="margin-top:0.9rem">
+            Screening only: verify rates, gauges, superposition, phase behavior, and tool drift before using these results for final DST interpretation or reserves decisions.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Latest readings</h2>
+          <div class="row" style="justify-content:space-between; margin-bottom:0.7rem">
+            <span id="rowCount" class="muted">0 rows loaded</span>
+            <div class="row">
+              <button id="downloadCase" class="small">Download case</button>
+              <label class="small" style="display:inline-flex; align-items:center; gap:0.4rem">Load case
+                <input id="caseFile" type="file" accept=".json,application/json" style="display:none" />
+              </label>
+              <button id="exportCsv" class="small">Export CSV</button>
+              <button id="exportJson" class="small">Export JSON</button>
+            </div>
+          </div>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr><th>Time</th><th>BHP psi</th><th>Rate bpd</th><th>Oil</th><th>Water</th><th>Gas Mscf/d</th><th>WHP psi</th><th>Temp F</th><th>Period</th></tr>
+              </thead>
+              <tbody id="dataBody">
+                <tr><td colspan="9" class="muted">Load sample data, paste CSV, add manual readings, or connect polling.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="analysis" class="tab-panel">
+      <div class="grid">
+        <div class="card span-4">
+          <h2>Reservoir and fluid inputs</h2>
+          <div class="fields">
+            <label>Net pay h, ft
+              <input id="netPay" type="number" step="0.1" value="55" />
+            </label>
+            <label>Oil viscosity mu, cP
+              <input id="viscosity" type="number" step="0.01" value="1.15" />
+            </label>
+            <label>FVF B, rb/stb
+              <input id="fvf" type="number" step="0.01" value="1.18" />
+            </label>
+            <label>Porosity fraction
+              <input id="porosity" type="number" step="0.001" value="0.18" />
+            </label>
+            <label>Total compressibility, 1/psi
+              <input id="ct" type="number" step="0.000001" value="0.000012" />
+            </label>
+            <label>Wellbore radius rw, ft
+              <input id="rw" type="number" step="0.01" value="0.33" />
+            </label>
+            <label>Shut-in threshold, bpd
+              <input id="shutThreshold" type="number" step="1" value="10" />
+            </label>
+            <label>Gas to liquid equivalent, bpd per Mscf/d
+              <input id="gasFactor" type="number" step="0.001" value="0" />
+            </label>
+            <label>Z-factor
+              <input id="zFactor" type="number" step="0.01" value="0.9" />
+            </label>
+            <label>Perforated top, ft MD
+              <input id="perfTop" type="number" step="1" placeholder="8420" />
+            </label>
+            <label>Perforated base, ft MD
+              <input id="perfBase" type="number" step="1" placeholder="8485" />
+            </label>
+            <label>Tubing ID, in
+              <input id="tubingId" type="number" step="0.001" value="2.441" />
+            </label>
+            <label>Packer depth, ft MD
+              <input id="packerDepth" type="number" step="1" placeholder="8350" />
+            </label>
+            <label>Wellbore volume, bbl
+              <input id="wellboreVolume" type="number" step="0.1" placeholder="auto from tubing" />
+            </label>
+            <label>Horner fit start, hr
+              <input id="hornerStart" type="number" step="0.01" value="0.25" />
+            </label>
+            <label>Horner fit end, hr
+              <input id="hornerEnd" type="number" step="0.01" value="999" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:0.85rem">
+            <button id="recalculate" class="primary">Recalculate</button>
+            <button id="saveInputs">Save inputs</button>
+            <button id="resetFitWindow">Auto fit window</button>
+          </div>
+          <p class="help" style="margin-top:0.65rem">The Horner fit window excludes early wellbore storage/afterflow and late boundary effects. Adjust it before using p*, k, skin, or PI for engineering decisions.</p>
+        </div>
+
+        <div class="card span-8">
+          <div class="chart-toolbar">
+            <h2 style="margin-bottom:0">Pressure and rate trend</h2>
+            <button class="small" data-export-plot="trendChart">Export PNG</button>
+          </div>
+          <div id="trendChart" class="chart" aria-label="BHP and rate trend chart"></div>
+          <div class="legend">
+            <span style="--c:#63a7ff">BHP</span>
+            <span style="--c:#3dd7b6">Rate</span>
+            <span style="--c:#ffba66">Shut-in points</span>
+          </div>
+        </div>
+
+        <div class="card span-5">
+          <h2>Detected DST periods</h2>
+          <p class="help">Auto labels can be corrected below. Manual edits are saved with the case and used by Horner, superposition, QC, and reporting.</p>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>#</th><th>Type</th><th>Start</th><th>End</th><th>Duration hr</th><th>Avg rate</th><th>Confidence</th></tr></thead>
+              <tbody id="periodBody">
+                <tr><td colspan="7" class="muted">No periods detected yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card span-7">
+          <div class="chart-toolbar">
+            <h2 style="margin-bottom:0">Horner buildup estimate</h2>
+            <button class="small" data-export-plot="hornerChart">Export PNG</button>
+          </div>
+          <div id="hornerChart" class="chart" aria-label="Horner buildup chart"></div>
+          <div id="hornerSummary" class="callout" style="margin-top:0.75rem">Load a flow followed by shut-in to calculate Horner slope, p*, permeability, skin, and PI.</div>
+        </div>
+        <div class="card">
+          <h2>Key job events</h2>
+          <div class="fields">
+            <label>Event time
+              <input id="eventTime" type="datetime-local" />
+            </label>
+            <label>Event type
+              <select id="eventType">
+                <option value="perforation">Perforation</option>
+                <option value="acid job">Acid job</option>
+                <option value="shut-in start">Shut-in start</option>
+                <option value="restart">Restart</option>
+                <option value="gauge change">Gauge change</option>
+                <option value="note">Note</option>
+              </select>
+            </label>
+            <label>Event note
+              <input id="eventNote" placeholder="e.g. main shut-in valve closed" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:0.75rem">
+            <button id="addEvent" class="primary">Add event</button>
+            <button id="clearEvents">Clear events</button>
+          </div>
+          <div id="eventList" class="event-list"><div class="muted">No key events added yet.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="diagnostics" class="tab-panel">
+      <div class="grid">
+        <div class="card span-7">
+          <div class="chart-toolbar">
+            <h2 style="margin-bottom:0">Log-log buildup derivative</h2>
+            <button class="small" data-export-plot="derivativeChart">Export PNG</button>
+          </div>
+          <div id="derivativeChart" class="chart" aria-label="Pressure derivative chart"></div>
+          <div class="legend">
+            <span style="--c:#63a7ff">Delta pressure</span>
+            <span style="--c:#ffba66">Derivative dP/dln(t)</span>
+          </div>
+        </div>
+        <div class="card span-5">
+          <h2>Interpretation cues</h2>
+          <div id="confidenceBox" class="confidence">
+            <div class="row" style="justify-content:space-between"><strong id="confidenceLabel">No analysis yet</strong><span id="confidenceScore" class="badge">0%</span></div>
+            <div class="confidence-meter"><span id="confidenceBar"></span></div>
+            <p id="confidenceNotes" class="help">Load readings and build a usable buildup before assigning interpretation confidence.</p>
+          </div>
+          <div id="diagnosticNotes" class="report">Load data to generate derivative and operational quality notes.</div>
+        </div>
+        <div class="card span-7">
+          <h2>Flow regime interpretation</h2>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Regime</th><th>Window</th><th>Confidence</th><th>Basis</th></tr></thead>
+              <tbody id="regimeBody">
+                <tr><td colspan="4" class="muted">No regimes identified yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card span-5">
+          <h2>Variable-rate support</h2>
+          <div id="superpositionBox" class="report">Load data to calculate equivalent flow time and superposition notes.</div>
+        </div>
+        <div class="card">
+          <h2>Data quality checks</h2>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Severity</th><th>Check</th><th>Detail</th></tr></thead>
+              <tbody id="qualityBody">
+                <tr><td colspan="3" class="muted">No data quality checks yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reporting" class="tab-panel">
+      <div class="grid">
+        <div class="card span-4">
+          <h2>Case details</h2>
+          <div class="fields">
+            <label>Well / DST job
+              <input id="caseWell" value="DST office monitoring case" />
+            </label>
+            <label>Zone / interval
+              <input id="caseZone" placeholder="e.g. Sand A 8420-8485 ft" />
+            </label>
+            <label>Engineer
+              <input id="caseEngineer" placeholder="Your name" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:0.85rem">
+            <button id="buildReport" class="primary">Build report</button>
+            <button id="copyReport">Copy report</button>
+            <button id="downloadReport">Download text</button>
+            <button id="downloadHtmlReport">Export HTML</button>
+            <button id="printPdfReport">Export PDF</button>
+            <button id="exportAllPlots">Export plots PNG</button>
+          </div>
+        </div>
+        <div class="card span-8">
+          <h2>Office interpretation note</h2>
+          <div id="reportText" class="report">Build a report after loading and analyzing data.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const APP_VERSION = "2.0.0";
+    const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
+    const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
+    const HEADER_ALIASES = {
+      time: ["time", "timestamp", "date_time", "datetime", "sample_time", "date", "reading_time"],
+      bhp: ["bhp", "bhp_psi", "bottomhole_pressure", "bottom_hole_pressure", "downhole_pressure", "pressure_bhp", "gauge_pressure", "pressure"],
+      whp: ["whp", "wellhead_pressure", "surface_pressure", "surface_pressure_psi", "thp", "tubing_head_pressure", "whp_psi"],
+      temp: ["temp", "temperature", "surface_temperature", "temperature_f", "temp_f", "gauge_temperature", "bh_temp"],
+      rate: ["rate", "rate_bpd", "surface_rate", "surface_rate_bpd", "total_rate", "liquid_rate", "q", "q_total"],
+      oil: ["oil", "oil_rate", "oil_bpd", "qo", "q_oil", "oil_rate_bpd"],
+      water: ["water", "water_rate", "water_bpd", "qw", "q_water", "water_rate_bpd"],
+      gas: ["gas", "gas_rate", "gas_mscfd", "qg", "q_gas", "gas_rate_mscfd"]
+    };
+
+    const state = {
+      rows: [],
+      periods: [],
+      manualPeriods: {},
+      events: [],
+      quality: [],
+      analysis: null,
+      importIssues: [],
+      importStats: {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []},
+      pollTimer: null,
+      lastPollError: "",
+      lastReportHtml: ""
+    };
+
+    const els = {};
+    const fieldIds = [
+      "csvFile", "caseFile", "timeMode", "csvPaste", "endpointUrl", "pollSeconds", "pollMessage",
+      "pressureUnit", "rateUnit", "gasUnit", "tempUnit",
+      "manualTime", "manualBhp", "manualOil", "manualWater", "manualGas", "manualWhp", "manualTemp",
+      "rowCount", "dataBody", "periodBody", "qualityBody", "trendChart", "hornerChart",
+      "derivativeChart", "hornerSummary", "diagnosticNotes", "regimeBody", "superpositionBox",
+      "confidenceLabel", "confidenceScore", "confidenceBar", "confidenceNotes",
+      "liveDot", "liveStatus", "kpiBhp", "kpiBhpNote", "kpiRate", "kpiPeriod", "kpiPeriodNote",
+      "kpiPstar", "kpiPerm", "kpiConfidence", "kpiConfidenceNote",
+      "stepImport", "stepQc", "stepPeriods", "stepAnalysis", "stepReport",
+      "netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor",
+      "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd",
+      "eventTime", "eventType", "eventNote", "eventList",
+      "caseWell", "caseZone", "caseEngineer", "reportText"
+    ];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fieldIds.forEach(id => els[id] = document.getElementById(id));
+      bindEvents();
+      setManualTimeNow();
+      setEventTimeNow();
+      loadSavedCase();
+      refresh();
+    });
+
+    function bindEvents() {
+      document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => showTab(tab.dataset.tab)));
+      document.getElementById("loadSample").addEventListener("click", () => {
+        state.rows = makeSampleRows();
+        state.manualPeriods = {};
+        state.events = makeSampleEvents();
+        state.importStats = {rawRows: state.rows.length, parsedRows: state.rows.length, invalidRows: 0, unsortedRows: 0, unitNotes: ["Demo data is already normalized to psi, bpd, Mscf/d, and F."]};
+        refresh("Loaded a synthetic multi-rate DST with cleanup, restart, afterflow, and buildup.");
+      });
+      document.getElementById("appendSampleRows").addEventListener("click", () => {
+        appendRows(makeSampleRows().slice(-15), "demo");
+        refresh("Appended recent demo rows.");
+      });
+      document.getElementById("clearData").addEventListener("click", () => {
+        if (!confirm("Clear all loaded readings from this browser session?")) return;
+        state.rows = [];
+        state.periods = [];
+        state.manualPeriods = {};
+        state.events = [];
+        state.importIssues = [];
+        state.importStats = {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+        refresh("Cleared data.");
+      });
+      els.csvFile.addEventListener("change", handleFileImport);
+      els.caseFile.addEventListener("change", handleCaseImport);
+      document.getElementById("parsePaste").addEventListener("click", () => {
+        const result = parseCsv(els.csvPaste.value, "paste");
+        appendRows(result.rows, "paste");
+        mergeImportStats(result);
+        refresh(`Imported ${result.rows.length} pasted row${result.rows.length === 1 ? "" : "s"}.`);
+      });
+      document.getElementById("pollOnce").addEventListener("click", () => pollEndpoint());
+      document.getElementById("togglePolling").addEventListener("click", togglePolling);
+      document.getElementById("addManual").addEventListener("click", addManualRow);
+      document.getElementById("useNow").addEventListener("click", setManualTimeNow);
+      document.getElementById("recalculate").addEventListener("click", () => refresh("Recalculated analysis."));
+      document.getElementById("resetFitWindow").addEventListener("click", resetFitWindow);
+      document.getElementById("saveInputs").addEventListener("click", saveInputs);
+      document.getElementById("saveLocal").addEventListener("click", saveCase);
+      document.getElementById("downloadCase").addEventListener("click", downloadCase);
+      document.getElementById("exportCsv").addEventListener("click", exportCsv);
+      document.getElementById("exportJson").addEventListener("click", exportJson);
+      document.getElementById("buildReport").addEventListener("click", buildReport);
+      document.getElementById("copyReport").addEventListener("click", copyReport);
+      document.getElementById("downloadReport").addEventListener("click", downloadReport);
+      document.getElementById("downloadHtmlReport").addEventListener("click", downloadHtmlReport);
+      document.getElementById("printPdfReport").addEventListener("click", printPdfReport);
+      document.getElementById("exportAllPlots").addEventListener("click", exportAllPlots);
+      document.getElementById("addEvent").addEventListener("click", addEvent);
+      document.getElementById("clearEvents").addEventListener("click", () => {
+        state.events = [];
+        refresh("Cleared event annotations.");
+      });
+      document.querySelectorAll("[data-export-plot]").forEach(button => button.addEventListener("click", () => exportPlotAsPng(button.dataset.exportPlot)));
+      [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit"].forEach(id => {
+        els[id]?.addEventListener("change", () => refresh());
+      });
+    }
+
+    function analysisInputIds() {
+      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd"];
+    }
+
+    function showTab(tabName) {
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === tabName));
+      document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabName));
+    }
+
+    /* Parsing and unit normalization */
+    function parseCsv(text, source = "import") {
+      const lines = String(text || "").split(/\r?\n/).filter(line => line.trim().length);
+      const result = {rows: [], issues: [], rawRows: Math.max(0, lines.length - 1), parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (lines.length < 2) {
+        result.issues.push("CSV requires a header and at least one data row.");
+        return result;
+      }
+      const rawHeaders = splitCsvLine(lines[0]);
+      const headers = rawHeaders.map(normalizeHeader);
+      const unitMap = inferUnits(rawHeaders);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      let previousTime = -Infinity;
+      lines.slice(1).forEach((line, index) => {
+        const values = splitCsvLine(line);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = rowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Row ${index + 2}: ${parsed.issue || "missing timestamp or BHP"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function splitCsvLine(line) {
+      const cells = [];
+      let current = "";
+      let quoted = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (char === '"' && line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          cells.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      cells.push(current.trim());
+      return cells;
+    }
+
+    function inferUnits(rawHeaders) {
+      const textByChannel = {};
+      rawHeaders.forEach(header => {
+        const normalized = normalizeHeader(header);
+        Object.entries(HEADER_ALIASES).forEach(([channel, aliases]) => {
+          if (aliases.some(alias => normalized.includes(normalizeHeader(alias)))) {
+            textByChannel[channel] = String(header).toLowerCase();
+          }
+        });
+      });
+      return {
+        pressure: inferUnit(textByChannel.bhp || textByChannel.whp, els.pressureUnit?.value || "psi", ["kpa", "bar", "mpa", "psi"]),
+        rate: inferUnit(textByChannel.rate || textByChannel.oil || textByChannel.water, els.rateUnit?.value || "bpd", ["m3/d", "m3d", "stb/d", "stbd", "bpd"]),
+        gas: inferUnit(textByChannel.gas, els.gasUnit?.value || "mscfd", ["mscf/d", "mscfd", "scf/d", "scfd", "e3m3/d", "e3m3d"]),
+        temp: inferUnit(textByChannel.temp, els.tempUnit?.value || "f", ["degc", "c", "degf", "f", "k"])
+      };
+    }
+
+    function inferUnit(headerText = "", fallback, candidates) {
+      const normalized = headerText.replace(/[^a-z0-9/]/g, "");
+      for (const candidate of candidates) {
+        const key = candidate.replace(/[^a-z0-9/]/g, "");
+        if (normalized.includes(key)) return {value: canonicalUnit(candidate), inferred: true};
+      }
+      return {value: canonicalUnit(fallback), inferred: false};
+    }
+
+    function canonicalUnit(unit) {
+      const key = String(unit || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      return ({kpa: "kpa", bar: "bar", mpa: "mpa", psi: "psi", m3d: "m3d", stbd: "stbd", bpd: "bpd", mscfd: "mscfd", scfd: "scfd", e3m3d: "e3m3d", degc: "c", c: "c", degf: "f", f: "f", k: "k"}[key] || unit || "psi");
+    }
+
+    function rowFromRecord(record, options = {}) {
+      const get = channel => {
+        for (const alias of HEADER_ALIASES[channel] || []) {
+          const key = normalizeHeader(alias);
+          if (record[key] !== undefined && record[key] !== "") return record[key];
+        }
+        return "";
+      };
+      const timeRaw = get("time");
+      const time = parseTime(timeRaw);
+      if (!time) return {row: null, issue: "missing or invalid timestamp"};
+      const rawBhp = nullableNum(get("bhp"));
+      if (!Number.isFinite(rawBhp)) return {row: null, issue: "missing or invalid bottomhole pressure"};
+      const unitMap = options.unitMap || defaultUnitMap();
+      const rawRate = nullableNum(get("rate"));
+      const explicitRate = Number.isFinite(rawRate);
+      const row = {
+        id: `${time.getTime()}-${options.source || "row"}-${options.rawIndex ?? ""}-${Math.random().toString(36).slice(2, 8)}`,
+        rawIndex: options.rawIndex ?? state.rows.length,
+        timeMs: time.getTime(),
+        timeText: String(timeRaw || ""),
+        bhp: convertPressure(rawBhp, unitMap.pressure.value),
+        oil: convertRate(nullableNum(get("oil")) || 0, unitMap.rate.value),
+        water: convertRate(nullableNum(get("water")) || 0, unitMap.rate.value),
+        gas: convertGas(nullableNum(get("gas")) || 0, unitMap.gas.value),
+        whp: convertNullablePressure(nullableNum(get("whp")), unitMap.pressure.value),
+        temp: convertNullableTemp(nullableNum(get("temp")), unitMap.temp.value),
+        source: options.source || "import",
+        explicitRate,
+        units: {pressure: unitMap.pressure.value, rate: unitMap.rate.value, gas: unitMap.gas.value, temp: unitMap.temp.value}
+      };
+      row.rate = explicitRate ? convertRate(rawRate, unitMap.rate.value) : calcRate(row);
+      return {row};
+    }
+
+    function defaultUnitMap() {
+      return {
+        pressure: {value: els.pressureUnit?.value || "psi"},
+        rate: {value: els.rateUnit?.value || "bpd"},
+        gas: {value: els.gasUnit?.value || "mscfd"},
+        temp: {value: els.tempUnit?.value || "f"}
+      };
+    }
+
+    function normalizeHeader(value) {
+      return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    }
+
+    function parseTime(value) {
+      if (!value) return null;
+      const text = String(value).trim();
+      let normalized = text;
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text)) normalized = text.replace(" ", "T");
+      const hasZone = /z$|[+-]\d{2}:?\d{2}$/i.test(normalized);
+      const date = new Date(!hasZone && els.timeMode && els.timeMode.value === "utc" ? `${normalized}Z` : normalized);
+      return Number.isFinite(date.getTime()) ? date : null;
+    }
+
+    function toNum(value) {
+      if (value === null || value === undefined || value === "") return NaN;
+      return Number(String(value).replace(/,/g, "").trim());
+    }
+
+    function nullableNum(value) {
+      const number = toNum(value);
+      return Number.isFinite(number) ? number : NaN;
+    }
+
+    function convertPressure(value, unit) {
+      const factor = {psi: 1, kpa: 0.1450377, bar: 14.50377, mpa: 145.0377}[canonicalUnit(unit)] || 1;
+      return value * factor;
+    }
+
+    function convertNullablePressure(value, unit) {
+      return Number.isFinite(value) ? convertPressure(value, unit) : null;
+    }
+
+    function convertRate(value, unit) {
+      const factor = {bpd: 1, stbd: 1, m3d: 6.28981}[canonicalUnit(unit)] || 1;
+      return value * factor;
+    }
+
+    function convertGas(value, unit) {
+      const factor = {mscfd: 1, scfd: 0.001, e3m3d: 35.3147}[canonicalUnit(unit)] || 1;
+      return value * factor;
+    }
+
+    function convertNullableTemp(value, unit) {
+      if (!Number.isFinite(value)) return null;
+      const key = canonicalUnit(unit);
+      if (key === "c") return value * 9 / 5 + 32;
+      if (key === "k") return (value - 273.15) * 9 / 5 + 32;
+      return value;
+    }
+
+    function calcRate(row) {
+      return (Number(row.oil) || 0) + (Number(row.water) || 0) + (Number(row.gas) || 0) * inputNumber("gasFactor", 0);
+    }
+
+    function appendRows(rows, source = "import") {
+      rows.filter(Boolean).forEach(row => {
+        row.source = row.source || source;
+        row.rate = row.explicitRate && Number.isFinite(row.rate) ? row.rate : calcRate(row);
+        state.rows.push(row);
+      });
+      normalizeRows();
+    }
+
+    function normalizeRows() {
+      state.rows.forEach((row, index) => {
+        row.rawIndex = Number.isFinite(row.rawIndex) ? row.rawIndex : index;
+        row.rate = row.explicitRate && Number.isFinite(row.rate) ? row.rate : calcRate(row);
+      });
+      state.rows.sort((a, b) => a.timeMs - b.timeMs || a.rawIndex - b.rawIndex);
+    }
+
+    function mergeImportStats(result) {
+      state.importStats.rawRows += result.rawRows || 0;
+      state.importStats.parsedRows += result.parsedRows || result.rows?.length || 0;
+      state.importStats.invalidRows += result.invalidRows || 0;
+      state.importStats.unsortedRows += result.unsortedRows || 0;
+      state.importStats.unitNotes = unique([...(state.importStats.unitNotes || []), ...(result.unitNotes || [])]);
+      state.importIssues = [...state.importIssues, ...(result.issues || [])].slice(-25);
+    }
+
+    async function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const result = parseCsv(text, file.name);
+      appendRows(result.rows, file.name);
+      mergeImportStats(result);
+      refresh(`Imported ${result.rows.length} row${result.rows.length === 1 ? "" : "s"} from ${file.name}.`);
+      event.target.value = "";
+    }
+
+    function addManualRow() {
+      const time = parseTime(els.manualTime.value);
+      const bhp = toNum(els.manualBhp.value);
+      if (!time || !Number.isFinite(bhp)) {
+        alert("Manual reading needs a valid time and BHP.");
+        return;
+      }
+      const row = {
+        id: `${time.getTime()}-manual-${Math.random().toString(36).slice(2, 8)}`,
+        rawIndex: state.rows.length,
+        timeMs: time.getTime(),
+        timeText: els.manualTime.value,
+        bhp,
+        oil: toNum(els.manualOil.value) || 0,
+        water: toNum(els.manualWater.value) || 0,
+        gas: toNum(els.manualGas.value) || 0,
+        whp: Number.isFinite(toNum(els.manualWhp.value)) ? toNum(els.manualWhp.value) : null,
+        temp: Number.isFinite(toNum(els.manualTemp.value)) ? toNum(els.manualTemp.value) : null,
+        source: "manual",
+        explicitRate: false,
+        units: {pressure: "psi", rate: "bpd", gas: "mscfd", temp: "f"}
+      };
+      row.rate = calcRate(row);
+      appendRows([row], "manual");
+      refresh("Added manual reading.");
+    }
+
+    function setManualTimeNow() {
+      const now = new Date();
+      now.setSeconds(0, 0);
+      const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      if (els.manualTime) els.manualTime.value = local;
+    }
+
+    function setEventTimeNow() {
+      if (!els.eventTime) return;
+      const now = new Date();
+      now.setSeconds(0, 0);
+      els.eventTime.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    async function pollEndpoint() {
+      const url = els.endpointUrl.value.trim();
+      if (!url) {
+        setPollMessage("Enter a JSON endpoint URL before polling.", true);
+        return;
+      }
+      try {
+        const response = await fetch(url, {cache: "no-store"});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const records = Array.isArray(payload) ? payload : Array.isArray(payload.rows) ? payload.rows : [payload];
+        const unitMap = defaultUnitMap();
+        const rows = records.map((record, rawIndex) => rowFromRecord(normalizeRecordKeys(record), {source: "endpoint", rawIndex, unitMap}).row).filter(Boolean);
+        appendRows(rows, "endpoint");
+        state.lastPollError = "";
+        state.importStats.rawRows += records.length;
+        state.importStats.parsedRows += rows.length;
+        setPollMessage(`Polled ${rows.length} row${rows.length === 1 ? "" : "s"} at ${new Date().toLocaleTimeString()}.`, false);
+        refresh();
+      } catch (error) {
+        state.lastPollError = error.message;
+        setPollMessage(`Poll failed: ${error.message}. Check VPN, CORS, and endpoint shape.`, true);
+      }
+    }
+
+    function normalizeRecordKeys(record) {
+      const normalized = {};
+      Object.entries(record || {}).forEach(([key, value]) => normalized[normalizeHeader(key)] = value);
+      return normalized;
+    }
+
+    function togglePolling() {
+      const button = document.getElementById("togglePolling");
+      if (state.pollTimer) {
+        clearInterval(state.pollTimer);
+        state.pollTimer = null;
+        button.textContent = "Start polling";
+        setLive(false);
+        setPollMessage("Polling is stopped.", false);
+        return;
+      }
+      const seconds = Math.max(5, Math.round(inputNumber("pollSeconds", 30)));
+      pollEndpoint();
+      state.pollTimer = setInterval(pollEndpoint, seconds * 1000);
+      button.textContent = "Stop polling";
+      setLive(true);
+      setPollMessage(`Polling every ${seconds} seconds.`, false);
+    }
+
+    function setPollMessage(message, isError) {
+      els.pollMessage.textContent = message;
+      els.pollMessage.style.color = isError ? "var(--bad)" : "var(--muted)";
+    }
+
+    function setLive(isLive) {
+      els.liveDot.classList.toggle("live", isLive);
+      els.liveStatus.textContent = isLive ? "Endpoint polling live" : "Offline/local mode";
+    }
+
+    /* Analysis */
+    function refresh(message) {
+      normalizeRows();
+      state.periods = detectPeriods(state.rows);
+      state.analysis = null;
+      state.quality = buildQualityChecks();
+      state.analysis = analyzeBuildup(state.rows, state.periods);
+      state.quality = buildQualityChecks();
+      if (state.analysis) {
+        state.analysis.confidence = analysisConfidence({fit: state.analysis.fit, fitPoints: state.analysis.selected, points: state.analysis.points, regimes: state.analysis.regimes, quality: state.quality});
+      }
+      renderAll(message);
+      persistCase();
+    }
+
+    function detectPeriods(rows) {
+      if (!rows.length) return [];
+      const threshold = inputNumber("shutThreshold", 10);
+      const segments = [];
+      rows.forEach((row, index) => {
+        const base = row.rate <= threshold ? "shut-in" : "flow";
+        const last = segments[segments.length - 1];
+        const rateJump = last && base === "flow" && last.base === "flow" && Math.abs(row.rate - last.avgRate) > Math.max(80, Math.abs(last.avgRate) * 0.28);
+        const longGap = index > 0 && (row.timeMs - rows[index - 1].timeMs) / 3600000 > 0.75;
+        if (!last || last.base !== base || rateJump || longGap) {
+          segments.push({base, startIndex: index, endIndex: index, avgRate: row.rate});
+        } else {
+          last.endIndex = index;
+          last.avgRate = average(rows.slice(last.startIndex, last.endIndex + 1).map(item => item.rate));
+        }
+      });
+      const expanded = [];
+      segments.forEach((segment, segmentIndex) => {
+        const segmentRows = rows.slice(segment.startIndex, segment.endIndex + 1);
+        const prev = expanded[expanded.length - 1];
+        if (segment.base === "shut-in" && prev && ["flow", "cleanup", "restart"].includes(prev.autoType) && segmentRows.length > 4) {
+          const splitIndex = segmentRows.findIndex(row => (row.timeMs - segmentRows[0].timeMs) / 3600000 > 0.35);
+          if (splitIndex > 1) {
+            expanded.push({...segment, startIndex: segment.startIndex, endIndex: segment.startIndex + splitIndex - 1, autoType: "afterflow", confidence: "medium", reason: "Early shut-in response immediately after flow; treat as storage/afterflow before Horner fitting."});
+            expanded.push({...segment, startIndex: segment.startIndex + splitIndex, endIndex: segment.endIndex, autoType: "shut-in", confidence: "high", reason: "Rate below shut-in threshold after afterflow cleanup."});
+            return;
+          }
+        }
+        if (segment.base === "flow" && prev && ["shut-in", "afterflow"].includes(prev.autoType) && segmentRows.length > 5) {
+          const splitIndex = segmentRows.findIndex(row => (row.timeMs - segmentRows[0].timeMs) / 3600000 > 0.4);
+          if (splitIndex > 1) {
+            expanded.push({...segment, startIndex: segment.startIndex, endIndex: segment.startIndex + splitIndex - 1, autoType: "restart", confidence: "medium", reason: "Initial rate recovery after shut-in."});
+            expanded.push({...segment, startIndex: segment.startIndex + splitIndex, endIndex: segment.endIndex, autoType: "flow", confidence: "high", reason: "Post-restart flowing period."});
+            return;
+          }
+        }
+        let autoType = segment.base;
+        let confidence = "high";
+        let reason = segment.base === "flow" ? "Rate above shut-in threshold." : "Rate below shut-in threshold.";
+        const segmentRates = segmentRows.map(row => row.rate);
+        const cv = coefficientOfVariation(segmentRates);
+        if (segment.base === "flow" && !expanded.some(item => ["flow", "cleanup", "restart"].includes(item.autoType))) {
+          autoType = "cleanup";
+          confidence = cv > 0.12 ? "high" : "medium";
+          reason = "First flowing period; rate/pressure cleanup likely.";
+        } else if (segment.base === "flow" && cv > 0.2) {
+          confidence = "medium";
+          reason = "Flow period has variable rate; superposition used for Horner normalization.";
+        }
+        expanded.push({...segment, autoType, confidence, reason});
+      });
+      return expanded.map((segment, index) => makePeriod(segment, index, rows));
+    }
+
+    function makePeriod(segment, index, rows) {
+      const periodRows = rows.slice(segment.startIndex, segment.endIndex + 1);
+      const start = periodRows[0];
+      const end = periodRows[periodRows.length - 1];
+      const durationHr = Math.max(0, (end.timeMs - start.timeMs) / 3600000);
+      const key = `${start.timeMs}-${end.timeMs}-${segment.startIndex}-${segment.endIndex}`;
+      const type = state.manualPeriods[key] || segment.autoType;
+      return {
+        key,
+        number: index + 1,
+        autoType: segment.autoType,
+        type,
+        startIndex: segment.startIndex,
+        endIndex: segment.endIndex,
+        start,
+        end,
+        durationHr,
+        avgRate: average(periodRows.map(row => row.rate)),
+        rows: periodRows,
+        confidence: state.manualPeriods[key] ? "manual" : segment.confidence,
+        reason: state.manualPeriods[key] ? "Manual correction applied by engineer." : segment.reason
+      };
+    }
+
+    function analyzeBuildup(rows, periods) {
+      const buildup = [...periods].reverse().find(period => period.type === "shut-in" && period.rows.length >= 4 && period.durationHr > 0.25);
+      if (!buildup) return null;
+      const buildupIndex = periods.indexOf(buildup);
+      const flowPeriods = periods.slice(0, buildupIndex).filter(period => ["flow", "cleanup", "restart"].includes(period.type) && period.rows.length >= 2);
+      const previousFlow = [...flowPeriods].reverse()[0];
+      if (!previousFlow) return null;
+      const qRef = Math.max(0.0001, previousFlow.avgRate || average(flowPeriods.flatMap(period => period.rows.map(row => row.rate))));
+      const equivalentFlowTime = equivalentProducingTime(flowPeriods, qRef);
+      const pwf = previousFlow.end.bhp;
+      const startPressure = buildup.rows[0].bhp;
+      const points = buildup.rows.slice(1).map(row => {
+        const dt = Math.max(0.001, (row.timeMs - buildup.start.timeMs) / 3600000);
+        const superpositionTime = Math.max(0.001, equivalentFlowTime + cumulativeRateWeight(flowPeriods, row.timeMs, qRef));
+        const horner = (superpositionTime + dt) / dt;
+        return {row, dt, superpositionTime, horner, logH: Math.log10(horner), pressure: row.bhp, deltaP: row.bhp - startPressure};
+      }).filter(point => point.deltaP > 0 && Number.isFinite(point.logH) && Number.isFinite(point.pressure));
+      if (points.length < 3) return null;
+      const window = selectedFitWindow(points);
+      const selected = points.filter(point => point.dt >= window.start && point.dt <= window.end);
+      const fitPoints = selected.length >= 3 ? selected : points.slice(Math.max(0, Math.floor(points.length * 0.2)), Math.max(3, Math.ceil(points.length * 0.82)));
+      const fit = linearRegression(fitPoints.map(point => point.logH), fitPoints.map(point => point.pressure));
+      const m = Math.abs(fit.slope);
+      const inputs = currentInputs();
+      const kh = m > 0 ? 162.6 * qRef * inputs.fvfRbStb * inputs.viscosityCp / m : NaN;
+      const k = kh / Math.max(inputs.netPayFt, 0.0001);
+      const hAtOneHour = Math.log10((equivalentFlowTime + 1) / 1);
+      const p1hr = fit.intercept + fit.slope * hAtOneHour;
+      const skin = Number.isFinite(k) && k > 0 && m > 0
+        ? 1.151 * ((p1hr - pwf) / m - Math.log10(k / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
+        : NaN;
+      const pi = fit.intercept > pwf ? qRef / (fit.intercept - pwf) : NaN;
+      const derivatives = derivativePoints(points);
+      const regimes = classifyRegimes(points, derivatives);
+      const plateau = median(derivatives.slice(Math.floor(derivatives.length * 0.25), Math.ceil(derivatives.length * 0.75)).map(point => point.derivative).filter(Number.isFinite));
+      const lastDt = points[points.length - 1]?.dt || 0;
+      const investigationRadius = Number.isFinite(k) && k > 0
+        ? 0.029 * Math.sqrt((k * lastDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
+        : NaN;
+      const confidence = analysisConfidence({fit, fitPoints, points, regimes, quality: state.quality});
+      return {buildup, previousFlow, flowPeriods, q: qRef, equivalentFlowTime, pwf, startPressure, points, selected: fitPoints, window, fit, m, pStar: fit.intercept, kh, k, p1hr, skin, pi, derivatives, regimes, plateau, investigationRadius, confidence};
+    }
+
+    function selectedFitWindow(points) {
+      const maxDt = Math.max(...points.map(point => point.dt));
+      return {
+        start: Math.max(0.001, inputNumber("hornerStart", Math.max(0.05, maxDt * 0.15))),
+        end: Math.min(inputNumber("hornerEnd", maxDt), maxDt)
+      };
+    }
+
+    function resetFitWindow() {
+      const analysis = state.analysis;
+      if (!analysis || !analysis.points.length) {
+        els.hornerStart.value = 0.25;
+        els.hornerEnd.value = 999;
+      } else {
+        const maxDt = Math.max(...analysis.points.map(point => point.dt));
+        els.hornerStart.value = fmtPlain(Math.max(0.05, maxDt * 0.18), 2);
+        els.hornerEnd.value = fmtPlain(maxDt * 0.82, 2);
+      }
+      refresh("Reset Horner fit window.");
+    }
+
+    function equivalentProducingTime(flowPeriods, qRef) {
+      const rateHours = flowPeriods.reduce((total, period) => total + period.avgRate * Math.max(period.durationHr, 0.01), 0);
+      return Math.max(0.0167, rateHours / Math.max(qRef, 0.0001));
+    }
+
+    function cumulativeRateWeight(flowPeriods, timeMs, qRef) {
+      return flowPeriods.reduce((total, period) => {
+        const end = Math.min(period.end.timeMs, timeMs);
+        const duration = Math.max(0, (end - period.start.timeMs) / 3600000);
+        return total + duration * (period.avgRate / Math.max(qRef, 0.0001) - 1);
+      }, 0);
+    }
+
+    function derivativePoints(points) {
+      const result = [];
+      for (let i = 1; i < points.length - 1; i += 1) {
+        const prev = points[i - 1];
+        const next = points[i + 1];
+        const denom = Math.log(next.dt) - Math.log(prev.dt);
+        if (denom === 0) continue;
+        const derivative = (next.deltaP - prev.deltaP) / denom;
+        const slope = localLogSlope(points, i, "deltaP");
+        result.push({...points[i], derivative, slope});
+      }
+      return result;
+    }
+
+    function classifyRegimes(points, derivatives) {
+      if (derivatives.length < 4) return [];
+      const regimes = [];
+      const add = (name, candidates, basis, confidence) => {
+        if (candidates.length < 2) return;
+        const start = candidates[0];
+        const end = candidates[candidates.length - 1];
+        regimes.push({name, startDt: start.dt, endDt: end.dt, confidence, basis});
+      };
+      const early = derivatives.slice(0, Math.ceil(derivatives.length * 0.22));
+      const mid = derivatives.slice(Math.floor(derivatives.length * 0.25), Math.ceil(derivatives.length * 0.72));
+      const late = derivatives.slice(Math.floor(derivatives.length * 0.72));
+      add("wellbore storage", early.filter(point => point.slope > 0.65), "Early log-log pressure slope trends toward unit slope.", early.some(point => point.slope > 0.85) ? "high" : "medium");
+      add("radial flow", mid.filter(point => Math.abs(point.slope) < 0.18 || isFlatDerivative(point, mid)), "Derivative stabilizes and pressure derivative slope is near zero.", mid.filter(point => Math.abs(point.slope) < 0.18).length > 3 ? "high" : "medium");
+      add("linear flow", mid.filter(point => point.slope > 0.32 && point.slope < 0.68), "Derivative trend approximates one-half slope.", "medium");
+      add("boundary-dominated flow", late.filter(point => point.slope > 0.35), "Late-time derivative rises after middle-time behavior.", late.some(point => point.slope > 0.55) ? "high" : "medium");
+      const troughIndex = derivatives.findIndex((point, index) => index > 1 && index < derivatives.length - 2 && point.derivative < derivatives[index - 1].derivative && point.derivative < derivatives[index + 1].derivative);
+      if (troughIndex > -1) {
+        const point = derivatives[troughIndex];
+        regimes.push({name: "dual-porosity behavior", startDt: point.dt, endDt: point.dt, confidence: "low", basis: "Derivative trough/rebound detected; confirm with more buildup duration and geologic context."});
+      }
+      return mergeRegimes(regimes);
+    }
+
+    function localLogSlope(points, index, key) {
+      const prev = points[Math.max(0, index - 1)];
+      const next = points[Math.min(points.length - 1, index + 1)];
+      const y1 = Math.max(prev[key], 1e-9);
+      const y2 = Math.max(next[key], 1e-9);
+      const x1 = Math.max(prev.dt, 1e-9);
+      const x2 = Math.max(next.dt, 1e-9);
+      return (Math.log10(y2) - Math.log10(y1)) / Math.max(Math.log10(x2) - Math.log10(x1), 1e-9);
+    }
+
+    function isFlatDerivative(point, window) {
+      const values = window.map(item => item.derivative).filter(value => value > 0);
+      const med = median(values);
+      return Number.isFinite(med) && Math.abs(point.derivative - med) / med < 0.18;
+    }
+
+    function mergeRegimes(regimes) {
+      const byName = new Map();
+      regimes.forEach(regime => {
+        const existing = byName.get(regime.name);
+        if (!existing) byName.set(regime.name, regime);
+        else {
+          existing.startDt = Math.min(existing.startDt, regime.startDt);
+          existing.endDt = Math.max(existing.endDt, regime.endDt);
+          existing.confidence = existing.confidence === "high" || regime.confidence === "high" ? "high" : existing.confidence;
+        }
+      });
+      return [...byName.values()].sort((a, b) => a.startDt - b.startDt);
+    }
+
+    function linearRegression(xValues, yValues) {
+      const n = xValues.length;
+      const sx = sum(xValues);
+      const sy = sum(yValues);
+      const sxx = sum(xValues.map(x => x * x));
+      const sxy = sum(xValues.map((x, i) => x * yValues[i]));
+      const denominator = n * sxx - sx * sx;
+      const slope = denominator === 0 ? 0 : (n * sxy - sx * sy) / denominator;
+      const intercept = (sy - slope * sx) / n;
+      const meanY = sy / n;
+      const ssTot = sum(yValues.map(y => (y - meanY) ** 2));
+      const residuals = yValues.map((y, i) => y - (intercept + slope * xValues[i]));
+      const ssRes = sum(residuals.map(value => value * value));
+      const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
+      const stderr = n > 2 ? Math.sqrt(ssRes / (n - 2)) : NaN;
+      const xMean = sx / n;
+      const sxxCentered = sum(xValues.map(x => (x - xMean) ** 2));
+      const slopeStdErr = Number.isFinite(stderr) && sxxCentered > 0 ? stderr / Math.sqrt(sxxCentered) : NaN;
+      const interceptStdErr = Number.isFinite(stderr) && sxxCentered > 0 ? stderr * Math.sqrt(1 / n + xMean * xMean / sxxCentered) : NaN;
+      return {slope, intercept, r2, stderr, slopeStdErr, interceptStdErr};
+    }
+
+    function analysisConfidence(context) {
+      let score = 20;
+      const notes = [];
+      if (context.fit?.r2 > 0.98) { score += 22; notes.push("Strong Horner straight-line fit."); }
+      else if (context.fit?.r2 > 0.94) { score += 12; notes.push("Moderate Horner fit."); }
+      else notes.push("Weak Horner fit or transitional data.");
+      if (context.fitPoints.length >= 6) score += 12;
+      else notes.push("Fit window has few points.");
+      if (context.regimes.some(regime => regime.name === "radial flow")) score += 18;
+      else notes.push("No confident radial-flow window detected.");
+      if (context.points.length >= 10) score += 8;
+      const alerts = (context.quality || []).filter(check => check.severity === "alert").length;
+      const warnings = (context.quality || []).filter(check => check.severity === "warn").length;
+      score -= alerts * 18 + warnings * 4;
+      score = clamp(score, 0, 100);
+      const label = score >= 78 ? "Final interpretation candidate" : score >= 52 ? "Screening interpretation" : "Low-confidence screen";
+      return {score, label, notes};
+    }
+
+    /* Quality checks */
+    function buildQualityChecks() {
+      if (!state.rows.length) return [];
+      const checks = [];
+      const sortedByRaw = [...state.rows].sort((a, b) => a.rawIndex - b.rawIndex);
+      const unsorted = countUnsorted(sortedByRaw.map(row => row.timeMs)) + state.importStats.unsortedRows;
+      checks.push(qc(unsorted ? "warn" : "ok", "Timestamp order", unsorted ? `${unsorted} row transition(s) arrived out of time order; analysis sorted them by timestamp.` : "Timestamps are sorted or were normalized on import."));
+      checks.push(qc(state.importStats.invalidRows ? "alert" : "ok", "Missing timestamps / pressure", state.importStats.invalidRows ? `${state.importStats.invalidRows} imported row(s) were rejected. ${state.importIssues.slice(0, 3).join(" ")}` : "No rejected rows from the latest imports."));
+      const duplicateTimes = duplicateCount(state.rows.map(row => row.timeMs));
+      const duplicateRows = duplicateCount(state.rows.map(row => `${row.timeMs}|${Math.round(row.bhp * 10)}|${Math.round(row.rate * 10)}`));
+      checks.push(qc(duplicateRows ? "warn" : "ok", "Duplicate rows", duplicateRows ? `${duplicateRows} duplicate row signature(s) found; duplicates are preserved and flagged.` : "No exact duplicate row signatures."));
+      checks.push(qc(duplicateTimes ? "warn" : "ok", "Duplicate timestamps", duplicateTimes ? `${duplicateTimes} repeated timestamp(s) found; inspect gauge merge/source feeds.` : "No repeated timestamps."));
+      const gaps = samplingGaps();
+      checks.push(qc(gaps.length ? "warn" : "ok", "Irregular sampling", gaps.length ? `${gaps.length} gap(s) exceed 1 hr; largest ${fmt(Math.max(...gaps), 2)} hr.` : "No sampling gap above 1 hr."));
+      const badPressure = state.rows.filter(row => row.bhp <= 0 || row.bhp > 30000).length;
+      checks.push(qc(badPressure ? "alert" : "ok", "Pressure range / unit mismatch", badPressure ? `${badPressure} BHP value(s) are outside 0-30000 psi after unit conversion.` : `Pressure values are plausible in psi. ${state.importStats.unitNotes.join(" ")}`));
+      const badRates = state.rows.filter(row => Math.abs(row.rate) > 200000).length;
+      checks.push(qc(badRates ? "alert" : "ok", "Rate range / unit mismatch", badRates ? `${badRates} rate value(s) exceed 200,000 bpd equivalent.` : "Surface rates are within broad DST screening limits."));
+      const missingSurface = state.rows.filter(row => row.whp == null || row.temp == null).length;
+      checks.push(qc(missingSurface ? "warn" : "ok", "Surface channels", missingSurface ? `${missingSurface} row(s) are missing WHP or temperature.` : "WHP and temperature are present for all rows."));
+      const unstable = unstableFlowPeriods();
+      checks.push(qc(unstable.length ? "warn" : "ok", "Rate stability", unstable.length ? `${unstable.length} flowing period(s) have rate CV above 15%; superposition is used but final interpretation needs full rate history validation.` : "Flowing periods are rate-stable by CV screen."));
+      const badShutins = state.periods.filter(period => period.type === "shut-in" && (period.durationHr < 0.5 || period.rows.length < 5 || pressureDeclines(period.rows))).length;
+      checks.push(qc(badShutins ? "warn" : "ok", "Shut-in quality", badShutins ? `${badShutins} shut-in period(s) are short, sparse, or show pressure decline.` : "Shut-ins are suitable for screening."));
+      const drift = gaugeDriftFlag();
+      checks.push(qc(drift ? "warn" : "ok", "Gauge drift", drift || "No large late-time drift pattern detected."));
+      const temp = temperatureAnomalyFlag();
+      checks.push(qc(temp ? "warn" : "ok", "Temperature anomalies", temp || "No temperature jump above 10 F between adjacent readings."));
+      checks.push(qc(state.analysis ? "ok" : "warn", "Buildup availability", state.analysis ? "Detected a usable flow plus shut-in sequence." : "Need flow followed by at least 4 shut-in points for Horner and derivative analysis."));
+      const suitability = suitabilityFlag(checks, state.analysis);
+      checks.push(qc(suitability.severity, "Interpretation suitability", suitability.detail));
+      return checks;
+    }
+
+    function qc(severity, check, detail) {
+      return {severity, check, detail};
+    }
+
+    function suitabilityFlag(checks, analysis) {
+      const alerts = checks.filter(check => check.severity === "alert").length;
+      const warnings = checks.filter(check => check.severity === "warn").length;
+      if (!analysis) return {severity: "warn", detail: "Screening only: no usable buildup analysis yet."};
+      if (alerts || warnings > 3 || analysis.fit.r2 < 0.94) return {severity: "warn", detail: "Screening only: resolve QC flags and validate rate/gauge history before final interpretation."};
+      if (!analysis.regimes.some(regime => regime.name === "radial flow")) return {severity: "warn", detail: "Screening only: no clear radial-flow window identified."};
+      return {severity: "ok", detail: "Candidate for final interpretation after engineering review of gauges, rates, phase behavior, and assumptions."};
+    }
+
+    function unstableFlowPeriods() {
+      return state.periods.filter(period => ["flow", "cleanup", "restart"].includes(period.type) && coefficientOfVariation(period.rows.map(row => row.rate)) > 0.15);
+    }
+
+    function samplingGaps() {
+      const gaps = [];
+      for (let i = 1; i < state.rows.length; i += 1) {
+        const gapHr = (state.rows[i].timeMs - state.rows[i - 1].timeMs) / 3600000;
+        if (gapHr > 1) gaps.push(gapHr);
+      }
+      return gaps;
+    }
+
+    function pressureDeclines(rows) {
+      if (rows.length < 3) return false;
+      return rows[rows.length - 1].bhp < rows[0].bhp - 5;
+    }
+
+    function gaugeDriftFlag() {
+      const analysis = state.analysis;
+      if (!analysis || analysis.points.length < 8) return "";
+      const late = analysis.points.slice(Math.floor(analysis.points.length * 0.75));
+      const driftRate = (late[late.length - 1].pressure - late[0].pressure) / Math.max(late[late.length - 1].dt - late[0].dt, 0.001);
+      return Math.abs(driftRate) > 35 ? `Late buildup pressure trend is ${fmt(driftRate, 1)} psi/hr; check gauge drift or boundaries.` : "";
+    }
+
+    function temperatureAnomalyFlag() {
+      const jumps = [];
+      for (let i = 1; i < state.rows.length; i += 1) {
+        if (state.rows[i].temp == null || state.rows[i - 1].temp == null) continue;
+        const jump = Math.abs(state.rows[i].temp - state.rows[i - 1].temp);
+        if (jump > 10) jumps.push(jump);
+      }
+      return jumps.length ? `${jumps.length} adjacent temperature jump(s) exceed 10 F; largest ${fmt(Math.max(...jumps), 1)} F.` : "";
+    }
+
+    /* Rendering */
+    function renderAll(message) {
+      renderKpis();
+      renderWorkflow();
+      renderDataTable();
+      renderPeriods();
+      renderTrend();
+      renderHorner();
+      renderDerivative();
+      renderQuality();
+      renderDiagnostics();
+      renderRegimes();
+      renderSuperposition();
+      renderEvents();
+      if (message) els.rowCount.textContent = `${state.rows.length} rows loaded - ${message}`;
+    }
+
+    function renderKpis() {
+      const last = state.rows[state.rows.length - 1];
+      const analysis = state.analysis;
+      els.kpiBhp.textContent = last ? fmt(last.bhp, 0) : "-";
+      els.kpiBhpNote.textContent = last ? formatTime(last.timeMs) : "psi";
+      els.kpiRate.textContent = last ? fmt(last.rate, 0) : "-";
+      const current = state.periods[state.periods.length - 1];
+      els.kpiPeriod.textContent = current ? current.type : "-";
+      els.kpiPeriodNote.textContent = current ? `${fmt(current.durationHr, 2)} hr, ${current.rows.length} points` : "flow/shut-in";
+      els.kpiPstar.textContent = analysis ? fmt(analysis.pStar, 0) : "-";
+      els.kpiPerm.textContent = analysis ? fmt(analysis.k, 2) : "-";
+      els.kpiConfidence.textContent = analysis ? `${Math.round(analysis.confidence.score)}%` : "-";
+      els.kpiConfidenceNote.textContent = analysis ? analysis.confidence.label : "analysis state";
+      els.rowCount.textContent = `${state.rows.length} row${state.rows.length === 1 ? "" : "s"} loaded`;
+    }
+
+    function renderWorkflow() {
+      const alerts = state.quality.filter(check => check.severity === "alert").length;
+      const warnings = state.quality.filter(check => check.severity === "warn").length;
+      setStep(els.stepImport, state.rows.length ? "ready" : "", state.rows.length ? `${state.rows.length} readings loaded` : "No data loaded");
+      setStep(els.stepQc, alerts ? "warn" : state.rows.length ? "ready" : "", state.rows.length ? `${alerts} alert(s), ${warnings} warning(s)` : "Waiting for readings");
+      setStep(els.stepPeriods, state.periods.length ? "ready" : "", state.periods.length ? `${state.periods.length} periods detected` : "Auto-detect then correct");
+      setStep(els.stepAnalysis, state.analysis ? "ready" : "", state.analysis ? `${state.analysis.confidence.label}` : "Choose fit window");
+      setStep(els.stepReport, state.analysis ? "ready" : "", state.analysis ? "Ready to export" : "Export interpretation");
+    }
+
+    function setStep(element, status, text) {
+      element.classList.toggle("ready", status === "ready");
+      element.classList.toggle("warn", status === "warn");
+      element.querySelector("span").textContent = text;
+    }
+
+    function renderDataTable() {
+      if (!state.rows.length) {
+        els.dataBody.innerHTML = '<tr><td colspan="9" class="muted">Load sample data, paste CSV, add manual readings, or connect polling.</td></tr>';
+        return;
+      }
+      const periodByIndex = new Map();
+      state.periods.forEach(period => {
+        for (let i = period.startIndex; i <= period.endIndex; i += 1) periodByIndex.set(i, period.type);
+      });
+      els.dataBody.innerHTML = state.rows.slice(-80).reverse().map((row, visibleIndex) => {
+        const index = state.rows.length - 1 - visibleIndex;
+        const period = periodByIndex.get(index) || "";
+        return `<tr>
+          <td class="nowrap">${formatTime(row.timeMs)}</td>
+          <td>${fmt(row.bhp, 1)}</td>
+          <td>${fmt(row.rate, 1)}</td>
+          <td>${fmt(row.oil, 1)}</td>
+          <td>${fmt(row.water, 1)}</td>
+          <td>${fmt(row.gas, 1)}</td>
+          <td>${row.whp == null ? "-" : fmt(row.whp, 1)}</td>
+          <td>${row.temp == null ? "-" : fmt(row.temp, 1)}</td>
+          <td><span class="badge ${BADGE_CLASS[period] || "shutin"}">${period}</span></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderPeriods() {
+      if (!state.periods.length) {
+        els.periodBody.innerHTML = '<tr><td colspan="7" class="muted">No periods detected yet.</td></tr>';
+        return;
+      }
+      els.periodBody.innerHTML = state.periods.map(period => `<tr>
+        <td>${period.number}</td>
+        <td>
+          <select class="period-select" data-period-key="${period.key}">
+            ${PERIOD_TYPES.map(type => `<option value="${type}" ${type === period.type ? "selected" : ""}>${type}</option>`).join("")}
+          </select>
+          <div class="help">auto: ${period.autoType}</div>
+        </td>
+        <td>${formatTime(period.start.timeMs)}</td>
+        <td>${formatTime(period.end.timeMs)}</td>
+        <td>${fmt(period.durationHr, 2)}</td>
+        <td>${fmt(period.avgRate, 1)}</td>
+        <td><span class="badge ${period.confidence === "manual" ? "cleanup" : "flow"}">${period.confidence}</span><div class="help">${escapeHtml(period.reason)}</div></td>
+      </tr>`).join("");
+      els.periodBody.querySelectorAll("select[data-period-key]").forEach(select => {
+        select.addEventListener("change", () => {
+          state.manualPeriods[select.dataset.periodKey] = select.value;
+          refresh("Applied manual period correction.");
+        });
+      });
+    }
+
+    function renderTrend() {
+      if (state.rows.length < 2) {
+        els.trendChart.innerHTML = emptySvg("Load readings to plot pressure, rate, periods, and events.");
+        return;
+      }
+      const points = state.rows.map((row, index) => ({x: row.timeMs, bhp: row.bhp, rate: row.rate, period: periodAtIndex(index)}));
+      els.trendChart.innerHTML = lineSvg({
+        series: [
+          {points: points.map(p => ({x: p.x, y: p.bhp, period: p.period})), color: "#63a7ff"},
+          {points: points.map(p => ({x: p.x, y: p.rate})), color: "#3dd7b6", axis: "right"}
+        ],
+        events: state.events,
+        xLabel: "time",
+        yLabel: "BHP psi",
+        rightLabel: "rate bpd",
+        formatX: value => formatShortTime(value)
+      });
+    }
+
+    function periodAtIndex(index) {
+      const period = state.periods.find(item => index >= item.startIndex && index <= item.endIndex);
+      return period ? period.type : "";
+    }
+
+    function renderHorner() {
+      const analysis = state.analysis;
+      if (!analysis) {
+        els.hornerChart.innerHTML = emptySvg("Need a flow/restart/cleanup period followed by a quality shut-in.");
+        els.hornerSummary.textContent = "Load a DST sequence, correct periods if needed, and set the Horner window to calculate p*, permeability, skin, and PI.";
+        return;
+      }
+      els.hornerChart.innerHTML = scatterSvg({
+        points: analysis.points.map(point => ({x: point.logH, y: point.pressure, selected: analysis.selected.includes(point)})),
+        fit: analysis.fit,
+        xLabel: "log10 Horner superposition ratio",
+        yLabel: "BHP psi"
+      });
+      els.hornerSummary.innerHTML = `
+        <strong>Last buildup:</strong> ${fmt(analysis.buildup.durationHr, 2)} hr after equivalent ${fmt(analysis.equivalentFlowTime, 2)} hr production at reference ${fmt(analysis.q, 1)} bpd.
+        Fit window ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr, ${analysis.selected.length} points, R2 ${fmt(analysis.fit.r2, 3)}, standard error ${fmt(analysis.fit.stderr, 1)} psi.
+        Slope ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}, p* ${fmt(analysis.pStar, 1)} psi +/- ${fmt(analysis.fit.interceptStdErr, 1)}.
+        kh ${fmt(analysis.kh, 1)} md-ft, k ${fmt(analysis.k, 2)} md, skin ${fmt(analysis.skin, 1)}, PI ${fmt(analysis.pi, 3)} bpd/psi.
+      `;
+    }
+
+    function renderDerivative() {
+      const analysis = state.analysis;
+      if (!analysis || analysis.derivatives.length < 2) {
+        els.derivativeChart.innerHTML = emptySvg("Need more buildup points for log-log pressure derivative.");
+        return;
+      }
+      els.derivativeChart.innerHTML = logLogSvg({
+        delta: analysis.points.filter(point => point.dt > 0 && point.deltaP > 0).map(point => ({x: point.dt, y: point.deltaP})),
+        derivative: analysis.derivatives.filter(point => point.dt > 0 && point.derivative > 0).map(point => ({x: point.dt, y: point.derivative})),
+        regimes: analysis.regimes
+      });
+    }
+
+    function renderDiagnostics() {
+      const analysis = state.analysis;
+      if (!analysis) {
+        els.confidenceLabel.textContent = "No analysis yet";
+        els.confidenceScore.textContent = "0%";
+        els.confidenceBar.style.setProperty("--w", "0%");
+        els.confidenceNotes.textContent = "Load readings and build a usable buildup before assigning interpretation confidence.";
+        els.diagnosticNotes.textContent = "No buildup interpretation yet. A useful DST transient screen needs stable rate history, shut-in period, frequent early pressure points, and reliable bottomhole gauge data.";
+        return;
+      }
+      els.confidenceLabel.textContent = analysis.confidence.label;
+      els.confidenceScore.textContent = `${Math.round(analysis.confidence.score)}%`;
+      els.confidenceBar.style.setProperty("--w", `${analysis.confidence.score}%`);
+      els.confidenceNotes.textContent = analysis.confidence.notes.join(" ");
+      const notes = [];
+      notes.push(`Derivative screen: ${Number.isFinite(analysis.plateau) ? `middle-time derivative around ${fmt(analysis.plateau, 1)} psi` : "not enough stable derivative points"}.`);
+      notes.push(`Radius of investigation estimate at last shut-in point: ${Number.isFinite(analysis.investigationRadius) ? `${fmt(analysis.investigationRadius, 0)} ft` : "not available"}.`);
+      notes.push(analysis.regimes.length ? `Likely regimes: ${analysis.regimes.map(regime => `${regime.name} (${regime.confidence})`).join(", ")}.` : "No flow regime was identified with useful confidence.");
+      notes.push(Math.abs(analysis.skin) > 15 ? "Skin magnitude is large; check completion damage/stimulation, multiphase cleanup, or fluid inputs." : "Skin is in a moderate screening range.");
+      notes.push(`Variable-rate normalization used equivalent producing time of ${fmt(analysis.equivalentFlowTime, 2)} hr.`);
+      els.diagnosticNotes.textContent = notes.join("\n\n");
+    }
+
+    function renderRegimes() {
+      const regimes = state.analysis?.regimes || [];
+      if (!regimes.length) {
+        els.regimeBody.innerHTML = '<tr><td colspan="4" class="muted">No regimes identified yet.</td></tr>';
+        return;
+      }
+      els.regimeBody.innerHTML = regimes.map(regime => `<tr>
+        <td>${escapeHtml(regime.name)}</td>
+        <td>${fmt(regime.startDt, 3)}-${fmt(regime.endDt, 3)} hr</td>
+        <td><span class="badge ${regime.confidence === "high" ? "flow" : "shutin"}">${regime.confidence}</span></td>
+        <td>${escapeHtml(regime.basis)}</td>
+      </tr>`).join("");
+    }
+
+    function renderSuperposition() {
+      const analysis = state.analysis;
+      if (!analysis) {
+        els.superpositionBox.textContent = "Load data to calculate equivalent flow time and superposition notes.";
+        return;
+      }
+      const rateChanges = analysis.flowPeriods.length;
+      els.superpositionBox.textContent = [
+        `Reference rate: ${fmt(analysis.q, 1)} bpd.`,
+        `Equivalent flow time: ${fmt(analysis.equivalentFlowTime, 2)} hr from ${rateChanges} flowing/restart/cleanup period(s).`,
+        `Irregular samples are normalized by elapsed time between readings. Multi-rate DSTs are screened with cumulative rate-hours divided by the reference rate.`,
+        `For final work, verify all rate steps, separator shrinkage, gas allocation, and phase behavior before replacing this simplified superposition.`
+      ].join("\n\n");
+    }
+
+    function renderQuality() {
+      if (!state.quality.length) {
+        els.qualityBody.innerHTML = '<tr><td colspan="3" class="muted">No data loaded.</td></tr>';
+        return;
+      }
+      els.qualityBody.innerHTML = state.quality.map(check => `<tr>
+        <td><span class="badge ${BADGE_CLASS[check.severity] || "shutin"}">${check.severity}</span></td>
+        <td>${escapeHtml(check.check)}</td>
+        <td>${escapeHtml(check.detail)}</td>
+      </tr>`).join("");
+    }
+
+    function renderEvents() {
+      if (!state.events.length) {
+        els.eventList.innerHTML = '<div class="muted">No key events added yet.</div>';
+        return;
+      }
+      els.eventList.innerHTML = state.events.map((event, index) => `<div class="event-item">
+        <span><strong>${escapeHtml(event.type)}</strong> - ${formatTime(event.timeMs)}<br><span class="muted">${escapeHtml(event.note || "")}</span></span>
+        <button class="small" data-remove-event="${index}">Remove</button>
+      </div>`).join("");
+      els.eventList.querySelectorAll("[data-remove-event]").forEach(button => {
+        button.addEventListener("click", () => {
+          state.events.splice(Number(button.dataset.removeEvent), 1);
+          refresh("Removed event.");
+        });
+      });
+    }
+
+    /* SVG plotting and export */
+    function lineSvg({series, events = [], xLabel, yLabel, rightLabel, formatX}) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 66, r: 62, t: 24, b: 48};
+      const allX = series.flatMap(s => s.points.map(p => p.x));
+      const xMin = Math.min(...allX);
+      const xMax = Math.max(...allX);
+      const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
+      const left = series[0];
+      const right = series[1];
+      const yScale = makeScale(minOf(left.points, "y"), maxOf(left.points, "y"), height - pad.b, pad.t);
+      const rScale = makeScale(minOf(right.points, "y"), maxOf(right.points, "y"), height - pad.b, pad.t);
+      const periodMarkers = left.points.map(p => p.period && p.period !== "flow" ? `<circle cx="${xScale(p.x)}" cy="${yScale(p.y)}" r="3.1" fill="${periodColor(p.period)}"/>` : "").join("");
+      const eventMarkers = events.filter(event => event.timeMs >= xMin && event.timeMs <= xMax).map((event, index) => {
+        const x = xScale(event.timeMs);
+        return `<g><line x1="${x}" y1="${pad.t}" x2="${x}" y2="${height - pad.b}" stroke="#ffd166" stroke-width="1.2" stroke-dasharray="4 4"/><text x="${x + 4}" y="${pad.t + 14 + index * 13}" fill="#ffd166" font-size="11">${escapeHtml(event.type)}</text></g>`;
+      }).join("");
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        <path d="${pathFor(left.points, xScale, yScale)}" fill="none" stroke="${left.color}" stroke-width="2.5"/>
+        <path d="${pathFor(right.points, xScale, rScale)}" fill="none" stroke="${right.color}" stroke-width="2.2" opacity="0.9"/>
+        ${periodMarkers}${eventMarkers}
+        ${axisLabels(width, height, pad, xLabel, yLabel, rightLabel)}
+        ${xTicks(xScale, xMin, xMax, height - pad.b, formatX)}
+        ${yTicks(yScale, minOf(left.points, "y"), maxOf(left.points, "y"), pad.l, "left")}
+        ${yTicks(rScale, minOf(right.points, "y"), maxOf(right.points, "y"), width - pad.r, "right")}
+      </svg>`;
+    }
+
+    function scatterSvg({points, fit, xLabel, yLabel}) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 68, r: 28, t: 24, b: 48};
+      const xMin = minOf(points, "x");
+      const xMax = maxOf(points, "x");
+      const yMin = minOf(points, "y");
+      const yMax = maxOf(points, "y");
+      const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
+      const yScale = makeScale(yMin, yMax, height - pad.b, pad.t);
+      const fitLine = [
+        {x: xMin, y: fit.intercept + fit.slope * xMin},
+        {x: xMax, y: fit.intercept + fit.slope * xMax}
+      ];
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        <path d="${pathFor(fitLine, xScale, yScale)}" fill="none" stroke="#3dd7b6" stroke-width="2.4" stroke-dasharray="7 5"/>
+        ${points.map(p => `<circle cx="${xScale(p.x)}" cy="${yScale(p.y)}" r="${p.selected ? 4.4 : 3.2}" fill="${p.selected ? "#ffba66" : "#6b7c93"}" opacity="${p.selected ? "0.95" : "0.55"}"/>`).join("")}
+        ${axisLabels(width, height, pad, xLabel, yLabel, "")}
+        ${xTicks(xScale, xMin, xMax, height - pad.b, value => fmt(value, 2))}
+        ${yTicks(yScale, yMin, yMax, pad.l, "left")}
+      </svg>`;
+    }
+
+    function logLogSvg({delta, derivative, regimes = []}) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 68, r: 28, t: 24, b: 48};
+      const all = delta.concat(derivative);
+      if (!all.length) return emptySvg("Need positive delta pressure and derivative points.");
+      const xMin = Math.min(...all.map(p => p.x));
+      const xMax = Math.max(...all.map(p => p.x));
+      const yMin = Math.min(...all.map(p => p.y));
+      const yMax = Math.max(...all.map(p => p.y));
+      const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
+      const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
+      const labels = regimes.map((regime, index) => {
+        const x = xScale(Math.sqrt(regime.startDt * Math.max(regime.endDt, regime.startDt)));
+        const y = pad.t + 18 + index * 15;
+        return `<g><line x1="${x}" y1="${pad.t}" x2="${x}" y2="${height - pad.b}" stroke="#ffd166" stroke-width="1" stroke-dasharray="3 4"/><text x="${x + 5}" y="${y}" fill="#ffd166" font-size="11">${escapeHtml(regime.name)} (${escapeHtml(regime.confidence)})</text></g>`;
+      }).join("");
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        <path d="${pathFor(delta, xScale, yScale)}" fill="none" stroke="#63a7ff" stroke-width="2.4"/>
+        <path d="${pathFor(derivative, xScale, yScale)}" fill="none" stroke="#ffba66" stroke-width="2.4"/>
+        ${labels}
+        ${axisLabels(width, height, pad, "shut-in time hr (log)", "pressure psi (log)", "")}
+        ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
+        ${yTicks(value => yScale(10 ** value), Math.log10(yMin), Math.log10(yMax), pad.l, "left", value => fmt(10 ** value, 0))}
+      </svg>`;
+    }
+
+    function emptySvg(text) {
+      return `<svg viewBox="0 0 920 310" role="img" xmlns="http://www.w3.org/2000/svg">
+        <rect width="920" height="310" fill="#071525"/>
+        <text x="460" y="155" text-anchor="middle" fill="#a9bad0" font-size="18">${escapeHtml(text)}</text>
+      </svg>`;
+    }
+
+    function makeGrid(width, height, pad) {
+      const lines = [];
+      for (let i = 0; i <= 5; i += 1) {
+        const x = pad.l + (width - pad.l - pad.r) * i / 5;
+        const y = pad.t + (height - pad.t - pad.b) * i / 5;
+        lines.push(`<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${height - pad.b}" stroke="rgba(255,255,255,0.07)"/>`);
+        lines.push(`<line x1="${pad.l}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="rgba(255,255,255,0.07)"/>`);
+      }
+      lines.push(`<rect x="${pad.l}" y="${pad.t}" width="${width - pad.l - pad.r}" height="${height - pad.t - pad.b}" fill="none" stroke="rgba(255,255,255,0.14)"/>`);
+      return lines.join("");
+    }
+
+    function axisLabels(width, height, pad, xLabel, yLabel, rightLabel) {
+      return `
+        <text x="${width / 2}" y="${height - 10}" fill="#a9bad0" font-size="13" text-anchor="middle">${xLabel}</text>
+        <text x="18" y="${height / 2}" fill="#a9bad0" font-size="13" text-anchor="middle" transform="rotate(-90 18 ${height / 2})">${yLabel}</text>
+        ${rightLabel ? `<text x="${width - 12}" y="${height / 2}" fill="#a9bad0" font-size="13" text-anchor="middle" transform="rotate(90 ${width - 12} ${height / 2})">${rightLabel}</text>` : ""}
+      `;
+    }
+
+    function xTicks(scale, min, max, y, formatter) {
+      const ticks = [];
+      for (let i = 0; i <= 4; i += 1) {
+        const value = min + (max - min) * i / 4;
+        const x = scale(value);
+        ticks.push(`<line x1="${x}" y1="${y}" x2="${x}" y2="${y + 5}" stroke="#a9bad0"/>`);
+        ticks.push(`<text x="${x}" y="${y + 20}" text-anchor="middle" fill="#a9bad0" font-size="11">${escapeHtml(formatter(value))}</text>`);
+      }
+      return ticks.join("");
+    }
+
+    function yTicks(scale, min, max, x, side, formatter = value => fmt(value, 0)) {
+      const ticks = [];
+      for (let i = 0; i <= 4; i += 1) {
+        const value = min + (max - min) * i / 4;
+        const y = scale(value);
+        const anchor = side === "right" ? "start" : "end";
+        const textX = side === "right" ? x + 8 : x - 8;
+        ticks.push(`<line x1="${side === "right" ? x : x - 5}" y1="${y}" x2="${side === "right" ? x + 5 : x}" y2="${y}" stroke="#a9bad0"/>`);
+        ticks.push(`<text x="${textX}" y="${y + 4}" text-anchor="${anchor}" fill="#a9bad0" font-size="11">${escapeHtml(formatter(value))}</text>`);
+      }
+      return ticks.join("");
+    }
+
+    function makeScale(min, max, outMin, outMax) {
+      const span = max - min || 1;
+      return value => outMin + (value - min) * (outMax - outMin) / span;
+    }
+
+    function pathFor(points, xScale, yScale) {
+      return points.map((point, index) => `${index ? "L" : "M"} ${xScale(point.x).toFixed(2)} ${yScale(point.y).toFixed(2)}`).join(" ");
+    }
+
+    async function exportPlotAsPng(chartId) {
+      const chart = document.getElementById(chartId);
+      const svg = chart?.querySelector("svg");
+      if (!svg) return alert("No plot available to export.");
+      const name = chartId.replace(/Chart$/, "").replace(/[A-Z]/g, char => `-${char.toLowerCase()}`).replace(/^-/, "");
+      const xml = new XMLSerializer().serializeToString(svg);
+      const url = URL.createObjectURL(new Blob([xml], {type: "image/svg+xml"}));
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1840;
+        canvas.height = 620;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#071525";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(blob => {
+          const linkUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = linkUrl;
+          link.download = `dst-${name}-${stamp()}.png`;
+          link.click();
+          URL.revokeObjectURL(linkUrl);
+        });
+      };
+      image.src = url;
+    }
+
+    function exportAllPlots() {
+      ["trendChart", "hornerChart", "derivativeChart"].forEach((chartId, index) => setTimeout(() => exportPlotAsPng(chartId), index * 250));
+    }
+
+    /* Report, case save/load, and export */
+    function exportCsv() {
+      const header = "timestamp,bhp_psi,rate_bpd,oil_bpd,water_bpd,gas_mscfd,whp_psi,temp_f,source";
+      const lines = state.rows.map(row => [
+        new Date(row.timeMs).toISOString(),
+        row.bhp, row.rate, row.oil, row.water, row.gas, row.whp ?? "", row.temp ?? "", row.source || ""
+      ].join(","));
+      download(`dst-pta-${stamp()}.csv`, [header, ...lines].join("\n"), "text/csv");
+    }
+
+    function exportJson() {
+      download(`dst-pta-analysis-${stamp()}.json`, JSON.stringify(casePayload(true), null, 2), "application/json");
+    }
+
+    function buildReport() {
+      const analysis = state.analysis;
+      const conclusion = engineeringConclusion();
+      const report = [
+        `DST PRESSURE TRANSIENT INTERPRETATION REPORT`,
+        `Case: ${els.caseWell.value || "-"}`,
+        `Zone: ${els.caseZone.value || "-"}`,
+        `Engineer: ${els.caseEngineer.value || "-"}`,
+        `Built: ${new Date().toLocaleString()}`,
+        ``,
+        `DATA SUMMARY`,
+        `Rows: ${state.rows.length}`,
+        `First reading: ${state.rows[0] ? formatTime(state.rows[0].timeMs) : "-"}`,
+        `Last reading: ${state.rows[state.rows.length - 1] ? formatTime(state.rows[state.rows.length - 1].timeMs) : "-"}`,
+        `Imported rows: ${state.importStats.parsedRows}; rejected rows: ${state.importStats.invalidRows}`,
+        ``,
+        `QUALITY FLAGS`,
+        ...state.quality.map(check => `${check.severity.toUpperCase()} - ${check.check}: ${check.detail}`),
+        ``,
+        `DETECTED PERIODS`,
+        ...state.periods.map(period => `${period.number}. ${period.type} (${period.confidence}) ${formatTime(period.start.timeMs)} to ${formatTime(period.end.timeMs)}; ${fmt(period.durationHr, 2)} hr; avg ${fmt(period.avgRate, 1)} bpd. ${period.reason}`),
+        ``,
+        `HORNER RESULTS`,
+        analysis ? `Fit window: ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr; points: ${analysis.selected.length}; R2: ${fmt(analysis.fit.r2, 3)}; standard error: ${fmt(analysis.fit.stderr, 1)} psi.` : `No usable Horner buildup detected.`,
+        analysis ? `p*: ${fmt(analysis.pStar, 1)} psi +/- ${fmt(analysis.fit.interceptStdErr, 1)}; slope: ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}.` : ``,
+        analysis ? `kh: ${fmt(analysis.kh, 1)} md-ft; k: ${fmt(analysis.k, 2)} md; skin: ${fmt(analysis.skin, 1)}; PI: ${fmt(analysis.pi, 3)} bpd/psi.` : ``,
+        ``,
+        `DERIVATIVE INTERPRETATION`,
+        analysis && analysis.regimes.length ? analysis.regimes.map(regime => `${regime.name}: ${fmt(regime.startDt, 3)}-${fmt(regime.endDt, 3)} hr (${regime.confidence}) - ${regime.basis}`).join("\n") : `No confident flow-regime labels identified.`,
+        ``,
+        `ENGINEERING CONCLUSION`,
+        conclusion,
+        ``,
+        `ASSUMPTIONS AND LIMITATIONS`,
+        `Pressure normalized to psi, liquid rates to bpd, gas rates to Mscf/d, and temperature to F.`,
+        `Variable-rate support uses cumulative rate-hours and equivalent producing time for screening; final work should use a full superposition model with validated rate history.`,
+        `Final interpretation requires gauge calibration/drift review, phase behavior, storage/afterflow removal, wellbore geometry validation, and geologic boundary checks.`,
+        ``,
+        `INPUTS`,
+        Object.entries(currentInputs()).map(([key, value]) => `${key}: ${value}`).join("\n"),
+        ``,
+        `KEY EVENTS`,
+        state.events.length ? state.events.map(event => `${formatTime(event.timeMs)} - ${event.type}: ${event.note || "-"}`).join("\n") : `No key events entered.`
+      ].filter(line => line !== undefined).join("\n");
+      els.reportText.textContent = report;
+      state.lastReportHtml = reportToHtml(report);
+      persistCase();
+      return report;
+    }
+
+    function engineeringConclusion() {
+      const analysis = state.analysis;
+      const suitability = state.quality.find(check => check.check === "Interpretation suitability");
+      if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup was detected.";
+      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
+    }
+
+    function reportToHtml(report) {
+      const title = escapeHtml(els.caseWell.value || "DST PTA report");
+      return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;line-height:1.45;color:#172033;margin:2rem}h1{color:#0c4e54}pre{white-space:pre-wrap;background:#f4f7f8;border:1px solid #ccd6dd;padding:1rem;border-radius:10px}</style></head><body><h1>${title}</h1><pre>${escapeHtml(report)}</pre></body></html>`;
+    }
+
+    async function copyReport() {
+      const report = els.reportText.textContent.includes("Build a report") ? buildReport() : els.reportText.textContent;
+      await navigator.clipboard.writeText(report);
+      alert("Report copied to clipboard.");
+    }
+
+    function downloadReport() {
+      const report = els.reportText.textContent.includes("Build a report") ? buildReport() : els.reportText.textContent;
+      download(`dst-pta-report-${stamp()}.txt`, report, "text/plain");
+    }
+
+    function downloadHtmlReport() {
+      if (!state.lastReportHtml) buildReport();
+      download(`dst-pta-report-${stamp()}.html`, state.lastReportHtml, "text/html");
+    }
+
+    function printPdfReport() {
+      if (!state.lastReportHtml) buildReport();
+      const win = window.open("", "_blank");
+      if (!win) return alert("Allow popups to print/export PDF.");
+      win.document.write(state.lastReportHtml);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 300);
+    }
+
+    function casePayload(includeAnalysis = false) {
+      return {
+        version: APP_VERSION,
+        savedAt: new Date().toISOString(),
+        rows: state.rows,
+        inputs: currentInputs(),
+        units: currentUnits(),
+        details: currentDetails(),
+        events: state.events,
+        manualPeriods: state.manualPeriods,
+        importStats: state.importStats,
+        importIssues: state.importIssues,
+        analysis: includeAnalysis ? compactAnalysis() : undefined
+      };
+    }
+
+    function persistCase() {
+      try {
+        localStorage.setItem("dstPtaCase", JSON.stringify(casePayload(false)));
+        localStorage.setItem("dstPtaInputs", JSON.stringify(currentInputs()));
+      } catch (error) {
+        console.warn("Unable to persist DST case locally", error);
+      }
+    }
+
+    function saveCase() {
+      persistCase();
+      alert("DST case saved in this browser.");
+    }
+
+    function downloadCase() {
+      download(`dst-pta-case-${stamp()}.json`, JSON.stringify(casePayload(false), null, 2), "application/json");
+    }
+
+    async function handleCaseImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const payload = safeJson(await file.text());
+      if (!payload || !Array.isArray(payload.rows)) {
+        alert("Case file is not a valid DST PTA case JSON.");
+        return;
+      }
+      applyCasePayload(payload);
+      refresh(`Loaded case ${file.name}.`);
+      event.target.value = "";
+    }
+
+    function saveInputs() {
+      localStorage.setItem("dstPtaInputs", JSON.stringify(currentInputs()));
+      persistCase();
+      alert("Analysis inputs saved.");
+    }
+
+    function loadSavedCase() {
+      const savedInputs = safeJson(localStorage.getItem("dstPtaInputs"));
+      if (savedInputs) applyInputs(savedInputs);
+      const saved = safeJson(localStorage.getItem("dstPtaCase"));
+      if (saved) applyCasePayload(saved);
+    }
+
+    function applyCasePayload(payload) {
+      if (payload.inputs) applyInputs(payload.inputs);
+      if (payload.units) applyUnits(payload.units);
+      if (payload.details) applyDetails(payload.details);
+      state.rows = Array.isArray(payload.rows) ? payload.rows : [];
+      state.events = Array.isArray(payload.events) ? payload.events : [];
+      state.manualPeriods = payload.manualPeriods || {};
+      state.importStats = payload.importStats || state.importStats;
+      state.importIssues = payload.importIssues || [];
+      normalizeRows();
+    }
+
+    function currentInputs() {
+      const inputs = {
+        netPayFt: inputNumber("netPay", 55),
+        viscosityCp: inputNumber("viscosity", 1.15),
+        fvfRbStb: inputNumber("fvf", 1.18),
+        porosityFraction: inputNumber("porosity", 0.18),
+        totalCompressibilityPsiInv: inputNumber("ct", 0.000012),
+        wellboreRadiusFt: inputNumber("rw", 0.33),
+        shutInThresholdBpd: inputNumber("shutThreshold", 10),
+        gasToLiquidEquivalent: inputNumber("gasFactor", 0),
+        zFactor: inputNumber("zFactor", 0.9),
+        perforatedTopFt: inputNumber("perfTop", NaN),
+        perforatedBaseFt: inputNumber("perfBase", NaN),
+        tubingIdIn: inputNumber("tubingId", 2.441),
+        packerDepthFt: inputNumber("packerDepth", NaN),
+        wellboreVolumeBbl: inputNumber("wellboreVolume", computedWellboreVolume())
+      };
+      return inputs;
+    }
+
+    function currentUnits() {
+      return {pressure: els.pressureUnit.value, rate: els.rateUnit.value, gas: els.gasUnit.value, temp: els.tempUnit.value};
+    }
+
+    function currentDetails() {
+      return {well: els.caseWell.value, zone: els.caseZone.value, engineer: els.caseEngineer.value};
+    }
+
+    function applyInputs(inputs) {
+      const map = {
+        netPayFt: "netPay", viscosityCp: "viscosity", fvfRbStb: "fvf", porosityFraction: "porosity",
+        totalCompressibilityPsiInv: "ct", wellboreRadiusFt: "rw", shutInThresholdBpd: "shutThreshold",
+        gasToLiquidEquivalent: "gasFactor", zFactor: "zFactor", perforatedTopFt: "perfTop",
+        perforatedBaseFt: "perfBase", tubingIdIn: "tubingId", packerDepthFt: "packerDepth",
+        wellboreVolumeBbl: "wellboreVolume"
+      };
+      Object.entries(map).forEach(([key, id]) => {
+        if (inputs[key] !== undefined && Number.isFinite(Number(inputs[key])) && els[id]) els[id].value = inputs[key];
+      });
+    }
+
+    function applyUnits(units) {
+      ["pressure", "rate", "gas", "temp"].forEach(key => {
+        const id = `${key}Unit`;
+        if (units[key] && els[id]) els[id].value = units[key];
+      });
+    }
+
+    function applyDetails(details) {
+      if (details.well) els.caseWell.value = details.well;
+      if (details.zone) els.caseZone.value = details.zone;
+      if (details.engineer) els.caseEngineer.value = details.engineer;
+    }
+
+    function compactAnalysis() {
+      const a = state.analysis;
+      if (!a) return null;
+      return {
+        pStarPsi: a.pStar,
+        slopePsiPerCycle: a.m,
+        r2: a.fit.r2,
+        standardErrorPsi: a.fit.stderr,
+        khMdFt: a.kh,
+        permeabilityMd: a.k,
+        skin: a.skin,
+        productivityIndexBpdPerPsi: a.pi,
+        buildupDurationHr: a.buildup.durationHr,
+        equivalentFlowTimeHr: a.equivalentFlowTime,
+        fitWindowHr: a.window,
+        confidence: a.confidence,
+        regimes: a.regimes
+      };
+    }
+
+    function addEvent() {
+      const time = parseTime(els.eventTime.value);
+      if (!time) return alert("Event needs a valid time.");
+      state.events.push({timeMs: time.getTime(), type: els.eventType.value, note: els.eventNote.value.trim()});
+      state.events.sort((a, b) => a.timeMs - b.timeMs);
+      els.eventNote.value = "";
+      refresh("Added event annotation.");
+    }
+
+    function makeSampleRows() {
+      const start = new Date("2026-06-21T08:00:00");
+      const rows = [];
+      const push = (minutes, bhp, oil, water, gas, whp, temp) => {
+        const timeMs = start.getTime() + minutes * 60000;
+        const row = {id: `${timeMs}-demo-${rows.length}`, rawIndex: rows.length, timeMs, timeText: new Date(timeMs).toISOString(), bhp, oil, water, gas, whp, temp, source: "demo", explicitRate: false, units: {pressure: "psi", rate: "bpd", gas: "mscfd", temp: "f"}};
+        row.rate = calcRate(row);
+        rows.push(row);
+      };
+      for (let i = 0; i <= 10; i += 1) push(i * 8, 8420 - 88 * Math.log10(i + 1), 0, 0, 0, 430 + i * 1.5, 184 + i * 0.08);
+      for (let i = 1; i <= 16; i += 1) {
+        const rate = 260 + i * 18 + Math.sin(i / 2) * 28;
+        push(80 + i * 10, 8320 - 95 * Math.log10(i + 1) - i * 6, rate, i < 6 ? 35 : 10, 0, 570 + i * 2.1, 185 + i * 0.14);
+      }
+      for (let i = 1; i <= 10; i += 1) push(250 + i * 7, 7700 + i * 22, 0, 0, 0, 510 - i * 1.4, 188 - i * 0.04);
+      for (let i = 1; i <= 10; i += 1) {
+        const rate = 560 + Math.sin(i) * 35;
+        push(330 + i * 8, 7830 - 50 * Math.log10(i + 1), rate, 6, 0, 610 + i * 1.8, 187 + i * 0.04);
+      }
+      const shutStart = 420;
+      for (let i = 0; i <= 44; i += 1) {
+        const minutes = shutStart + i * (i < 10 ? 5 : 10);
+        const dtHr = Math.max(0.02, (minutes - shutStart) / 60);
+        const buildup = 520 * (1 - Math.exp(-dtHr / 1.55)) + 72 * Math.log10(dtHr + 1);
+        const storage = i < 5 ? -35 + i * 8 : 0;
+        const noise = Math.sin(i * 1.33) * 2.2;
+        push(minutes, 7745 + buildup + storage + noise, 0, 0, 0, 500 - i * 0.8, 189 - i * 0.025);
+      }
+      return rows;
+    }
+
+    function makeSampleEvents() {
+      const start = new Date("2026-06-21T08:00:00").getTime();
+      return [
+        {timeMs: start + 80 * 60000, type: "perforation", note: "DST flow opened after initial shut-in."},
+        {timeMs: start + 250 * 60000, type: "shut-in start", note: "Short pressure buildup before restart."},
+        {timeMs: start + 330 * 60000, type: "restart", note: "Second flow / restart period."},
+        {timeMs: start + 420 * 60000, type: "shut-in start", note: "Main buildup for Horner and derivative."}
+      ];
+    }
+
+    /* Utilities */
+    function inputNumber(id, fallback) {
+      const value = Number(els[id]?.value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function computedWellboreVolume() {
+      const tubingIdIn = inputNumber("tubingId", 2.441);
+      const packerDepth = inputNumber("packerDepth", NaN);
+      if (!Number.isFinite(tubingIdIn) || !Number.isFinite(packerDepth)) return NaN;
+      return (Math.PI * (tubingIdIn / 12) ** 2 / 4) * packerDepth / 5.615;
+    }
+
+    function periodColor(period) {
+      return {"shut-in": "#ffba66", "cleanup": "#9be7ff", "restart": "#c7a6ff", "afterflow": "#ffd166", "flow": "#7ee787"}[period] || "#ffba66";
+    }
+
+    function download(filename, text, type) {
+      const blob = new Blob([text], {type});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function safeJson(text) {
+      try { return JSON.parse(text); } catch { return null; }
+    }
+
+    function formatTime(timeMs) {
+      return new Date(timeMs).toLocaleString([], {month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit"});
+    }
+
+    function formatShortTime(timeMs) {
+      return new Date(timeMs).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+    }
+
+    function fmt(value, digits = 1) {
+      return Number.isFinite(value) ? Number(value).toLocaleString(undefined, {maximumFractionDigits: digits, minimumFractionDigits: digits}) : "-";
+    }
+
+    function fmtPlain(value, digits = 2) {
+      return Number.isFinite(value) ? Number(value).toFixed(digits) : "";
+    }
+
+    function stamp() {
+      return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    }
+
+    function sum(values) {
+      return values.reduce((total, value) => total + value, 0);
+    }
+
+    function average(values) {
+      const clean = values.filter(Number.isFinite);
+      return clean.length ? sum(clean) / clean.length : 0;
+    }
+
+    function median(values) {
+      const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+      if (!sorted.length) return NaN;
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function coefficientOfVariation(values) {
+      const clean = values.filter(value => Number.isFinite(value) && Math.abs(value) > 0.0001);
+      if (clean.length < 2) return 0;
+      const avg = average(clean);
+      const sd = Math.sqrt(average(clean.map(value => (value - avg) ** 2)));
+      return Math.abs(sd / avg);
+    }
+
+    function duplicateCount(values) {
+      const seen = new Set();
+      let duplicates = 0;
+      values.forEach(value => {
+        if (seen.has(value)) duplicates += 1;
+        seen.add(value);
+      });
+      return duplicates;
+    }
+
+    function countUnsorted(values) {
+      let count = 0;
+      for (let i = 1; i < values.length; i += 1) if (values[i] < values[i - 1]) count += 1;
+      return count;
+    }
+
+    function unique(values) {
+      return [...new Set(values.filter(Boolean))];
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function minOf(points, key) {
+      const min = Math.min(...points.map(point => point[key]));
+      const max = Math.max(...points.map(point => point[key]));
+      return min === max ? min - 1 : min;
+    }
+
+    function maxOf(points, key) {
+      const min = Math.min(...points.map(point => point[key]));
+      const max = Math.max(...points.map(point => point[key]));
+      return min === max ? max + 1 : max;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
+    }
+  </script>
+</body>
+</html>
