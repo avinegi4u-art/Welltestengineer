@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.3 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.4 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <style>
     :root {
@@ -502,6 +502,33 @@
     .nowrap { white-space: nowrap; }
     .hide { display: none !important; }
 
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .slider-row {
+      display: grid;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+    }
+
+    .slider-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .chart-controls {
+      display: grid;
+      gap: 0.65rem;
+      margin-bottom: 0.75rem;
+    }
+
     .report {
       white-space: pre-wrap;
       border: 1px solid var(--border);
@@ -541,8 +568,8 @@
           </svg>
         </div>
         <div>
-          <h1>DST Pressure Transient Analyzer Pro</h1>
-          <p class="sub">Kappa-style office PTA workflow: Bourdet pressure derivative, buildup selection, spike filtering, log-log and semilog diagnostics, Horner and derivative permeability cross-check, flow-regime ID, PI, skin, step-rate fracture screening, multi-buildup comparison, and live JSON/CSV import.</p>
+          <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.4</span></h1>
+          <p class="sub">Kappa-style PTA: Bourdet derivative with live L slider, analytical WBS+radial type-curve overlay, superposition deconvolution for messy DST rate histories, buildup selection, spike filter, semilog/log-log diagnostics, and model cross-check.</p>
         </div>
       </div>
       <div class="hero-actions">
@@ -868,10 +895,25 @@
             <h2 style="margin-bottom:0">Log-log buildup derivative (Bourdet)</h2>
             <button class="small" data-export-plot="derivativeChart">Export PNG</button>
           </div>
+          <div class="chart-controls">
+            <div class="slider-row">
+              <div class="slider-meta">
+                <span>Bourdet smoothing L (live preview)</span>
+                <span class="mono">L = <strong id="bourdetSmoothingValue">0.15</strong> log cycles</span>
+              </div>
+              <input id="bourdetSmoothingSlider" type="range" min="0.05" max="0.6" step="0.01" value="0.15" />
+            </div>
+            <label style="display:inline-flex; align-items:center; gap:0.45rem; color:var(--muted); font-size:0.86rem">
+              <input id="showTypeCurve" type="checkbox" checked />
+              Overlay analytical type curve (wellbore storage + radial)
+            </label>
+          </div>
           <div id="derivativeChart" class="chart" aria-label="Pressure derivative chart"></div>
+          <div id="typeCurveNote" class="help" style="margin-top:0.55rem">Type curve uses Horner k, skin, and estimated CD from early-time storage.</div>
           <div class="legend">
             <span style="--c:#63a7ff">Delta pressure</span>
             <span style="--c:#ffba66">Bourdet derivative</span>
+            <span style="--c:#c7a6ff">Analytical WBS + radial</span>
             <span style="--c:#7ee787">Unit / half-slope guides</span>
           </div>
         </div>
@@ -916,6 +958,20 @@
                 <tr><td colspan="4" class="muted">No regimes identified yet.</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+        <div class="card span-5">
+          <h2>Variable-rate / deconvolution</h2>
+          <div id="deconvSummary" class="report" style="min-height:8rem">Load data to build superposition deconvolution and rate-normalized buildup curves for messy DST sequences.</div>
+          <div class="chart-toolbar" style="margin-top:0.75rem">
+            <h3 style="margin:0;font-size:0.95rem">Raw vs deconvolved log-log</h3>
+            <button class="small" data-export-plot="deconvChart">Export PNG</button>
+          </div>
+          <div id="deconvChart" class="chart" aria-label="Deconvolution comparison chart"></div>
+          <div class="legend">
+            <span style="--c:#63a7ff">Raw delta pressure</span>
+            <span style="--c:#3dd7b6">Deconvolved delta pressure</span>
+            <span style="--c:#ffba66">Deconvolved Bourdet derivative</span>
           </div>
         </div>
         <div class="card span-5">
@@ -1067,7 +1123,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2.3.0";
+    const APP_VERSION = "2.4.0";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1094,7 +1150,8 @@
       importStats: {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []},
       pollTimer: null,
       lastPollError: "",
-      lastReportHtml: ""
+      lastReportHtml: "",
+      derivativePreviewFrame: null
     };
 
     const els = {};
@@ -1110,12 +1167,13 @@
       "stepImport", "stepQc", "stepPeriods", "stepAnalysis", "stepReport",
       "netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor",
       "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd",
-      "buildupSelect", "bourdetSmoothing", "spikeFilter",
+      "buildupSelect", "bourdetSmoothing", "bourdetSmoothingSlider", "bourdetSmoothingValue", "showTypeCurve", "typeCurveNote", "spikeFilter",
       "eventTime", "eventType", "eventNote", "eventList",
       "caseWell", "caseZone", "caseEngineer", "reportText",
       "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups",
       "stepRateSummary", "stepRateChart", "stepRateBody", "injectivityChart", "buildupCompareSummary", "buildupCompareBody",
-      "semilogChart", "modelCompareSummary", "modelCompareBody"
+      "semilogChart", "modelCompareSummary", "modelCompareBody",
+      "deconvSummary", "deconvChart"
     ];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -1183,13 +1241,55 @@
         refresh("Cleared event annotations.");
       });
       document.querySelectorAll("[data-export-plot]").forEach(button => button.addEventListener("click", () => exportPlotAsPng(button.dataset.exportPlot)));
+      els.bourdetSmoothingSlider?.addEventListener("input", () => scheduleDerivativePreview());
+      els.bourdetSmoothing?.addEventListener("input", () => {
+        if (els.bourdetSmoothingSlider) els.bourdetSmoothingSlider.value = els.bourdetSmoothing.value;
+        scheduleDerivativePreview();
+      });
+      els.showTypeCurve?.addEventListener("change", () => renderDerivative());
       [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "buildupSelect", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups"].forEach(id => {
         els[id]?.addEventListener("change", () => refresh());
       });
     }
 
+    function scheduleDerivativePreview() {
+      if (state.derivativePreviewFrame) {
+        if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(state.derivativePreviewFrame);
+        else clearTimeout(state.derivativePreviewFrame);
+      }
+      const runner = () => {
+        state.derivativePreviewFrame = null;
+        refreshDerivativeLive();
+      };
+      if (typeof requestAnimationFrame === "function") state.derivativePreviewFrame = requestAnimationFrame(runner);
+      else state.derivativePreviewFrame = setTimeout(runner, 0);
+    }
+
+    function syncBourdetControls(value) {
+      const bourdetL = clamp(value, 0.05, 0.6);
+      if (els.bourdetSmoothing) els.bourdetSmoothing.value = fmtPlain(bourdetL, 2);
+      if (els.bourdetSmoothingSlider) els.bourdetSmoothingSlider.value = bourdetL;
+      if (els.bourdetSmoothingValue) els.bourdetSmoothingValue.textContent = fmt(bourdetL, 2);
+      return bourdetL;
+    }
+
+    function refreshDerivativeLive() {
+      const analysis = state.analysis;
+      if (!analysis?.points?.length) return;
+      const bourdetL = syncBourdetControls(Number(els.bourdetSmoothingSlider?.value || els.bourdetSmoothing?.value || 0.15));
+      recomputeDerivativeMetrics(analysis, bourdetL);
+      state.quality = buildQualityChecks();
+      renderDerivative();
+      renderDeconvolution();
+      renderModelComparison();
+      renderRegimes();
+      renderDiagnostics();
+      renderKpis();
+      persistCase();
+    }
+
     function analysisInputIds() {
-      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd", "bourdetSmoothing", "spikeFilter"];
+      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd", "bourdetSmoothing", "spikeFilter", "showTypeCurve"];
     }
 
     function showTab(tabName) {
@@ -1535,6 +1635,9 @@
       if (state.analysis) {
         state.analysis.confidence = analysisConfidence({fit: state.analysis.fit, fitPoints: state.analysis.selected, points: state.analysis.points, regimes: state.analysis.regimes, quality: state.quality, modelCheck: state.analysis.modelCheck});
       }
+      if (state.analysis) {
+        syncBourdetControls(state.analysis.bourdetL || inputNumber("bourdetSmoothing", 0.15));
+      }
       renderAll(message);
       persistCase();
     }
@@ -1717,34 +1820,139 @@
         ? 1.151 * ((p1hr - pwf) / m - Math.log10(k / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
         : NaN;
       const pi = fit.intercept > pwf ? qRef / (fit.intercept - pwf) : NaN;
-      const bourdetL = clamp(inputNumber("bourdetSmoothing", 0.15), 0.05, 0.6);
-      const derivatives = bourdetDerivative(points, bourdetL);
-      const regimes = classifyRegimes(points, derivatives);
-      const radialRegime = regimes.find(regime => regime.name === "radial flow");
-      const plateauWindow = derivatives.filter(point => radialRegime && point.dt >= radialRegime.startDt && point.dt <= radialRegime.endDt && point.derivative > 0);
-      const plateau = plateauWindow.length
-        ? median(plateauWindow.map(point => point.derivative))
-        : median(derivatives.slice(Math.floor(derivatives.length * 0.25), Math.ceil(derivatives.length * 0.75)).map(point => point.derivative).filter(Number.isFinite));
-      const kDerivative = Number.isFinite(plateau) && plateau > 0
-        ? 70.6 * qRef * inputs.fvfRbStb * inputs.viscosityCp / (Math.max(inputs.netPayFt, 0.0001) * plateau)
-        : NaN;
-      const skinDerivative = Number.isFinite(kDerivative) && kDerivative > 0 && m > 0
-        ? 1.151 * ((p1hr - pwf) / m - Math.log10(kDerivative / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
-        : NaN;
-      const storageRegime = regimes.find(regime => regime.name === "wellbore storage");
-      const storageSlope = storageRegime
-        ? median(derivatives.filter(point => point.dt >= storageRegime.startDt && point.dt <= storageRegime.endDt).map(point => point.slope).filter(Number.isFinite))
-        : NaN;
-      const wellboreStorageCoeff = Number.isFinite(storageSlope) && storageSlope > 0.75
-        ? (qRef * inputs.fvfRbStb / 24) / storageSlope
-        : NaN;
-      const modelCheck = buildModelCrossCheck({kHorner: k, kDerivative, skinHorner: skin, skinDerivative, plateau, bourdetL, radialRegime, wellboreStorageCoeff});
+      const analysis = {buildup, previousFlow, flowPeriods, q: qRef, equivalentFlowTime, pwf, startPressure, points, selected: fitPoints, window, fit, m, pStar: fit.intercept, kh, k, p1hr, skin, pi, inputs};
+      recomputeDerivativeMetrics(analysis, clamp(inputNumber("bourdetSmoothing", 0.15), 0.05, 0.6));
       const lastDt = points[points.length - 1]?.dt || 0;
-      const investigationRadius = Number.isFinite(k) && k > 0
-        ? 0.029 * Math.sqrt((k * lastDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
+      analysis.investigationRadius = Number.isFinite(analysis.k) && analysis.k > 0
+        ? 0.029 * Math.sqrt((analysis.k * lastDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
         : NaN;
-      const confidence = analysisConfidence({fit, fitPoints, points, regimes, quality: state.quality, modelCheck});
-      return {buildup, previousFlow, flowPeriods, q: qRef, equivalentFlowTime, pwf, startPressure, points, selected: fitPoints, window, fit, m, pStar: fit.intercept, kh, k, p1hr, skin, pi, derivatives, regimes, plateau, investigationRadius, confidence, bourdetL, kDerivative, skinDerivative, radialRegime, wellboreStorageCoeff, modelCheck};
+      analysis.confidence = analysisConfidence({fit, fitPoints: fitPoints, points, regimes: analysis.regimes, quality: state.quality, modelCheck: analysis.modelCheck});
+      return analysis;
+    }
+
+    function recomputeDerivativeMetrics(analysis, bourdetL) {
+      const inputs = analysis.inputs || currentInputs();
+      analysis.bourdetL = clamp(bourdetL, 0.05, 0.6);
+      analysis.derivatives = bourdetDerivative(analysis.points, analysis.bourdetL);
+      analysis.regimes = classifyRegimes(analysis.points, analysis.derivatives);
+      analysis.radialRegime = analysis.regimes.find(regime => regime.name === "radial flow");
+      const plateauWindow = analysis.derivatives.filter(point => analysis.radialRegime && point.dt >= analysis.radialRegime.startDt && point.dt <= analysis.radialRegime.endDt && point.derivative > 0);
+      analysis.plateau = plateauWindow.length
+        ? median(plateauWindow.map(point => point.derivative))
+        : median(analysis.derivatives.slice(Math.floor(analysis.derivatives.length * 0.25), Math.ceil(analysis.derivatives.length * 0.75)).map(point => point.derivative).filter(Number.isFinite));
+      analysis.kDerivative = Number.isFinite(analysis.plateau) && analysis.plateau > 0
+        ? 70.6 * analysis.q * inputs.fvfRbStb * inputs.viscosityCp / (Math.max(inputs.netPayFt, 0.0001) * analysis.plateau)
+        : NaN;
+      analysis.skinDerivative = Number.isFinite(analysis.kDerivative) && analysis.kDerivative > 0 && analysis.m > 0
+        ? 1.151 * ((analysis.p1hr - analysis.pwf) / analysis.m - Math.log10(analysis.kDerivative / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
+        : NaN;
+      const storageRegime = analysis.regimes.find(regime => regime.name === "wellbore storage");
+      const storageSlope = storageRegime
+        ? median(analysis.derivatives.filter(point => point.dt >= storageRegime.startDt && point.dt <= storageRegime.endDt).map(point => point.slope).filter(Number.isFinite))
+        : NaN;
+      analysis.wellboreStorageCoeff = Number.isFinite(storageSlope) && storageSlope > 0.75
+        ? (analysis.q * inputs.fvfRbStb / 24) / storageSlope
+        : NaN;
+      analysis.modelCheck = buildModelCrossCheck({
+        kHorner: analysis.k,
+        kDerivative: analysis.kDerivative,
+        skinHorner: analysis.skin,
+        skinDerivative: analysis.skinDerivative,
+        plateau: analysis.plateau,
+        bourdetL: analysis.bourdetL,
+        radialRegime: analysis.radialRegime,
+        wellboreStorageCoeff: analysis.wellboreStorageCoeff
+      });
+      analysis.typeCurve = buildTypeCurveOverlay(analysis, inputs);
+      analysis.deconvolution = computeDeconvolution(analysis);
+    }
+
+    function dimensionlessTime(dtHr, inputs, k) {
+      return 0.0002637 * k * dtHr / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt ** 2);
+    }
+
+    function fieldPressureFromPD(pD, q, inputs, k) {
+      return pD * 141.2 * q * inputs.fvfRbStb * inputs.viscosityCp / (Math.max(k, 1e-9) * Math.max(inputs.netPayFt, 1e-9));
+    }
+
+    function estimateDimensionlessStorage(analysis, inputs) {
+      const k = Math.max(analysis.k, 1e-6);
+      const S = Number.isFinite(analysis.skin) ? analysis.skin : 0;
+      if (Number.isFinite(analysis.wellboreStorageCoeff) && analysis.wellboreStorageCoeff > 0) {
+        const denom = 2 * Math.PI * inputs.porosityFraction * inputs.totalCompressibilityPsiInv * inputs.netPayFt * inputs.wellboreRadiusFt ** 2;
+        return clamp(0.8936 * analysis.wellboreStorageCoeff / Math.max(denom, 1e-12), 10, 1e7);
+      }
+      const storage = analysis.regimes?.find(regime => regime.name === "wellbore storage");
+      if (storage) {
+        const tD = dimensionlessTime(storage.endDt, inputs, k);
+        return clamp(tD / Math.exp(2 * Math.max(S, 0)), 10, 1e7);
+      }
+      return 1000;
+    }
+
+    function wbsRadialPD(tD, CD, S) {
+      if (tD <= 0) return 0;
+      const CDu = Math.max(CD, 1e-6);
+      const storageP = tD / CDu;
+      const radialP = 0.5 * Math.log(Math.max(tD, 1e-12)) + 0.80907 + S;
+      const x = Math.log10(Math.max(tD / CDu, 1e-12));
+      const blend = clamp((x - 0.15) / 1.35, 0, 1);
+      return storageP * (1 - blend) + radialP * blend;
+    }
+
+    function wbsRadialPDeriv(tD, CD, S) {
+      if (tD <= 0) return 0;
+      const CDu = Math.max(CD, 1e-6);
+      const storageD = tD / CDu;
+      const radialD = 0.5;
+      const x = Math.log10(Math.max(tD / CDu, 1e-12));
+      const blend = clamp((x - 0.15) / 1.35, 0, 1);
+      return storageD * (1 - blend) + radialD * blend;
+    }
+
+    function buildTypeCurveOverlay(analysis, inputs) {
+      if (!analysis?.points?.length || !Number.isFinite(analysis.k) || analysis.k <= 0) return null;
+      const q = analysis.q;
+      const k = analysis.k;
+      const S = Number.isFinite(analysis.skin) ? analysis.skin : 0;
+      const CD = estimateDimensionlessStorage(analysis, inputs);
+      const times = analysis.points.map(point => point.dt).filter(dt => dt > 0);
+      const tMin = Math.min(...times);
+      const tMax = Math.max(...times);
+      if (!(tMin > 0 && tMax > tMin)) return null;
+      const pressure = [];
+      const derivative = [];
+      for (let i = 0; i <= 80; i += 1) {
+        const dt = tMin * Math.pow(tMax / tMin, i / 80);
+        const tD = dimensionlessTime(dt, inputs, k);
+        pressure.push({x: dt, y: fieldPressureFromPD(wbsRadialPD(tD, CD, S), q, inputs, k)});
+        derivative.push({x: dt, y: fieldPressureFromPD(wbsRadialPDeriv(tD, CD, S), q, inputs, k)});
+      }
+      return {pressure, derivative, CD, S, k, label: `WBS + radial: k ${fmt(k, 2)} md, S ${fmt(S, 1)}, CD ${fmt(CD, 0)}`};
+    }
+
+    function computeDeconvolution(analysis) {
+      if (!analysis?.points?.length) return null;
+      const qRef = analysis.q;
+      const buildupStart = analysis.buildup.start.timeMs;
+      const points = analysis.points.map(point => {
+        const kernel = Math.max(hornerSuperpositionRatio(analysis.flowPeriods, buildupStart, point.row.timeMs, qRef), 1e-6);
+        const rateNormalized = point.deltaP / qRef;
+        const deconvolved = point.deltaP / kernel;
+        return {dt: point.dt, raw: point.deltaP, rateNormalized, deconvolved, kernel};
+      });
+      const deconvDeriv = bourdetDerivative(
+        points.map(point => ({dt: point.dt, deltaP: Math.max(point.deconvolved, 1e-9)})),
+        analysis.bourdetL || 0.15
+      );
+      const rateCv = coefficientOfVariation(analysis.flowPeriods.map(period => period.avgRate));
+      const summary = [
+        `Superposition deconvolution applied across ${analysis.flowPeriods.length} pre-buildup flow segment(s).`,
+        `Pre-buildup rate CV: ${fmt(rateCv * 100, 1)}%. ${rateCv > 0.15 ? "Messy DST sequence detected; use deconvolved curves for screening before final Horner/derivative picks." : "Rate history is relatively stable; raw and deconvolved curves should be similar."}`,
+        `Deconvolved delta pressure divides out the variable-rate superposition kernel to expose a constant-rate-equivalent buildup response.`,
+        `Rate-normalized pressure (deltaP / q_ref) is also computed for quick injectivity-style comparison.`
+      ].join("\n\n");
+      return {points, derivatives: deconvDeriv, rateCv, summary};
     }
 
     function buildModelCrossCheck(context) {
@@ -2226,6 +2434,12 @@
               ? `Horner k ${fmt(state.analysis.k, 2)} md and derivative k ${fmt(state.analysis.kDerivative, 2)} md differ by ${fmt(state.analysis.modelCheck.deltaKPct, 1)}%; do not finalize without review.`
               : "Need both Horner and Bourdet derivative plateau estimates."));
       }
+      if (state.analysis?.deconvolution) {
+        const cv = state.analysis.deconvolution.rateCv || 0;
+        checks.push(qc(cv > 0.15 ? "warn" : "ok", "Variable-rate deconvolution", cv > 0.15
+          ? `Pre-buildup rate CV is ${fmt(cv * 100, 1)}%; compare raw vs deconvolved log-log before finalizing Horner/derivative interpretation.`
+          : `Pre-buildup rate CV is ${fmt(cv * 100, 1)}%; raw and deconvolved buildup shapes should be similar.`));
+      }
       const suitability = suitabilityFlag(checks, state.analysis);
       checks.push(qc(suitability.severity, "Interpretation suitability", suitability.detail));
       return checks;
@@ -2296,6 +2510,7 @@
       renderRegimes();
       renderSuperposition();
       renderModelComparison();
+      renderDeconvolution();
       renderStepRate();
       renderBuildupComparison();
       renderEvents();
@@ -2436,13 +2651,35 @@
       const analysis = state.analysis;
       if (!analysis || analysis.derivatives.length < 2) {
         els.derivativeChart.innerHTML = emptySvg("Need more buildup points for log-log pressure derivative.");
+        if (els.typeCurveNote) els.typeCurveNote.textContent = "Type curve overlay appears after a usable Horner analysis.";
         return;
       }
+      const showTypeCurve = els.showTypeCurve?.checked !== false;
       els.derivativeChart.innerHTML = logLogSvg({
         delta: analysis.points.filter(point => point.dt > 0 && point.deltaP > 0).map(point => ({x: point.dt, y: point.deltaP})),
         derivative: analysis.derivatives.filter(point => point.dt > 0 && point.derivative > 0).map(point => ({x: point.dt, y: point.derivative})),
-        regimes: analysis.regimes
+        regimes: analysis.regimes,
+        typeCurve: showTypeCurve ? analysis.typeCurve : null
       });
+      if (els.typeCurveNote) {
+        els.typeCurveNote.textContent = showTypeCurve && analysis.typeCurve
+          ? analysis.typeCurve.label
+          : showTypeCurve
+            ? "Type curve needs a positive Horner permeability estimate."
+            : "Analytical type-curve overlay is hidden.";
+      }
+    }
+
+    function renderDeconvolution() {
+      const analysis = state.analysis;
+      const deconv = analysis?.deconvolution;
+      if (!deconv?.points?.length) {
+        els.deconvSummary.textContent = "Load data to build superposition deconvolution and rate-normalized buildup curves for messy DST sequences.";
+        els.deconvChart.innerHTML = emptySvg("Need a buildup with rate history to plot deconvolution.");
+        return;
+      }
+      els.deconvSummary.textContent = deconv.summary;
+      els.deconvChart.innerHTML = deconvLogLogSvg(deconv);
     }
 
     function renderDiagnostics() {
@@ -2465,7 +2702,7 @@
       notes.push(`Radius of investigation estimate at last shut-in point: ${Number.isFinite(analysis.investigationRadius) ? `${fmt(analysis.investigationRadius, 0)} ft` : "not available"}.`);
       notes.push(analysis.regimes.length ? `Likely regimes: ${analysis.regimes.map(regime => `${regime.name} (${regime.confidence})`).join(", ")}.` : "No flow regime was identified with useful confidence.");
       notes.push(Math.abs(analysis.skin) > 15 ? "Skin magnitude is large; check completion damage/stimulation, multiphase cleanup, or fluid inputs." : "Skin is in a moderate screening range.");
-      notes.push(`Variable-rate normalization used equivalent producing time of ${fmt(analysis.equivalentFlowTime, 2)} hr.`);
+      notes.push(`Deconvolution screen: pre-buildup rate CV ${fmt((analysis.deconvolution?.rateCv || 0) * 100, 1)}%; compare raw vs deconvolved log-log before finalizing interpretation.`);
       els.diagnosticNotes.textContent = notes.join("\n\n");
     }
 
@@ -2521,6 +2758,7 @@
       if (Number.isFinite(analysis.modelCheck.deltaKPct)) lines.push(`Horner vs derivative permeability delta: ${fmt(analysis.modelCheck.deltaKPct, 1)}%.`);
       if (analysis.radialRegime) lines.push(`Radial-flow window from Bourdet screen: ${fmt(analysis.radialRegime.startDt, 3)}-${fmt(analysis.radialRegime.endDt, 3)} hr (${analysis.radialRegime.confidence}).`);
       if (Number.isFinite(analysis.wellboreStorageCoeff)) lines.push(`Early-time storage indicator: ${fmt(analysis.wellboreStorageCoeff, 1)} bbl/psi (screening only).`);
+      if (analysis.typeCurve) lines.push(`Type curve overlay: ${analysis.typeCurve.label}.`);
       els.modelCompareSummary.textContent = lines.join("\n\n");
       els.modelCompareBody.innerHTML = analysis.modelCheck.rows.map(row => `<tr>
         <td>${escapeHtml(row.method)}</td>
@@ -2740,11 +2978,12 @@
       </svg>`;
     }
 
-    function logLogSvg({delta, derivative, regimes = []}) {
+    function logLogSvg({delta, derivative, regimes = [], typeCurve = null}) {
       const width = 920;
       const height = 310;
       const pad = {l: 68, r: 28, t: 24, b: 48};
-      const all = delta.concat(derivative);
+      const typePoints = typeCurve ? typeCurve.pressure.concat(typeCurve.derivative) : [];
+      const all = delta.concat(derivative).concat(typePoints);
       if (!all.length) return emptySvg("Need positive delta pressure and derivative points.");
       const xMin = Math.min(...all.map(p => p.x));
       const xMax = Math.max(...all.map(p => p.x));
@@ -2762,6 +3001,10 @@
         {x: xMin, y: anchorY * Math.sqrt(xMin / anchorX)},
         {x: xMax, y: anchorY * Math.sqrt(xMax / anchorX)}
       ] : [];
+      const typePaths = typeCurve ? `
+        <path d="${pathFor(typeCurve.pressure, xScale, yScale)}" fill="none" stroke="#c7a6ff" stroke-width="2.1" stroke-dasharray="8 5" opacity="0.95"/>
+        <path d="${pathFor(typeCurve.derivative, xScale, yScale)}" fill="none" stroke="#e59cff" stroke-width="2.1" stroke-dasharray="4 4" opacity="0.95"/>
+      ` : "";
       const labels = regimes.map((regime, index) => {
         const x = xScale(Math.sqrt(regime.startDt * Math.max(regime.endDt, regime.startDt)));
         const y = pad.t + 18 + index * 15;
@@ -2771,10 +3014,37 @@
         ${makeGrid(width, height, pad)}
         ${unitSlope.length ? `<path d="${pathFor(unitSlope, xScale, yScale)}" fill="none" stroke="#7ee787" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
         ${halfSlope.length ? `<path d="${pathFor(halfSlope, xScale, yScale)}" fill="none" stroke="#9be7ff" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
+        ${typePaths}
         <path d="${pathFor(delta, xScale, yScale)}" fill="none" stroke="#63a7ff" stroke-width="2.4"/>
         <path d="${pathFor(derivative, xScale, yScale)}" fill="none" stroke="#ffba66" stroke-width="2.4"/>
         ${labels}
         ${axisLabels(width, height, pad, "shut-in time hr (log)", "pressure psi (log)", "")}
+        ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
+        ${yTicks(value => yScale(10 ** value), Math.log10(yMin), Math.log10(yMax), pad.l, "left", value => fmt(10 ** value, 0))}
+      </svg>`;
+    }
+
+    function deconvLogLogSvg(deconv) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 68, r: 28, t: 24, b: 48};
+      const raw = deconv.points.filter(point => point.dt > 0 && point.raw > 0).map(point => ({x: point.dt, y: point.raw}));
+      const deconvolved = deconv.points.filter(point => point.dt > 0 && point.deconvolved > 0).map(point => ({x: point.dt, y: point.deconvolved}));
+      const deriv = (deconv.derivatives || []).filter(point => point.dt > 0 && point.derivative > 0).map(point => ({x: point.dt, y: point.derivative}));
+      const all = raw.concat(deconvolved).concat(deriv);
+      if (!all.length) return emptySvg("Need positive deconvolution points.");
+      const xMin = Math.min(...all.map(point => point.x));
+      const xMax = Math.max(...all.map(point => point.x));
+      const yMin = Math.min(...all.map(point => point.y));
+      const yMax = Math.max(...all.map(point => point.y));
+      const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
+      const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        <path d="${pathFor(raw, xScale, yScale)}" fill="none" stroke="#63a7ff" stroke-width="2.2" opacity="0.85"/>
+        <path d="${pathFor(deconvolved, xScale, yScale)}" fill="none" stroke="#3dd7b6" stroke-width="2.5"/>
+        <path d="${pathFor(deriv, xScale, yScale)}" fill="none" stroke="#ffba66" stroke-width="2.2" stroke-dasharray="6 4"/>
+        ${axisLabels(width, height, pad, "shut-in time hr (log)", "normalized pressure psi (log)", "")}
         ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
         ${yTicks(value => yScale(10 ** value), Math.log10(yMin), Math.log10(yMax), pad.l, "left", value => fmt(10 ** value, 0))}
       </svg>`;
@@ -2904,7 +3174,7 @@
     }
 
     function exportAllPlots() {
-      ["trendChart", "hornerChart", "derivativeChart", "semilogChart", "stepRateChart", "injectivityChart"].forEach((chartId, index) => setTimeout(() => exportPlotAsPng(chartId), index * 250));
+      ["trendChart", "hornerChart", "derivativeChart", "semilogChart", "deconvChart", "stepRateChart", "injectivityChart"].forEach((chartId, index) => setTimeout(() => exportPlotAsPng(chartId), index * 250));
     }
 
     /* Report, case save/load, and export */
@@ -2951,6 +3221,11 @@
         ``,
         `DERIVATIVE / MODEL CROSS-CHECK`,
         analysis?.modelCheck?.rows?.length ? analysis.modelCheck.rows.map(row => `${row.method}: k ${fmt(row.k, 2)} md, skin ${fmt(row.skin, 1)} - ${row.basis} [${row.status}]`).join("\n") : `No model cross-check available.`,
+        ``,
+        analysis?.typeCurve ? `TYPE CURVE OVERLAY: ${analysis.typeCurve.label}` : ``,
+        ``,
+        `DECONVOLUTION / RATE NORMALIZATION`,
+        analysis?.deconvolution?.summary || `No deconvolution screen available.`,
         ``,
         `DERIVATIVE INTERPRETATION`,
         analysis && analysis.regimes.length ? analysis.regimes.map(regime => `${regime.name}: ${fmt(regime.startDt, 3)}-${fmt(regime.endDt, 3)} hr (${regime.confidence}) - ${regime.basis}`).join("\n") : `No confident flow-regime labels identified.`,
@@ -3109,6 +3384,7 @@
         wellboreVolumeBbl: inputNumber("wellboreVolume", computedWellboreVolume()),
         bourdetSmoothing: inputNumber("bourdetSmoothing", 0.15),
         spikeFilter: els.spikeFilter?.value || "standard",
+        showTypeCurve: els.showTypeCurve?.checked !== false,
         hornerStartHr: inputNumber("hornerStart", 0.25),
         hornerEndHr: inputNumber("hornerEnd", 999),
         activeBuildupKey: els.buildupSelect?.value || ""
@@ -3138,6 +3414,8 @@
       });
       if (inputs.spikeFilter && els.spikeFilter) els.spikeFilter.value = inputs.spikeFilter;
       if (inputs.activeBuildupKey && els.buildupSelect) els.buildupSelect.value = inputs.activeBuildupKey;
+      if (inputs.showTypeCurve !== undefined && els.showTypeCurve) els.showTypeCurve.checked = !!inputs.showTypeCurve;
+      if (inputs.bourdetSmoothing !== undefined) syncBourdetControls(Number(inputs.bourdetSmoothing));
     }
 
     function applyUnits(units) {
@@ -3167,6 +3445,8 @@
         skin: a.skin,
         derivativeSkin: a.skinDerivative,
         bourdetSmoothing: a.bourdetL,
+        typeCurve: a.typeCurve ? {CD: a.typeCurve.CD, S: a.typeCurve.S, label: a.typeCurve.label} : null,
+        deconvolutionRateCv: a.deconvolution?.rateCv,
         modelCheck: a.modelCheck,
         productivityIndexBpdPerPsi: a.pi,
         buildupDurationHr: a.buildup.durationHr,
