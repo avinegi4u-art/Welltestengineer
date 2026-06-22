@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.4 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.5 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <style>
     :root {
@@ -529,6 +529,37 @@
       margin-bottom: 0.75rem;
     }
 
+    .gate-list {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+    }
+
+    .gate-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.55rem 0.7rem;
+      background: rgba(7, 21, 37, 0.72);
+      font-size: 0.86rem;
+    }
+
+    .gate-item.pass { border-color: rgba(126, 231, 135, 0.35); }
+    .gate-item.fail { border-color: rgba(255, 123, 138, 0.42); }
+    .gate-status {
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+    .gate-status.approved { color: var(--good); }
+    .gate-status.review { color: var(--warn); }
+    .gate-status.screening { color: #ffba66; }
+    .gate-status.blocked { color: var(--bad); }
+
     .report {
       white-space: pre-wrap;
       border: 1px solid var(--border);
@@ -568,8 +599,8 @@
           </svg>
         </div>
         <div>
-          <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.4</span></h1>
-          <p class="sub">Kappa-style PTA: Bourdet derivative with live L slider, analytical WBS+radial type-curve overlay, superposition deconvolution for messy DST rate histories, buildup selection, spike filter, semilog/log-log diagnostics, and model cross-check.</p>
+          <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.5</span></h1>
+          <p class="sub">Professional PTA workflow: uncertainty bands, interpretation gating, boundary/model logic, transparent deconvolution audit, and data-sufficiency QC — plus Bourdet derivative, type curves, and multi-buildup comparison.</p>
         </div>
       </div>
       <div class="hero-actions">
@@ -941,6 +972,15 @@
           </div>
         </div>
         <div class="card span-5">
+          <h2>Interpretation gating</h2>
+          <div class="row" style="justify-content:space-between; margin-bottom:0.45rem">
+            <strong>Report readiness</strong>
+            <span id="gateStatus" class="gate-status screening">Not ready</span>
+          </div>
+          <div id="gateSummary" class="help">Load a buildup to evaluate whether Horner, derivative, and QC results are ready for office reporting.</div>
+          <div id="gateList" class="gate-list"></div>
+        </div>
+        <div class="card span-5">
           <h2>Interpretation cues</h2>
           <div id="confidenceBox" class="confidence">
             <div class="row" style="justify-content:space-between"><strong id="confidenceLabel">No analysis yet</strong><span id="confidenceScore" class="badge">0%</span></div>
@@ -968,6 +1008,15 @@
             <button class="small" data-export-plot="deconvChart">Export PNG</button>
           </div>
           <div id="deconvChart" class="chart" aria-label="Deconvolution comparison chart"></div>
+          <div class="scroll" style="margin-top:0.75rem">
+            <table>
+              <thead><tr><th>Flow #</th><th>Type</th><th>Avg rate</th><th>Δq</th><th>Duration hr</th></tr></thead>
+              <tbody id="deconvAuditBody">
+                <tr><td colspan="5" class="muted">Kernel audit appears after buildup analysis.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="deconvFormula" class="help" style="margin-top:0.55rem">Formula: Δp_decon = Δp_raw / superposition_kernel; kernel built from pre-buildup Δq and elapsed time to shut-in.</div>
           <div class="legend">
             <span style="--c:#63a7ff">Raw delta pressure</span>
             <span style="--c:#3dd7b6">Deconvolved delta pressure</span>
@@ -979,8 +1028,17 @@
           <div id="superpositionBox" class="report">Load data to calculate equivalent flow time and superposition notes.</div>
         </div>
         <div class="card">
-          <h2>Data quality checks</h2>
+          <h2>Data quality &amp; sufficiency</h2>
+          <div id="sufficiencySummary" class="report" style="min-height:6rem; margin-bottom:0.75rem">Load data to score whether the dataset is sufficient for PTA interpretation.</div>
           <div class="scroll">
+            <table>
+              <thead><tr><th>Status</th><th>Sufficiency check</th><th>Requirement</th><th>Actual</th></tr></thead>
+              <tbody id="sufficiencyBody">
+                <tr><td colspan="4" class="muted">No sufficiency checks yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="scroll" style="margin-top:0.85rem">
             <table>
               <thead><tr><th>Severity</th><th>Check</th><th>Detail</th></tr></thead>
               <tbody id="qualityBody">
@@ -1123,7 +1181,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2.4.0";
+    const APP_VERSION = "2.5.0";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1173,7 +1231,9 @@
       "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups",
       "stepRateSummary", "stepRateChart", "stepRateBody", "injectivityChart", "buildupCompareSummary", "buildupCompareBody",
       "semilogChart", "modelCompareSummary", "modelCompareBody",
-      "deconvSummary", "deconvChart"
+      "deconvSummary", "deconvChart", "deconvAuditBody", "deconvFormula",
+      "gateStatus", "gateSummary", "gateList",
+      "sufficiencySummary", "sufficiencyBody"
     ];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -1279,12 +1339,25 @@
       const bourdetL = syncBourdetControls(Number(els.bourdetSmoothingSlider?.value || els.bourdetSmoothing?.value || 0.15));
       recomputeDerivativeMetrics(analysis, bourdetL);
       state.quality = buildQualityChecks();
+      analysis.interpretationGates = buildInterpretationGates(analysis, state.quality);
+      analysis.confidence = analysisConfidence({
+        fit: analysis.fit,
+        fitPoints: analysis.selected,
+        points: analysis.points,
+        regimes: analysis.regimes,
+        quality: state.quality,
+        modelCheck: analysis.modelCheck,
+        gates: analysis.interpretationGates
+      });
       renderDerivative();
       renderDeconvolution();
       renderModelComparison();
       renderRegimes();
       renderDiagnostics();
+      renderGates();
+      renderSufficiency();
       renderKpis();
+      renderHorner();
       persistCase();
     }
 
@@ -1633,7 +1706,16 @@
       state.stepRate = analyzeStepRate(rows, state.periods, state.events, state.multiBuildup);
       state.quality = buildQualityChecks();
       if (state.analysis) {
-        state.analysis.confidence = analysisConfidence({fit: state.analysis.fit, fitPoints: state.analysis.selected, points: state.analysis.points, regimes: state.analysis.regimes, quality: state.quality, modelCheck: state.analysis.modelCheck});
+        state.analysis.interpretationGates = buildInterpretationGates(state.analysis, state.quality);
+        state.analysis.confidence = analysisConfidence({
+          fit: state.analysis.fit,
+          fitPoints: state.analysis.selected,
+          points: state.analysis.points,
+          regimes: state.analysis.regimes,
+          quality: state.quality,
+          modelCheck: state.analysis.modelCheck,
+          gates: state.analysis.interpretationGates
+        });
       }
       if (state.analysis) {
         syncBourdetControls(state.analysis.bourdetL || inputNumber("bourdetSmoothing", 0.15));
@@ -1826,7 +1908,11 @@
       analysis.investigationRadius = Number.isFinite(analysis.k) && analysis.k > 0
         ? 0.029 * Math.sqrt((analysis.k * lastDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
         : NaN;
-      analysis.confidence = analysisConfidence({fit, fitPoints: fitPoints, points, regimes: analysis.regimes, quality: state.quality, modelCheck: analysis.modelCheck});
+      analysis.uncertainty = computeUncertaintyBands(analysis);
+      analysis.boundaryModel = analyzeBoundaryModel(analysis, inputs);
+      analysis.sufficiency = assessDataSufficiency(analysis);
+      analysis.interpretationGates = buildInterpretationGates(analysis, state.quality);
+      analysis.confidence = analysisConfidence({fit, fitPoints: fitPoints, points, regimes: analysis.regimes, quality: state.quality, modelCheck: analysis.modelCheck, gates: analysis.interpretationGates});
       return analysis;
     }
 
@@ -1865,6 +1951,149 @@
       });
       analysis.typeCurve = buildTypeCurveOverlay(analysis, inputs);
       analysis.deconvolution = computeDeconvolution(analysis);
+      if (analysis.k) {
+        analysis.uncertainty = computeUncertaintyBands(analysis);
+        analysis.boundaryModel = analyzeBoundaryModel(analysis, inputs);
+        analysis.sufficiency = assessDataSufficiency(analysis);
+        analysis.interpretationGates = buildInterpretationGates(analysis, state.quality);
+        analysis.confidence = analysisConfidence({
+          fit: analysis.fit,
+          fitPoints: analysis.selected,
+          points: analysis.points,
+          regimes: analysis.regimes,
+          quality: state.quality,
+          modelCheck: analysis.modelCheck,
+          gates: analysis.interpretationGates
+        });
+      }
+    }
+
+    function computeUncertaintyBands(analysis) {
+      const fit = analysis.fit;
+      const inputs = analysis.inputs || currentInputs();
+      const m = analysis.m;
+      const slopeRel = Number.isFinite(fit.slopeStdErr) && m > 0 ? Math.abs(fit.slopeStdErr / m) : NaN;
+      const kMid = analysis.k;
+      const kLow = Number.isFinite(kMid) && Number.isFinite(slopeRel) ? kMid / (1 + slopeRel) : NaN;
+      const kHigh = Number.isFinite(kMid) && Number.isFinite(slopeRel) ? kMid * (1 + slopeRel) : NaN;
+      const kDerivMid = analysis.kDerivative;
+      const plateauRel = Number.isFinite(analysis.plateau) && analysis.derivatives?.length
+        ? coefficientOfVariation(analysis.derivatives.filter(p => p.derivative > 0).map(p => p.derivative))
+        : NaN;
+      const kDerivLow = Number.isFinite(kDerivMid) && Number.isFinite(plateauRel) ? kDerivMid / (1 + plateauRel) : NaN;
+      const kDerivHigh = Number.isFinite(kDerivMid) && Number.isFinite(plateauRel) ? kDerivMid * (1 + plateauRel) : NaN;
+      const pStarMid = analysis.pStar;
+      const pStarLow = Number.isFinite(fit.interceptStdErr) ? pStarMid - fit.interceptStdErr : NaN;
+      const pStarHigh = Number.isFinite(fit.interceptStdErr) ? pStarMid + fit.interceptStdErr : NaN;
+      const skinMid = analysis.skin;
+      const skinSpan = Number.isFinite(slopeRel) ? Math.max(1.5, Math.abs(skinMid) * slopeRel * 1.2) : NaN;
+      const skinLow = Number.isFinite(skinSpan) ? skinMid - skinSpan : NaN;
+      const skinHigh = Number.isFinite(skinSpan) ? skinMid + skinSpan : NaN;
+      const fitBand = (analysis.selected || []).map(point => ({
+        x: point.logH,
+        yLow: fit.intercept + fit.slope * point.logH - 2 * (fit.stderr || 0),
+        yHigh: fit.intercept + fit.slope * point.logH + 2 * (fit.stderr || 0),
+        yMid: fit.intercept + fit.slope * point.logH
+      }));
+      return {
+        k: {low: kLow, mid: kMid, high: kHigh},
+        kDerivative: {low: kDerivLow, mid: kDerivMid, high: kDerivHigh},
+        pStar: {low: pStarLow, mid: pStarMid, high: pStarHigh},
+        skin: {low: skinLow, mid: skinMid, high: skinHigh},
+        fitBand,
+        summary: `Horner k ${fmt(kLow, 2)}–${fmt(kHigh, 2)} md; p* ${fmt(pStarLow, 1)}–${fmt(pStarHigh, 1)} psi; skin ${fmt(skinLow, 1)}–${fmt(skinHigh, 1)} (±1σ screening bands).`
+      };
+    }
+
+    function analyzeBoundaryModel(analysis, inputs) {
+      const boundary = analysis.regimes?.find(regime => regime.name === "boundary-dominated flow");
+      const radial = analysis.radialRegime;
+      const storage = analysis.regimes?.find(regime => regime.name === "wellbore storage");
+      const lastDt = analysis.points[analysis.points.length - 1]?.dt || 0;
+      const dominant = !!(boundary && boundary.confidence === "high" && boundary.startDt < lastDt * 0.75);
+      let model = "infinite-acting radial + wellbore storage";
+      const notes = [];
+      if (storage) notes.push(`Early wellbore storage window ${fmt(storage.startDt, 3)}–${fmt(storage.endDt, 3)} hr.`);
+      if (radial) notes.push(`Radial-flow screening window ${fmt(radial.startDt, 3)}–${fmt(radial.endDt, 3)} hr (${radial.confidence}).`);
+      if (boundary) {
+        notes.push(`Late boundary uplift from ${fmt(boundary.startDt, 3)} hr (${boundary.confidence}).`);
+        model = dominant ? "boundary-dominated (late time)" : "radial flow with emerging boundary";
+      }
+      const rdi = Number.isFinite(analysis.investigationRadius) ? analysis.investigationRadius : NaN;
+      const rdiAtBoundary = boundary && Number.isFinite(analysis.k)
+        ? 0.029 * Math.sqrt((analysis.k * boundary.startDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
+        : NaN;
+      const boundaryDistanceHint = Number.isFinite(rdiAtBoundary) ? rdiAtBoundary : NaN;
+      if (dominant) notes.push(`Boundary influence appears before full radial stabilization; prefer deconvolved curves and avoid late-time Horner points.`);
+      if (Number.isFinite(boundaryDistanceHint)) notes.push(`Order-of-magnitude radius to boundary influence at detected uplift: ~${fmt(boundaryDistanceHint, 0)} ft (screening).`);
+      if (Number.isFinite(rdi)) notes.push(`Radius of investigation at last shut-in point: ~${fmt(rdi, 0)} ft.`);
+      return {model, dominant, boundary, radial, storage, boundaryDistanceHint, rdi, notes, overlayLabel: dominant ? "Use WBS+radial only before boundary uplift" : "WBS + radial type curve applicable"};
+    }
+
+    function assessDataSufficiency(analysis) {
+      if (!analysis) return null;
+      const points = analysis.points || [];
+      const earlyCount = points.filter(point => point.dt <= 0.1).length;
+      const logSpan = points.length >= 2 ? Math.log10(points[points.length - 1].dt / Math.max(points[0].dt, 1e-6)) : 0;
+      const radialCount = analysis.radialRegime
+        ? analysis.derivatives.filter(point => point.dt >= analysis.radialRegime.startDt && point.dt <= analysis.radialRegime.endDt).length
+        : 0;
+      const requirements = [
+        {name: "Early-time sampling", need: "≥4 points in first 0.1 hr", actual: earlyCount, pass: earlyCount >= 4},
+        {name: "Shut-in duration", need: "≥2.0 hr", actual: fmt(analysis.buildup.durationHr, 2), pass: analysis.buildup.durationHr >= 2},
+        {name: "Horner fit points", need: "≥6 in fit window", actual: analysis.selected.length, pass: analysis.selected.length >= 6},
+        {name: "Log-time span", need: "≥1.0 log cycle", actual: fmt(logSpan, 2), pass: logSpan >= 1},
+        {name: "Radial derivative points", need: "≥3 in radial window", actual: radialCount, pass: radialCount >= 3},
+        {name: "Pre-buildup flow history", need: "≥1 flow period", actual: analysis.flowPeriods.length, pass: analysis.flowPeriods.length >= 1},
+        {name: "Horner fit quality", need: "R² ≥ 0.94", actual: fmt(analysis.fit.r2, 3), pass: analysis.fit.r2 >= 0.94}
+      ];
+      const passed = requirements.filter(item => item.pass).length;
+      const score = Math.round(passed / requirements.length * 100);
+      const grade = score >= 86 ? "sufficient" : score >= 57 ? "marginal" : "insufficient";
+      return {
+        requirements,
+        passed,
+        total: requirements.length,
+        score,
+        grade,
+        pass: score >= 86,
+        summary: `${passed}/${requirements.length} sufficiency checks passed (${score}%). Dataset is ${grade} for office PTA interpretation.`
+      };
+    }
+
+    function buildInterpretationGates(analysis, quality) {
+      const gates = [];
+      const add = (id, label, pass, severity, detail) => gates.push({id, label, pass: !!pass, severity, detail});
+      add("buildup", "Usable buildup detected", analysis, "blocker", "Need flow followed by shut-in with enough points.");
+      add("qc_alerts", "No QC alerts", !quality.some(check => check.severity === "alert"), "blocker", "Resolve alert-level QC before reporting.");
+      add("sufficiency", "Data sufficiency", analysis?.sufficiency?.pass, "blocker", analysis?.sufficiency?.summary || "Need more early-time and radial-flow data.");
+      add("horner_r2", "Horner R² ≥ 0.94", analysis?.fit?.r2 >= 0.94, "major", `Current R² ${fmt(analysis?.fit?.r2, 3)}.`);
+      add("radial_window", "Radial-flow window", analysis?.radialRegime, "major", "Need a Bourdet radial-flow plateau for derivative k.");
+      add("k_agreement", "Horner vs derivative k", analysis?.modelCheck?.agreement !== "poor", "major", `Agreement: ${analysis?.modelCheck?.agreement || "n/a"}.`);
+      add("boundary_gate", "Boundary not dominant", !analysis?.boundaryModel?.dominant, "minor", analysis?.boundaryModel?.model || "No boundary model yet.");
+      add("deconv_review", "Deconvolution reviewed", !analysis?.deconvolution || analysis.deconvolution.rateCv <= 0.15 || analysis.deconvolution.meanCorrectionPct <= 35, "minor", "Messy rate history requires raw vs deconvolved comparison.");
+      const blockers = gates.filter(gate => !gate.pass && gate.severity === "blocker");
+      const majors = gates.filter(gate => !gate.pass && gate.severity === "major");
+      let status = "APPROVED_FOR_REPORT";
+      let statusClass = "approved";
+      if (blockers.length) {
+        status = "BLOCKED";
+        statusClass = "blocked";
+      } else if (majors.length >= 2) {
+        status = "SCREENING_ONLY";
+        statusClass = "screening";
+      } else if (majors.length) {
+        status = "REVIEW_REQUIRED";
+        statusClass = "review";
+      }
+      const summary = status === "APPROVED_FOR_REPORT"
+        ? "All blockers passed and no more than one major gate is open. Candidate for office report after engineering review."
+        : status === "REVIEW_REQUIRED"
+          ? "One major gate is open. Use for screening; resolve before final report language."
+          : status === "SCREENING_ONLY"
+            ? "Multiple major gates open. Screening only — do not finalize permeability or skin."
+            : "Blockers present. Fix data, QC, or sufficiency before interpretation.";
+      return {gates, status, statusClass, summary, blockers: blockers.length, majors: majors.length};
     }
 
     function dimensionlessTime(dtHr, inputs, k) {
@@ -1939,20 +2168,42 @@
         const kernel = Math.max(hornerSuperpositionRatio(analysis.flowPeriods, buildupStart, point.row.timeMs, qRef), 1e-6);
         const rateNormalized = point.deltaP / qRef;
         const deconvolved = point.deltaP / kernel;
-        return {dt: point.dt, raw: point.deltaP, rateNormalized, deconvolved, kernel};
+        const correctionPct = point.deltaP > 0 ? Math.abs(deconvolved - point.deltaP) / point.deltaP * 100 : 0;
+        return {dt: point.dt, raw: point.deltaP, rateNormalized, deconvolved, kernel, correctionPct};
       });
       const deconvDeriv = bourdetDerivative(
         points.map(point => ({dt: point.dt, deltaP: Math.max(point.deconvolved, 1e-9)})),
         analysis.bourdetL || 0.15
       );
       const rateCv = coefficientOfVariation(analysis.flowPeriods.map(period => period.avgRate));
+      const meanCorrectionPct = average(points.map(point => point.correctionPct));
+      const segments = analysis.flowPeriods.map((period, idx) => {
+        const qPrev = idx === 0 ? 0 : Math.max(analysis.flowPeriods[idx - 1].avgRate, 0);
+        return {
+          number: period.number,
+          type: period.type,
+          avgRate: period.avgRate,
+          dq: period.avgRate - qPrev,
+          durationHr: period.durationHr,
+          start: formatTime(period.start.timeMs)
+        };
+      });
+      const auditPoints = points.filter((_, idx) => idx % Math.max(1, Math.floor(points.length / 6)) === 0).map(point => ({
+        dt: point.dt,
+        raw: point.raw,
+        kernel: point.kernel,
+        deconvolved: point.deconvolved,
+        correctionPct: point.correctionPct
+      }));
       const summary = [
         `Superposition deconvolution applied across ${analysis.flowPeriods.length} pre-buildup flow segment(s).`,
-        `Pre-buildup rate CV: ${fmt(rateCv * 100, 1)}%. ${rateCv > 0.15 ? "Messy DST sequence detected; use deconvolved curves for screening before final Horner/derivative picks." : "Rate history is relatively stable; raw and deconvolved curves should be similar."}`,
-        `Deconvolved delta pressure divides out the variable-rate superposition kernel to expose a constant-rate-equivalent buildup response.`,
-        `Rate-normalized pressure (deltaP / q_ref) is also computed for quick injectivity-style comparison.`
+        `Pre-buildup rate CV: ${fmt(rateCv * 100, 1)}%. Mean correction vs raw Δp: ${fmt(meanCorrectionPct, 1)}%.`,
+        rateCv > 0.15 || meanCorrectionPct > 25
+          ? "Messy DST sequence: review kernel audit table and raw vs deconvolved log-log before trusting Horner/derivative picks."
+          : "Rate history is relatively stable; raw and deconvolved curves should be similar.",
+        `Formula: Δp_decon(t) = Δp_raw(t) / superposition_kernel(t), where kernel comes from stage-by-stage Δq and elapsed time to shut-in.`
       ].join("\n\n");
-      return {points, derivatives: deconvDeriv, rateCv, summary};
+      return {points, derivatives: deconvDeriv, rateCv, meanCorrectionPct, segments, auditPoints, summary};
     }
 
     function buildModelCrossCheck(context) {
@@ -2384,6 +2635,10 @@
       if (context.modelCheck?.agreement === "good") { score += 12; notes.push("Horner and Bourdet derivative k agree within 20%."); }
       else if (context.modelCheck?.agreement === "moderate") { score += 4; notes.push("Horner and derivative k differ moderately; review fit window and Bourdet L."); }
       else if (context.modelCheck?.agreement === "poor") { score -= 10; notes.push("Horner and derivative k disagree; treat as screening only."); }
+      if (context.gates?.status === "APPROVED_FOR_REPORT") { score += 8; notes.push("Interpretation gates allow office report drafting."); }
+      else if (context.gates?.status === "REVIEW_REQUIRED") { score -= 4; notes.push("Interpretation gating requires engineering review."); }
+      else if (context.gates?.status === "SCREENING_ONLY") { score -= 12; notes.push("Multiple interpretation gates failed; screening only."); }
+      else if (context.gates?.status === "BLOCKED") { score -= 25; notes.push("Interpretation blocked by QC or data sufficiency."); }
       if (context.points.length >= 10) score += 8;
       const alerts = (context.quality || []).filter(check => check.severity === "alert").length;
       const warnings = (context.quality || []).filter(check => check.severity === "warn").length;
@@ -2434,11 +2689,24 @@
               ? `Horner k ${fmt(state.analysis.k, 2)} md and derivative k ${fmt(state.analysis.kDerivative, 2)} md differ by ${fmt(state.analysis.modelCheck.deltaKPct, 1)}%; do not finalize without review.`
               : "Need both Horner and Bourdet derivative plateau estimates."));
       }
+      if (state.analysis?.sufficiency) {
+        const s = state.analysis.sufficiency;
+        checks.push(qc(s.pass ? "ok" : s.grade === "marginal" ? "warn" : "alert", "Data sufficiency", s.summary));
+      }
+      if (state.analysis?.interpretationGates) {
+        const g = state.analysis.interpretationGates;
+        checks.push(qc(g.status === "APPROVED_FOR_REPORT" ? "ok" : g.status === "REVIEW_REQUIRED" ? "warn" : "alert", "Interpretation gating", `${g.status.replaceAll("_", " ")} — ${g.summary}`));
+      }
+      if (state.analysis?.boundaryModel?.dominant) {
+        checks.push(qc("warn", "Boundary model", `${state.analysis.boundaryModel.model}. ${state.analysis.boundaryModel.notes.join(" ")}`));
+      }
+      if (state.analysis?.uncertainty) {
+        checks.push(qc("ok", "Uncertainty bands", state.analysis.uncertainty.summary));
+      }
       if (state.analysis?.deconvolution) {
         const cv = state.analysis.deconvolution.rateCv || 0;
-        checks.push(qc(cv > 0.15 ? "warn" : "ok", "Variable-rate deconvolution", cv > 0.15
-          ? `Pre-buildup rate CV is ${fmt(cv * 100, 1)}%; compare raw vs deconvolved log-log before finalizing Horner/derivative interpretation.`
-          : `Pre-buildup rate CV is ${fmt(cv * 100, 1)}%; raw and deconvolved buildup shapes should be similar.`));
+        const corr = state.analysis.deconvolution.meanCorrectionPct || 0;
+        checks.push(qc(cv > 0.15 || corr > 25 ? "warn" : "ok", "Variable-rate deconvolution", `Rate CV ${fmt(cv * 100, 1)}%; mean kernel correction ${fmt(corr, 1)}%. See deconvolution audit for segment Δq and kernel values.`));
       }
       const suitability = suitabilityFlag(checks, state.analysis);
       checks.push(qc(suitability.severity, "Interpretation suitability", suitability.detail));
@@ -2455,7 +2723,9 @@
       if (!analysis) return {severity: "warn", detail: "Screening only: no usable buildup analysis yet."};
       if (alerts || warnings > 3 || analysis.fit.r2 < 0.94) return {severity: "warn", detail: "Screening only: resolve QC flags and validate rate/gauge history before final interpretation."};
       if (!analysis.regimes.some(regime => regime.name === "radial flow")) return {severity: "warn", detail: "Screening only: no clear radial-flow window identified."};
-      if (analysis.modelCheck?.agreement === "poor") return {severity: "warn", detail: "Screening only: Horner and Bourdet derivative permeability disagree materially."};
+      if (analysis.boundaryModel?.dominant) return {severity: "warn", detail: "Screening only: boundary-dominated late time; avoid finalizing k/skin from late Horner points."};
+      if (analysis.interpretationGates?.status === "BLOCKED") return {severity: "alert", detail: "Interpretation blocked by gating — resolve blockers before any final report."};
+      if (!analysis.sufficiency?.pass) return {severity: "warn", detail: "Screening only: dataset sufficiency is marginal or insufficient."};
       return {severity: "ok", detail: "Candidate for final interpretation after engineering review of gauges, rates, phase behavior, and assumptions."};
     }
 
@@ -2511,6 +2781,8 @@
       renderSuperposition();
       renderModelComparison();
       renderDeconvolution();
+      renderGates();
+      renderSufficiency();
       renderStepRate();
       renderBuildupComparison();
       renderEvents();
@@ -2528,8 +2800,8 @@
       els.kpiPeriodNote.textContent = current ? `${fmt(current.durationHr, 2)} hr, ${current.rows.length} points` : "flow/shut-in";
       els.kpiPstar.textContent = analysis ? fmt(analysis.pStar, 0) : "-";
       els.kpiPerm.textContent = analysis ? fmt(analysis.k, 2) : "-";
-      els.kpiConfidence.textContent = analysis ? `${Math.round(analysis.confidence.score)}%` : "-";
-      els.kpiConfidenceNote.textContent = analysis ? analysis.confidence.label : "analysis state";
+      els.kpiConfidence.textContent = analysis?.interpretationGates ? analysis.interpretationGates.status.replaceAll("_", " ") : analysis ? `${Math.round(analysis.confidence.score)}%` : "-";
+      els.kpiConfidenceNote.textContent = analysis?.uncertainty ? `k ${fmt(analysis.uncertainty.k.low, 1)}–${fmt(analysis.uncertainty.k.high, 1)} md` : analysis ? analysis.confidence.label : "analysis state";
       els.rowCount.textContent = `${state.rows.length} row${state.rows.length === 1 ? "" : "s"} loaded`;
     }
 
@@ -2636,14 +2908,17 @@
       els.hornerChart.innerHTML = scatterSvg({
         points: analysis.points.map(point => ({x: point.logH, y: point.pressure, selected: analysis.selected.includes(point)})),
         fit: analysis.fit,
+        uncertainty: analysis.uncertainty,
         xLabel: "log10 Horner superposition ratio",
         yLabel: "BHP psi"
       });
+      const u = analysis.uncertainty;
       els.hornerSummary.innerHTML = `
         <strong>Buildup #${analysis.buildup.number}:</strong> ${fmt(analysis.buildup.durationHr, 2)} hr after equivalent ${fmt(analysis.equivalentFlowTime, 2)} hr production at reference ${fmt(analysis.q, 1)} bpd.
         Fit window ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr, ${analysis.selected.length} points, R2 ${fmt(analysis.fit.r2, 3)}, standard error ${fmt(analysis.fit.stderr, 1)} psi.
-        Slope ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}, p* ${fmt(analysis.pStar, 1)} psi +/- ${fmt(analysis.fit.interceptStdErr, 1)}.
-        Horner k ${fmt(analysis.k, 2)} md, derivative k ${fmt(analysis.kDerivative, 2)} md (Bourdet L ${fmt(analysis.bourdetL, 2)}), skin ${fmt(analysis.skin, 1)}, PI ${fmt(analysis.pi, 3)} bpd/psi.
+        Slope ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}, p* ${fmt(analysis.pStar, 1)} psi (${fmt(u?.pStar.low, 1)}–${fmt(u?.pStar.high, 1)}).
+        Horner k ${fmt(analysis.k, 2)} md (${fmt(u?.k.low, 2)}–${fmt(u?.k.high, 2)}), derivative k ${fmt(analysis.kDerivative, 2)} md, skin ${fmt(analysis.skin, 1)} (${fmt(u?.skin.low, 1)}–${fmt(u?.skin.high, 1)}), PI ${fmt(analysis.pi, 3)} bpd/psi.
+        Boundary model: ${escapeHtml(analysis.boundaryModel?.model || "n/a")}.
       `;
     }
 
@@ -2676,10 +2951,61 @@
       if (!deconv?.points?.length) {
         els.deconvSummary.textContent = "Load data to build superposition deconvolution and rate-normalized buildup curves for messy DST sequences.";
         els.deconvChart.innerHTML = emptySvg("Need a buildup with rate history to plot deconvolution.");
+        if (els.deconvAuditBody) els.deconvAuditBody.innerHTML = '<tr><td colspan="5" class="muted">Kernel audit appears after buildup analysis.</td></tr>';
+        if (els.deconvFormula) els.deconvFormula.textContent = "Formula: Δp_decon = Δp_raw / superposition_kernel; kernel built from pre-buildup Δq and elapsed time to shut-in.";
         return;
       }
       els.deconvSummary.textContent = deconv.summary;
       els.deconvChart.innerHTML = deconvLogLogSvg(deconv);
+      if (els.deconvAuditBody) {
+        els.deconvAuditBody.innerHTML = deconv.segments.map(segment => `<tr>
+          <td>${segment.number}</td>
+          <td>${escapeHtml(segment.type)}</td>
+          <td>${fmt(segment.avgRate, 1)}</td>
+          <td>${fmt(segment.dq, 1)}</td>
+          <td>${fmt(segment.durationHr, 2)}</td>
+        </tr>`).join("");
+      }
+      if (els.deconvFormula) {
+        const sample = deconv.auditPoints?.[0];
+        els.deconvFormula.textContent = sample
+          ? `Example at ${fmt(sample.dt, 3)} hr: raw ${fmt(sample.raw, 1)} psi, kernel ${fmt(sample.kernel, 3)}, deconvolved ${fmt(sample.deconvolved, 1)} psi (${fmt(sample.correctionPct, 1)}% correction).`
+          : "Formula: Δp_decon = Δp_raw / superposition_kernel.";
+      }
+    }
+
+    function renderGates() {
+      const gates = state.analysis?.interpretationGates;
+      if (!gates) {
+        els.gateStatus.textContent = "Not ready";
+        els.gateStatus.className = "gate-status screening";
+        els.gateSummary.textContent = "Load a buildup to evaluate whether Horner, derivative, and QC results are ready for office reporting.";
+        els.gateList.innerHTML = "";
+        return;
+      }
+      els.gateStatus.textContent = gates.status.replaceAll("_", " ");
+      els.gateStatus.className = `gate-status ${gates.statusClass}`;
+      els.gateSummary.textContent = gates.summary;
+      els.gateList.innerHTML = gates.gates.map(gate => `<div class="gate-item ${gate.pass ? "pass" : "fail"}">
+        <span>${escapeHtml(gate.label)}</span>
+        <span class="badge ${gate.pass ? "flow" : gate.severity === "blocker" ? "alert" : "shutin"}">${gate.pass ? "pass" : gate.severity}</span>
+      </div>`).join("");
+    }
+
+    function renderSufficiency() {
+      const sufficiency = state.analysis?.sufficiency;
+      if (!sufficiency) {
+        els.sufficiencySummary.textContent = "Load data to score whether the dataset is sufficient for PTA interpretation.";
+        els.sufficiencyBody.innerHTML = '<tr><td colspan="4" class="muted">No sufficiency checks yet.</td></tr>';
+        return;
+      }
+      els.sufficiencySummary.textContent = sufficiency.summary;
+      els.sufficiencyBody.innerHTML = sufficiency.requirements.map(item => `<tr>
+        <td><span class="badge ${item.pass ? "flow" : "alert"}">${item.pass ? "pass" : "fail"}</span></td>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.need)}</td>
+        <td>${escapeHtml(String(item.actual))}</td>
+      </tr>`).join("");
     }
 
     function renderDiagnostics() {
@@ -2702,7 +3028,9 @@
       notes.push(`Radius of investigation estimate at last shut-in point: ${Number.isFinite(analysis.investigationRadius) ? `${fmt(analysis.investigationRadius, 0)} ft` : "not available"}.`);
       notes.push(analysis.regimes.length ? `Likely regimes: ${analysis.regimes.map(regime => `${regime.name} (${regime.confidence})`).join(", ")}.` : "No flow regime was identified with useful confidence.");
       notes.push(Math.abs(analysis.skin) > 15 ? "Skin magnitude is large; check completion damage/stimulation, multiphase cleanup, or fluid inputs." : "Skin is in a moderate screening range.");
-      notes.push(`Deconvolution screen: pre-buildup rate CV ${fmt((analysis.deconvolution?.rateCv || 0) * 100, 1)}%; compare raw vs deconvolved log-log before finalizing interpretation.`);
+      notes.push(`Interpretation gate: ${analysis.interpretationGates?.status?.replaceAll("_", " ") || "n/a"} — ${analysis.interpretationGates?.summary || "Load buildup first."}`);
+      notes.push(`Data sufficiency: ${analysis.sufficiency?.summary || "n/a"}`);
+      notes.push(analysis.boundaryModel ? `Boundary/model screen: ${analysis.boundaryModel.model}. ${analysis.boundaryModel.notes.join(" ")}` : "No boundary model screen yet.");
       els.diagnosticNotes.textContent = notes.join("\n\n");
     }
 
@@ -2759,6 +3087,8 @@
       if (analysis.radialRegime) lines.push(`Radial-flow window from Bourdet screen: ${fmt(analysis.radialRegime.startDt, 3)}-${fmt(analysis.radialRegime.endDt, 3)} hr (${analysis.radialRegime.confidence}).`);
       if (Number.isFinite(analysis.wellboreStorageCoeff)) lines.push(`Early-time storage indicator: ${fmt(analysis.wellboreStorageCoeff, 1)} bbl/psi (screening only).`);
       if (analysis.typeCurve) lines.push(`Type curve overlay: ${analysis.typeCurve.label}.`);
+      if (analysis.boundaryModel) lines.push(`Boundary/model: ${analysis.boundaryModel.model}. ${analysis.boundaryModel.overlayLabel}.`);
+      if (analysis.uncertainty) lines.push(analysis.uncertainty.summary);
       els.modelCompareSummary.textContent = lines.join("\n\n");
       els.modelCompareBody.innerHTML = analysis.modelCheck.rows.map(row => `<tr>
         <td>${escapeHtml(row.method)}</td>
@@ -2954,7 +3284,7 @@
       </svg>`;
     }
 
-    function scatterSvg({points, fit, xLabel, yLabel}) {
+    function scatterSvg({points, fit, uncertainty = null, xLabel, yLabel}) {
       const width = 920;
       const height = 310;
       const pad = {l: 68, r: 28, t: 24, b: 48};
@@ -2968,8 +3298,12 @@
         {x: xMin, y: fit.intercept + fit.slope * xMin},
         {x: xMax, y: fit.intercept + fit.slope * xMax}
       ];
+      const band = uncertainty?.fitBand?.length
+        ? `<polygon points="${uncertainty.fitBand.map(point => `${xScale(point.x).toFixed(2)},${yScale(point.yHigh).toFixed(2)}`).join(" ")} ${[...uncertainty.fitBand].reverse().map(point => `${xScale(point.x).toFixed(2)},${yScale(point.yLow).toFixed(2)}`).join(" ")}" fill="rgba(61,215,182,0.14)" stroke="none"/>`
+        : "";
       return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
         ${makeGrid(width, height, pad)}
+        ${band}
         <path d="${pathFor(fitLine, xScale, yScale)}" fill="none" stroke="#3dd7b6" stroke-width="2.4" stroke-dasharray="7 5"/>
         ${points.map(p => `<circle cx="${xScale(p.x)}" cy="${yScale(p.y)}" r="${p.selected ? 4.4 : 3.2}" fill="${p.selected ? "#ffba66" : "#6b7c93"}" opacity="${p.selected ? "0.95" : "0.55"}"/>`).join("")}
         ${axisLabels(width, height, pad, xLabel, yLabel, "")}
@@ -3224,6 +3558,17 @@
         ``,
         analysis?.typeCurve ? `TYPE CURVE OVERLAY: ${analysis.typeCurve.label}` : ``,
         ``,
+        analysis?.uncertainty ? `UNCERTAINTY BANDS (screening ±1σ)\n${analysis.uncertainty.summary}` : ``,
+        ``,
+        `INTERPRETATION GATING`,
+        analysis?.interpretationGates ? `${analysis.interpretationGates.status.replaceAll("_", " ")} — ${analysis.interpretationGates.summary}\n${analysis.interpretationGates.gates.map(gate => `${gate.pass ? "PASS" : "FAIL"} [${gate.severity}] ${gate.label}`).join("\n")}` : `No interpretation gates available.`,
+        ``,
+        `DATA SUFFICIENCY`,
+        analysis?.sufficiency ? `${analysis.sufficiency.summary}\n${analysis.sufficiency.requirements.map(item => `${item.pass ? "PASS" : "FAIL"} ${item.name}: need ${item.need}, actual ${item.actual}`).join("\n")}` : `No sufficiency assessment available.`,
+        ``,
+        `BOUNDARY / MODEL LOGIC`,
+        analysis?.boundaryModel ? `${analysis.boundaryModel.model}\n${analysis.boundaryModel.notes.join("\n")}` : `No boundary model screen available.`,
+        ``,
         `DECONVOLUTION / RATE NORMALIZATION`,
         analysis?.deconvolution?.summary || `No deconvolution screen available.`,
         ``,
@@ -3260,7 +3605,10 @@
       const analysis = state.analysis;
       const suitability = state.quality.find(check => check.check === "Interpretation suitability");
       if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup was detected.";
-      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md (derivative k ${fmt(analysis.kDerivative, 2)} md) and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
+      if (analysis.interpretationGates?.status === "BLOCKED" || analysis.interpretationGates?.status === "SCREENING_ONLY") {
+        return `${analysis.interpretationGates.status.replaceAll("_", " ")}. ${analysis.interpretationGates.summary}`;
+      }
+      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi (${fmt(analysis.uncertainty?.pStar.low, 1)}–${fmt(analysis.uncertainty?.pStar.high, 1)}) with k ${fmt(analysis.k, 2)} md (${fmt(analysis.uncertainty?.k.low, 2)}–${fmt(analysis.uncertainty?.k.high, 2)}) and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
     }
 
     function reportToHtml(report) {
@@ -3442,6 +3790,10 @@
         khMdFt: a.kh,
         permeabilityMd: a.k,
         derivativePermeabilityMd: a.kDerivative,
+        uncertainty: a.uncertainty,
+        boundaryModel: a.boundaryModel,
+        sufficiency: a.sufficiency,
+        interpretationGates: a.interpretationGates,
         skin: a.skin,
         derivativeSkin: a.skinDerivative,
         bourdetSmoothing: a.bourdetL,
