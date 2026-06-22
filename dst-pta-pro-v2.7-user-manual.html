@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DST Pressure Transient Analyzer Pro v2.7 — User Manual</title>
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #4a5568;
+      --accent: #0c4e54;
+      --accent-2: #1d6b73;
+      --border: #cbd5e1;
+      --bg: #ffffff;
+      --callout: #f0f9f8;
+      --warn: #fff8ed;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.55;
+      color: var(--ink);
+      background: #eef2f6;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      background: #0d1b2d;
+      color: #eef5ff;
+      border-bottom: 1px solid #29445f;
+    }
+
+    .toolbar button {
+      font: inherit;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.55rem 1rem;
+      cursor: pointer;
+      background: #3dd7b6;
+      color: #03131b;
+      font-weight: 700;
+    }
+
+    .toolbar .hint { font-size: 0.9rem; color: #a9bad0; }
+
+    .page {
+      width: min(210mm, calc(100% - 2rem));
+      margin: 1.25rem auto 2rem;
+      background: var(--bg);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      padding: 18mm 16mm;
+    }
+
+    h1, h2, h3, h4 { color: var(--accent); line-height: 1.25; }
+    h1 { font-size: 1.85rem; margin: 0 0 0.35rem; }
+    h2 { font-size: 1.2rem; margin: 1.6rem 0 0.55rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.25rem; page-break-after: avoid; }
+    h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; color: var(--accent-2); page-break-after: avoid; }
+    h4 { font-size: 0.95rem; margin: 0.85rem 0 0.35rem; color: var(--ink); }
+    p { margin: 0.5rem 0; }
+    ul, ol { margin: 0.45rem 0 0.75rem 1.2rem; padding: 0; }
+    li { margin: 0.2rem 0; }
+
+    .cover {
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #f7fffe 0%, #f4f8fb 100%);
+    }
+
+    .cover .meta { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
+    .cover .badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .toc {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      margin: 1rem 0 1.5rem;
+      background: #fafbfc;
+      page-break-inside: avoid;
+    }
+
+    .toc ol { margin: 0.5rem 0 0 1.1rem; }
+    .toc a { color: var(--accent-2); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.65rem 0 1rem;
+      font-size: 0.92rem;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.42rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #edf4f5; color: var(--accent); font-weight: 700; }
+
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
+      background: #f1f5f9;
+      padding: 0.08rem 0.28rem;
+      border-radius: 4px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--callout);
+      padding: 0.75rem 0.9rem;
+      margin: 0.75rem 0;
+      border-radius: 0 8px 8px 0;
+      page-break-inside: avoid;
+    }
+
+    .callout.warn {
+      border-left-color: #d97706;
+      background: var(--warn);
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.45rem;
+      margin: 0.75rem 0 1rem;
+    }
+
+    .workflow div {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem;
+      text-align: center;
+      font-size: 0.82rem;
+      background: #fafbfc;
+    }
+
+    .workflow strong { display: block; color: var(--accent); margin-bottom: 0.2rem; }
+
+    .flow {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.8rem;
+      margin: 0.65rem 0;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      background: #f8fafc;
+      white-space: pre-wrap;
+      page-break-inside: avoid;
+    }
+
+    .page-break { page-break-before: always; }
+    .avoid-break { page-break-inside: avoid; }
+
+    footer {
+      margin-top: 2rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .page {
+        width: auto;
+        margin: 0;
+        box-shadow: none;
+        padding: 12mm 10mm;
+      }
+      a { color: inherit; text-decoration: none; }
+      h2 { page-break-before: auto; }
+    }
+
+    @page {
+      size: A4;
+      margin: 12mm 10mm;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <strong>DST PTA Pro v2.7 — User Manual</strong>
+      <div class="hint">Use Print → Save as PDF for a office-ready document.</div>
+    </div>
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <article class="page">
+    <header class="cover avoid-break">
+      <h1>DST Pressure Transient Analyzer Pro</h1>
+      <p class="meta"><strong>Version 2.7</strong> · User Manual · Welltest Engineer</p>
+      <p>Office-grade DST pressure transient analysis: Horner and Bourdet derivative interpretation, calibrated uncertainty, model arbitration, boundary classification, composite screening, interpretation gating, and report export.</p>
+      <span class="badge">Companion app file: dst-pressure-transient-analysis-pro-v2.7.html</span>
+    </header>
+
+    <nav class="toc avoid-break" aria-label="Table of contents">
+      <h2 style="margin-top:0;border:0">Contents</h2>
+      <ol>
+        <li><a href="#overview">Overview and getting started</a></li>
+        <li><a href="#workflow">Recommended five-step workflow</a></li>
+        <li><a href="#data-link">Tab: Data link</a></li>
+        <li><a href="#analysis">Tab: Analysis</a></li>
+        <li><a href="#diagnostics">Tab: Diagnostics</a></li>
+        <li><a href="#steprate">Tab: Step-rate and acid comparison</a></li>
+        <li><a href="#reporting">Tab: Report and export</a></li>
+        <li><a href="#workflows">Typical office workflows</a></li>
+        <li><a href="#numbers">Understanding the numbers</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+        <li><a href="#limitations">Limitations and responsible use</a></li>
+      </ol>
+    </nav>
+
+    <section id="overview">
+      <h2>1. Overview and getting started</h2>
+      <h3>What this app does</h3>
+      <p>This is a browser-based <strong>DST pressure transient analysis (PTA)</strong> tool for screening and office review. It helps you:</p>
+      <ul>
+        <li>Import gauge and rate data (CSV, paste, manual entry, optional live JSON polling)</li>
+        <li>Auto-detect flow, shut-in, cleanup, restart, and afterflow periods</li>
+        <li>Run Horner and Bourdet derivative interpretation with superposition for variable-rate DSTs</li>
+        <li>Arbitrate models (Horner, derivative, type curve, boundary) with explicit accept/reject reasons</li>
+        <li>Apply calibrated 95% uncertainty envelopes and interpretation gating</li>
+        <li>Screen composite/multilayer behavior and boundary effects</li>
+        <li>Compare pre-acid and post-acid buildups</li>
+        <li>Export text, HTML, PDF, plots, and an engineer-facing CSV table</li>
+      </ul>
+
+      <div class="callout warn">
+        <strong>Screening tool, not a full commercial PTA replacement.</strong> Results should be validated by an experienced well-test engineer before external reporting, reserves work, or operational decisions. The app is designed to support Kappa-style office discipline, not replace rigorous commercial software without review.
+      </div>
+
+      <h3>How to open the app</h3>
+      <ol>
+        <li>Open <code>dst-pressure-transient-analysis-pro-v2.7.html</code> in Chrome, Edge, or Firefox.</li>
+        <li>No installation or server is required.</li>
+        <li>Data is stored locally in your browser unless you configure endpoint polling.</li>
+        <li>Click <strong>Load DST demo</strong> on first use to learn the interface.</li>
+      </ol>
+
+      <h3>Header controls</h3>
+      <table>
+        <thead><tr><th>Control</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Load DST demo</strong></td><td>Loads synthetic multi-rate DST data with buildup, events, and QC examples.</td></tr>
+          <tr><td><strong>Save case</strong></td><td>Saves readings, inputs, events, and period corrections to browser local storage.</td></tr>
+          <tr><td><strong>Clear</strong></td><td>Removes all loaded readings from the session.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Live KPI strip</h3>
+      <table>
+        <thead><tr><th>KPI</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Last BHP</td><td>Most recent bottomhole pressure (psi)</td></tr>
+          <tr><td>Surface rate</td><td>Most recent total liquid-equivalent rate (bpd)</td></tr>
+          <tr><td>Current period</td><td>Auto-detected period type for the latest reading</td></tr>
+          <tr><td>Extrapolated pressure</td><td>Horner p* (psi)</td></tr>
+          <tr><td>Permeability</td><td>Horner k (md), screening value</td></tr>
+          <tr><td>Confidence</td><td>Interpretation gating label and calibration note</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="workflow">
+      <h2>2. Recommended five-step workflow</h2>
+      <p>The workflow banner tracks your progress through a standard PTA review:</p>
+      <div class="workflow avoid-break">
+        <div><strong>1. Import</strong>Load readings</div>
+        <div><strong>2. QC</strong>Check alerts</div>
+        <div><strong>3. Periods</strong>Correct labels</div>
+        <div><strong>4. Analysis</strong>Fit &amp; inputs</div>
+        <div><strong>5. Report</strong>Export</div>
+      </div>
+      <table>
+        <thead><tr><th>Step</th><th>Goal</th><th>What “good” looks like</th></tr></thead>
+        <tbody>
+          <tr><td>1. Import</td><td>Load readings</td><td>Row count &gt; 0; timestamps and BHP present</td></tr>
+          <tr><td>2. QC</td><td>Check data quality</td><td>Zero alerts; warnings understood and addressed</td></tr>
+          <tr><td>3. Periods</td><td>Confirm flow/shut-in labels</td><td>Periods match the job log and valve operations</td></tr>
+          <tr><td>4. Analysis</td><td>Set inputs and fit window</td><td>Radial window visible; gating not blocked</td></tr>
+          <tr><td>5. Report</td><td>Build and export</td><td>Status banner shows review required or approved</td></tr>
+        </tbody>
+      </table>
+      <div class="flow">Typical first session:
+1. Load DST demo
+2. Walk through each tab left to right
+3. Import your real CSV and repeat</div>
+    </section>
+
+    <section id="data-link" class="page-break">
+      <h2>3. Tab: Data link</h2>
+
+      <h3>3.1 Unit settings</h3>
+      <p>Set units <strong>before</strong> importing data. The app normalizes internally to psi, bpd, Mscf/d, and °F.</p>
+      <table>
+        <thead><tr><th>Channel</th><th>Options</th></tr></thead>
+        <tbody>
+          <tr><td>Pressure</td><td>psi, kPa, bar, MPa</td></tr>
+          <tr><td>Liquid rate</td><td>bpd, m³/d, STB/d</td></tr>
+          <tr><td>Gas rate</td><td>Mscf/d, scf/d, e³m³/d</td></tr>
+          <tr><td>Temperature</td><td>°F, °C, K</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 CSV import</h3>
+      <p>Column names are flexible. Common accepted headers:</p>
+      <table>
+        <thead><tr><th>Channel</th><th>Example headers</th></tr></thead>
+        <tbody>
+          <tr><td>Time</td><td><code>time</code>, <code>timestamp</code>, <code>datetime</code>, <code>date_time</code></td></tr>
+          <tr><td>BHP</td><td><code>bhp</code>, <code>bhp_psi</code>, <code>bottomhole_pressure</code>, <code>pressure</code></td></tr>
+          <tr><td>Rate</td><td><code>rate</code>, <code>rate_bpd</code>, <code>surface_rate</code>, <code>q</code></td></tr>
+          <tr><td>Oil / water / gas</td><td><code>oil_bpd</code>, <code>water_bpd</code>, <code>gas_mscfd</code></td></tr>
+          <tr><td>WHP</td><td><code>whp</code>, <code>wellhead_pressure</code>, <code>thp</code></td></tr>
+          <tr><td>Temperature</td><td><code>temp</code>, <code>temperature_f</code></td></tr>
+        </tbody>
+      </table>
+      <p><strong>Import methods:</strong></p>
+      <ul>
+        <li><strong>Import CSV file</strong> — choose a <code>.csv</code> file from disk</li>
+        <li><strong>Paste CSV rows</strong> — paste header + data, then click <strong>Import pasted rows</strong></li>
+      </ul>
+      <p><strong>Time zone:</strong> choose local office time (default) or UTC when timestamps have no time zone.</p>
+
+      <h3>3.3 Live endpoint polling (optional)</h3>
+      <p>For a JSON feed from a historian, WITSML bridge, or office proxy:</p>
+      <ol>
+        <li>Enter the JSON endpoint URL</li>
+        <li>Set poll interval (seconds, minimum 5)</li>
+        <li>Click <strong>Poll once</strong> or <strong>Start polling</strong></li>
+      </ol>
+      <p>Supported JSON shapes: a single row object, an array of rows, or <code>{ "rows": [...] }</code>.</p>
+      <div class="callout warn">The endpoint must allow browser CORS access, or you must use a same-origin proxy. If polling fails, use CSV import instead.</div>
+
+      <h3>3.4 Manual readings</h3>
+      <p>Use for spot checks or missing rows: set time, BHP, oil/water/gas rates, WHP, and temperature, then click <strong>Add reading</strong>. Total rate is computed from components if no total rate column exists.</p>
+
+      <h3>3.5 Data table and case management</h3>
+      <table>
+        <thead><tr><th>Button</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Download case</td><td>Save full case as JSON</td></tr>
+          <tr><td>Load case</td><td>Restore a saved JSON case</td></tr>
+          <tr><td>Export CSV</td><td>Export normalized readings</td></tr>
+          <tr><td>Export JSON</td><td>Export analysis snapshot</td></tr>
+        </tbody>
+      </table>
+      <p>The data table shows the <strong>last 80 rows</strong> with auto-detected period tags.</p>
+    </section>
+
+    <section id="analysis" class="page-break">
+      <h2>4. Tab: Analysis</h2>
+
+      <h3>4.1 Reservoir and fluid inputs</h3>
+      <table>
+        <thead><tr><th>Input</th><th>Meaning</th><th>Typical use</th></tr></thead>
+        <tbody>
+          <tr><td>Net pay h, ft</td><td>Effective pay thickness</td><td>Permeability calculation</td></tr>
+          <tr><td>Oil viscosity μ, cP</td><td>Formation oil viscosity</td><td>k, skin</td></tr>
+          <tr><td>FVF B, rb/stb</td><td>Formation volume factor</td><td>Horner and derivative</td></tr>
+          <tr><td>Porosity</td><td>Fraction (e.g. 0.18)</td><td>Radius of investigation, type curve</td></tr>
+          <tr><td>Total compressibility ct</td><td>1/psi</td><td>Investigation radius, storage</td></tr>
+          <tr><td>Wellbore radius rw, ft</td><td>Effective wellbore radius</td><td>Skin, dimensionless time</td></tr>
+          <tr><td>Shut-in threshold, bpd</td><td>Rate below which period = shut-in</td><td>Period detection</td></tr>
+          <tr><td>Gas to liquid equivalent</td><td>bpd per Mscf/d</td><td>Total rate from component rates</td></tr>
+          <tr><td>Tubing ID / packer / perf</td><td>Mechanical references</td><td>Documentation, wellbore volume</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 Buildup and fit controls</h3>
+      <table>
+        <thead><tr><th>Control</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Horner fit start / end, hr</td><td>Shut-in time window for straight-line fit</td></tr>
+          <tr><td>Active buildup shut-in</td><td>Which shut-in to interpret when several exist</td></tr>
+          <tr><td>Bourdet smoothing L</td><td>Derivative smoothing (0.05–0.6 log cycles)</td></tr>
+          <tr><td>Pressure spike filter</td><td>Off / Mild / Standard — despikes gauge glitches</td></tr>
+          <tr><td>Recalculate</td><td>Re-run full analysis</td></tr>
+          <tr><td>Auto fit from derivative</td><td>Sets Horner window from radial-flow plateau</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Fit window guidance:</strong> start after wellbore storage; end before boundary effects or gauge drift. Use <strong>Auto fit from derivative</strong> first, then adjust manually using the log-log derivative chart on the Diagnostics tab.
+      </div>
+
+      <h3>4.3 Charts on the Analysis tab</h3>
+      <h4>Pressure and rate trend</h4>
+      <p>Blue = BHP, green = rate. Review the full DST timeline before trusting any single buildup.</p>
+      <h4>Horner buildup</h4>
+      <ul>
+        <li>X-axis = log₁₀ Horner superposition ratio</li>
+        <li>Y-axis = BHP (psi)</li>
+        <li>Orange points = selected fit window</li>
+        <li>Green dashed line = Horner straight-line fit</li>
+        <li>Shaded band = 95% fit uncertainty envelope</li>
+      </ul>
+      <p>The summary box below the Horner chart reports buildup duration, R², k, skin, PI, calibrated bands, boundary type, and uncertainty method.</p>
+
+      <h3>4.4 Detected DST periods</h3>
+      <p>Auto labels include <code>cleanup</code>, <code>flow</code>, <code>shut-in</code>, <code>restart</code>, and <code>afterflow</code>. Correct mislabeled periods using the dropdown in each row. Manual edits are saved with the case and drive Horner, superposition, QC, and reporting.</p>
+
+      <h3>4.5 Key job events</h3>
+      <p>Add operational markers: perforation, <strong>acid job</strong>, step-rate start/end, shut-in start, restart, gauge change, and notes.</p>
+      <div class="callout">
+        <strong>Acidizing workflow:</strong> add an <strong>Acid job</strong> event at the acid time to enable pre-acid vs post-acid buildup comparison on the Step-rate tab.
+      </div>
+    </section>
+
+    <section id="diagnostics" class="page-break">
+      <h2>5. Tab: Diagnostics</h2>
+      <p>This is the main interpretation-quality tab. Review it before approving any report.</p>
+
+      <h3>5.1 Log-log derivative (Bourdet)</h3>
+      <ul>
+        <li>Blue = Δp</li>
+        <li>Orange = Bourdet derivative</li>
+        <li>Purple dashed = analytical WBS + radial type curve</li>
+        <li>Green/cyan guides = unit and half-slope references</li>
+        <li>Vertical labels = flow regimes (storage, radial, boundary, etc.)</li>
+      </ul>
+      <p>Use the <strong>live Bourdet slider</strong> to tune smoothing without a full page reload. Toggle the type-curve overlay to compare against an analytical WBS + radial model.</p>
+
+      <h3>5.2 Model arbitration (v2.7)</h3>
+      <p>The app compares four interpretation paths and selects a winner with explicit reasons:</p>
+      <table>
+        <thead><tr><th>Method</th><th>Basis</th></tr></thead>
+        <tbody>
+          <tr><td>Horner straight line</td><td>Fit window R², point count, pre-boundary cleanliness</td></tr>
+          <tr><td>Bourdet derivative plateau</td><td>Radial derivative level and window quality</td></tr>
+          <tr><td>WBS + radial type curve</td><td>Log-log match in radial window</td></tr>
+          <tr><td>Boundary-dominated</td><td>Late-time behavior (indicator or reject)</td></tr>
+        </tbody>
+      </table>
+      <p>Each candidate receives a <strong>verdict</strong> (accepted / rejected / indicator / unavailable), a <strong>score</strong>, and a list of passed/failed criteria in the arbitration decision log.</p>
+
+      <h3>5.3 Composite / multilayer screen</h3>
+      <table>
+        <thead><tr><th>Severity</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>none</strong></td><td>Single-layer radial behavior is plausible</td></tr>
+          <tr><td><strong>watch</strong></td><td>Minor non-ideal indicators — use caveats</td></tr>
+          <tr><td><strong>flagged</strong></td><td>Treat k and skin as screening values only</td></tr>
+          <tr><td><strong>strong</strong></td><td>Do not finalize single-layer interpretation</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.4 Interpretation gating</h3>
+      <table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Blocked — do not report</strong></td><td>Fix data, QC, or sufficiency blockers first</td></tr>
+          <tr><td><strong>Screening only</strong></td><td>Multiple major issues — do not finalize k/skin</td></tr>
+          <tr><td><strong>Review required</strong></td><td>One or more major gates open — senior review needed</td></tr>
+          <tr><td><strong>Approved for office report</strong></td><td>Passes gates; engineer sign-off still required</td></tr>
+          <tr><td><strong>Approved for final report</strong></td><td>Only in strict “Final report” interpretation mode</td></tr>
+        </tbody>
+      </table>
+      <p>Gates include QC alerts, data sufficiency, uncertainty calibration score, Horner R², fit points, fit before boundary onset, radial window quality, accepted arbitration candidate, k agreement, boundary dominance, deconvolution stability, and composite severity.</p>
+
+      <h3>5.5 Data quality and sufficiency</h3>
+      <h4>Interpretation mode</h4>
+      <table>
+        <thead><tr><th>Mode</th><th>Use when</th></tr></thead>
+        <tbody>
+          <tr><td>Screening (lenient)</td><td>First look, messy or incomplete data</td></tr>
+          <tr><td>Office review (default)</td><td>Normal office PTA work</td></tr>
+          <tr><td>Final report (strict)</td><td>External report — all checks must pass</td></tr>
+        </tbody>
+      </table>
+      <p>Configurable thresholds: min early-time points, min Horner fit points, min radial points, min shut-in duration, min log-time span.</p>
+      <p>The QC table includes an <strong>Action</strong> column with recommended steps such as “exclude interval”, “fit window contaminated”, or “validate rate allocation”.</p>
+
+      <h3>5.6 Deconvolution (variable-rate DSTs)</h3>
+      <p>For DSTs with rate changes before shut-in, review the deconvolution panel:</p>
+      <ul>
+        <li>Raw vs deconvolved log-log comparison</li>
+        <li>Kernel audit — which flow segments materially affect superposition</li>
+        <li>Stability rating: stable / marginal / unstable</li>
+      </ul>
+      <p>If deconvolution is <strong>unstable</strong>, prefer raw curves or fix rate allocation before trusting Horner or derivative picks.</p>
+    </section>
+
+    <section id="steprate" class="page-break">
+      <h2>6. Tab: Step-rate and acid comparison</h2>
+
+      <h3>6.1 Step-rate screening</h3>
+      <p>Configure stage pressure basis, tail fraction, minimum stage duration/points, pressure channel (BHP or WHP), and whether to filter periods after an acid/step-rate event.</p>
+      <p><strong>Manual step grouping</strong> (optional):</p>
+      <div class="flow">1-2;3;4-5</div>
+      <p>Semicolon separates groups; numbers refer to chronological flow period indices.</p>
+      <p>Outputs include pressure-vs-rate chart with fracture markers, injectivity/falloff screen, and a stage table with dP/dq and flags. <strong>Screening only</strong> — not a substitute for full fracture design.</p>
+
+      <h3>6.2 Multi-buildup comparison (pre/post acid)</h3>
+      <p>When multiple shut-ins exist and an <strong>Acid job</strong> event is defined:</p>
+      <ul>
+        <li>Table of all buildups with k, skin, PI, p*, and R²</li>
+        <li>Pre-acid vs post-acid deltas with percent change</li>
+        <li>Stimulation assessment: near-wellbore improvement vs cleanup behavior only</li>
+      </ul>
+    </section>
+
+    <section id="reporting" class="page-break">
+      <h2>7. Tab: Report and export</h2>
+
+      <h3>7.1 Case details</h3>
+      <p>Enter well/DST job name, zone/interval, and engineer name before building the report.</p>
+
+      <h3>7.2 Export buttons</h3>
+      <table>
+        <thead><tr><th>Button</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td>Build report</td><td>Full text report in the panel</td></tr>
+          <tr><td>Copy report</td><td>Clipboard</td></tr>
+          <tr><td>Download text</td><td><code>.txt</code> file</td></tr>
+          <tr><td>Export HTML</td><td>Formatted HTML report</td></tr>
+          <tr><td>Export PDF</td><td>Browser print-to-PDF</td></tr>
+          <tr><td>Export plots PNG</td><td>All charts as images</td></tr>
+          <tr><td>Export engineer table (CSV)</td><td>Periods, QC, gates, models, and interpretation values</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.3 Report status banner</h3>
+      <p>Shows gating label, selected buildup, fit window, QC counts, sufficiency grade, calibration score, best arbitration model, and composite severity.</p>
+
+      <h3>7.4 Major report sections</h3>
+      <ol>
+        <li>Report status and executive summary</li>
+        <li>Data summary and QC flags with actions</li>
+        <li>Detected periods</li>
+        <li>Horner results</li>
+        <li>Model arbitration log</li>
+        <li>Composite / multilayer screen</li>
+        <li>Calibrated uncertainty (95% bands and methods)</li>
+        <li>Interpretation gating (pass/fail per gate)</li>
+        <li>Data sufficiency</li>
+        <li>Boundary / model logic</li>
+        <li>Deconvolution audit</li>
+        <li>Derivative regimes</li>
+        <li>Step-rate screen</li>
+        <li>Multi-buildup comparison</li>
+        <li>Engineering conclusion, assumptions, inputs, and events</li>
+      </ol>
+    </section>
+
+    <section id="workflows">
+      <h2>8. Typical office workflows</h2>
+
+      <h3>8.1 Standard single-buildup DST</h3>
+      <div class="flow">Import CSV → Check QC → Correct periods → Set reservoir inputs
+→ Select buildup → Auto fit from derivative → Tune Bourdet L
+→ Review arbitration + gating → Build report → Export</div>
+
+      <h3>8.2 Acid job (pre/post comparison)</h3>
+      <div class="flow">Import data → Add "Acid job" event at acid time
+→ Analyze post-acid buildup (and pre-acid if needed)
+→ Step-rate tab: compare buildups
+→ Check stimulation assessment
+→ Include multi-buildup section in report</div>
+
+      <h3>8.3 Messy variable-rate DST</h3>
+      <div class="flow">Import data → Diagnostics: deconvolution panel
+→ Compare raw vs deconvolved log-log
+→ If unstable: fix rates or justify raw-curve use
+→ Do not approve report until deconv is stable or explained</div>
+
+      <h3>8.4 Near-boundary well</h3>
+      <div class="flow">Diagnostics: review boundary type (sealing vs constant-pressure)
+→ Check "fit before boundary onset" gate
+→ Truncate Horner fit end if contaminated
+→ Use type curve only before boundary uplift
+→ Document boundary distance and influence window</div>
+    </section>
+
+    <section id="numbers" class="page-break">
+      <h2>9. Understanding the numbers</h2>
+
+      <h3>Permeability (k)</h3>
+      <ul>
+        <li><strong>Horner k</strong> — from straight-line slope</li>
+        <li><strong>Derivative k</strong> — from Bourdet plateau</li>
+        <li><strong>Consensus envelope</strong> — overlap of Horner and derivative 95% bands</li>
+        <li>Non-overlapping bands reduce calibration score and tighten gating</li>
+      </ul>
+
+      <h3>Skin (S)</h3>
+      <p>Fit-propagated from Horner. Large |S| may indicate damage, stimulation, multiphase cleanup, or incorrect inputs.</p>
+
+      <h3>p*</h3>
+      <p>Extrapolated infinite-acting pressure from the Horner intercept. Not necessarily static reservoir pressure if boundaries or composite effects dominate.</p>
+
+      <h3>PI (productivity index)</h3>
+      <p>q / (p* − pwf) in bpd/psi. Screening value only.</p>
+
+      <h3>Uncertainty calibration score (0–100)</h3>
+      <table>
+        <thead><tr><th>Score</th><th>Grade</th><th>Recommended use</th></tr></thead>
+        <tbody>
+          <tr><td>≥ 78</td><td>Well-calibrated</td><td>Reasonable for office report with engineering review</td></tr>
+          <tr><td>55–77</td><td>Moderately calibrated</td><td>Use ranges, not point values</td></tr>
+          <tr><td>&lt; 55</td><td>Poorly calibrated</td><td>Screening only; collect more radial-flow data</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>10. Troubleshooting</h2>
+      <table>
+        <thead><tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>No buildup detected</td><td>No flow before shut-in, or shut-in too short</td><td>Check periods; verify shut-in threshold</td></tr>
+          <tr><td>Poor Horner R²</td><td>Wrong fit window, bad gauge, wrong periods</td><td>Auto fit; trim window; fix periods; spike filter</td></tr>
+          <tr><td>Horner k ≠ derivative k</td><td>Boundary, composite, rate history, Bourdet L</td><td>Tune L; read arbitration log; check deconvolution</td></tr>
+          <tr><td>Gating = Blocked</td><td>QC alerts or insufficient data</td><td>Read QC Action column; extend shut-in; more early points</td></tr>
+          <tr><td>Composite = strong</td><td>Multilayer / dual-porosity / model mismatch</td><td>Do not finalize single-layer k/skin</td></tr>
+          <tr><td>Polling fails</td><td>CORS or invalid JSON</td><td>Use CSV import or a proxy</td></tr>
+          <tr><td>Case lost</td><td>Browser storage cleared</td><td>Download case JSON regularly</td></tr>
+          <tr><td>Demo shows Blocked</td><td>Synthetic data is intentionally challenging</td><td>Expected for training; use real data for reporting</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="limitations">
+      <h2>11. Limitations and responsible use</h2>
+      <ul>
+        <li>Single-file browser app — no multi-user database or audit trail beyond exported files</li>
+        <li>Superposition deconvolution is screening-grade, not rigorous commercial deconvolution</li>
+        <li>Boundary and composite logic are rule-based screens, not full reservoir simulation</li>
+        <li>Type curve overlay is WBS + radial only — no full layered inversion</li>
+        <li>Uncertainty bands are calibrated screening envelopes, not full Monte Carlo analysis</li>
+        <li>Always validate gauge calibration, rate allocation, PVT, geology, and phase behavior independently</li>
+      </ul>
+      <div class="callout warn">
+        <strong>Use gating labels honestly.</strong> “Screening only” is for internal discussion. “Review required” needs senior review before external circulation. “Approved” still requires engineer sign-off and professional judgment.
+      </div>
+    </section>
+
+    <footer class="avoid-break">
+      <p><strong>DST Pressure Transient Analyzer Pro v2.7</strong> · User Manual</p>
+      <p>Companion application: <code>dst-pressure-transient-analysis-pro-v2.7.html</code> · Repository: Welltestengineer</p>
+      <p>Generated for printable / PDF export. Open this page in a browser and choose <strong>Print → Save as PDF</strong>.</p>
+    </footer>
+  </article>
+</body>
+</html>

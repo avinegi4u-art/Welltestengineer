@@ -8,6 +8,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 |------|---------|
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
 | `dst-pressure-transient-analysis-pro-v2.7.html` | **DST PTA Pro v2.7** (open this one) — calibrated uncertainty envelopes, hardened report gating, engineered boundary classification, transparent model arbitration, weighted composite screening |
+| `dst-pta-pro-v2.7-user-manual.html` | **Printable user manual** for v2.7 — open in browser, then Print → Save as PDF |
 | `dst-pressure-transient-analysis-pro-v2.6.html` | DST PTA Pro v2.6 — prior release |
 | `dst-pressure-transient-analysis.html` | Older DST analyzer v2.0 — superseded by Pro v2.7 |
 | `DST-2 BHA GD Chetna D_33#G 17.2 ppg, Final.xlsx` | Reference Halliburton BHA worksheet (ONGC / GD Chetna / DST-2) |
