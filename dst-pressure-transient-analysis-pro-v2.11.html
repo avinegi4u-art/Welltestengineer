@@ -635,7 +635,7 @@
         </div>
         <div>
           <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.11</span></h1>
-          <p class="sub">Physics-based Bayesian priors, multilayer inversion with model evidence, minimum shut-in boundary guidance, exportable sign-off packages, and pairwise curve-selection audit traces.</p>
+          <p class="sub">Local-first DST/PTA for senior well test engineers — variable-rate superposition, Horner and Bourdet derivative analysis, boundary detection, composite screening, physics-based Bayesian uncertainty, interpretation gating, and office sign-off. Offline, auditable, practical.</p>
         </div>
       </div>
       <div class="hero-actions">
@@ -781,7 +781,7 @@
             <button id="useNow">Use current time</button>
           </div>
           <div class="callout warn" style="margin-top:0.9rem">
-            Screening only: verify rates, gauges, superposition, phase behavior, and tool drift before using these results for final DST interpretation or reserves decisions.
+            Screening only: verify rates, gauges, superposition, phase behavior, and tool drift before using these results for final DST interpretation or office distribution.
           </div>
         </div>
 
@@ -1283,8 +1283,7 @@
             <label>Report language mode
               <select id="reportLanguageMode">
                 <option value="office" selected>Office technical</option>
-                <option value="reserves">Reserves / booking safe</option>
-                <option value="regulatory">Regulatory / official filing</option>
+                <option value="regulatory">External filing / partner</option>
               </select>
             </label>
           </div>
@@ -1306,18 +1305,28 @@
             <div id="reportStatusDetail">Load and analyze data to evaluate report readiness.</div>
             <div id="reportSummary" class="report-summary-grid"></div>
           </div>
-          <h3 style="margin:1rem 0 0.45rem;font-size:0.95rem">Screening vs office vs reserves usage</h3>
+          <h3 style="margin:1rem 0 0.45rem;font-size:0.95rem">Screening vs office review usage</h3>
           <div id="usageGuidanceHeadline" class="help" style="margin-bottom:0.55rem">Load and analyze data to see what each output may be used for.</div>
           <div class="scroll" style="margin-bottom:0.85rem">
             <table>
-              <thead><tr><th>Output</th><th>Screening</th><th>Office</th><th>Reserves</th><th>Note</th></tr></thead>
+              <thead><tr><th>Output</th><th>Screening</th><th>Office review</th><th>Note</th></tr></thead>
               <tbody id="usageGuidanceBody">
-                <tr><td colspan="5" class="muted">Usage matrix appears after analysis.</td></tr>
+                <tr><td colspan="4" class="muted">Usage matrix appears after analysis.</td></tr>
               </tbody>
             </table>
           </div>
-          <h3 style="margin:1rem 0 0.45rem;font-size:0.95rem">Office / reserves sign-off workflow</h3>
-          <div id="signOffHeadline" class="help" style="margin-bottom:0.55rem">Complete the checklist before distributing an office interpretation. Reserves booking remains blocked in-app.</div>
+          <h3 style="margin:1rem 0 0.45rem;font-size:0.95rem">Engineering audit trail</h3>
+          <div id="engineeringAuditHeadline" class="help" style="margin-bottom:0.55rem">Fit windows, QC flags, model selection rationale, and gating status appear after analysis.</div>
+          <div class="scroll" style="margin-bottom:0.85rem">
+            <table>
+              <thead><tr><th>Area</th><th>Item</th><th>Value</th><th>Status</th><th>Detail</th></tr></thead>
+              <tbody id="engineeringAuditBody">
+                <tr><td colspan="5" class="muted">Engineering audit trail appears after analysis.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 style="margin:1rem 0 0.45rem;font-size:0.95rem">Office sign-off workflow</h3>
+          <div id="signOffHeadline" class="help" style="margin-bottom:0.55rem">Complete the checklist before distributing an office interpretation.</div>
           <div id="signOffSteps" class="gate-list" style="margin-bottom:0.85rem"></div>
           <div id="signOffSummary" class="callout" style="min-height:4rem;margin-bottom:0.85rem">Sign-off status appears after analysis.</div>
           <div id="reportText" class="report">Build a report after loading and analyzing data.</div>
@@ -1327,7 +1336,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2.11.0";
+    const APP_VERSION = "2.11.1";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1389,7 +1398,7 @@
       "compositeStatus", "compositeSummary", "compositeBody", "compositeInversionSummary", "compositeInversionBody",
       "reportLanguageMode",
       "deconvSummary", "deconvChart", "deconvAuditBody", "deconvFormula", "curveDominanceSummary", "curveDominanceAuditBody", "curveDominanceComparisonBody", "curveDominanceRationale",
-      "usageGuidanceHeadline", "usageGuidanceBody", "signOffHeadline", "signOffSteps", "signOffSummary", "boundaryShutinGuidance",
+      "usageGuidanceHeadline", "usageGuidanceBody", "engineeringAuditHeadline", "engineeringAuditBody", "signOffHeadline", "signOffSteps", "signOffSummary", "boundaryShutinGuidance",
       "gateStatus", "gateSummary", "gateList",
       "sufficiencySummary", "sufficiencyBody",
       "interpretationMode", "minEarlyPoints", "minFitPoints", "minRadialPoints", "minShutinHr", "minLogSpan",
@@ -2160,6 +2169,7 @@
         analysis.curveDominance = buildCurveDominanceGuide(analysis);
         analysis.usageGuidance = buildUsageGuidance(analysis);
         analysis.signOffWorkflow = buildSignOffWorkflow(analysis);
+        analysis.engineeringAudit = buildEngineeringAudit(analysis, state.quality);
         analysis.sufficiency = assessDataSufficiency(analysis);
         analysis.interpretationGates = buildInterpretationGates(analysis, state.quality);
         analysis.confidence = analysisConfidence({
@@ -2656,19 +2666,15 @@
         pass: !!checks[step.id] || step.auto
       }));
       const officeReady = steps.filter(step => step.requiredFor === "office").every(step => step.pass);
-      const reservesAllowed = false;
-      const reservesReason = "Reserves booking is never auto-approved in DST PTA Pro — export screening ranges only and follow corporate reserves workflow offline.";
       const headline = officeReady
         ? "Office sign-off checklist complete — suitable to draft office report after final engineer review."
         : "Office sign-off incomplete — complete checklist before distributing interpretation.";
       return {
         steps,
         officeReady,
-        reservesAllowed,
-        reservesReason,
         headline,
         usageHeadline: usage?.headline || "",
-        summary: `${headline} ${reservesReason}`
+        summary: headline
       };
     }
 
@@ -2736,29 +2742,75 @@
       const sparseBoundary = analysis.boundaryModel?.lateTimeDataLimited;
       const approved = gates?.status === "APPROVED_FOR_REPORT";
       const reviewOnly = gates?.status === "REVIEW_REQUIRED" || gates?.status === "SCREENING_ONLY" || gates?.status === "BLOCKED";
-      const row = (param, screening, office, reserves, note) => ({param, screening, office, reserves, note});
+      const row = (param, screening, office, note) => ({param, screening, office, note});
 
       const rows = [
-        row("Permeability k", "P10–P90 / bootstrap always", approved && (prob?.qualityScore >= 48 || bayes?.posteriorQuality !== "diffuse") ? "P50 + 90% CrI for office file" : "P50 screening only", "Do not book", "Reserves needs independent validation, corporate definitions, and sign-off"),
-        row("p*", "Range always OK", approved ? "P50 if gates pass" : "Screening only", "Do not book", "Confirm gauge QC, phase behavior, and extrapolation basis"),
-        row("Skin", "Screening", approved ? "Office with completion review" : "Screening", "Do not book", "Large |S| needs stimulation/damage context"),
-        row("PI", "Screening", approved ? "Office screening" : "Screening", "Do not book", "Depends on flowing bottomhole and rate allocation"),
-        row("Boundary distance", "Qualitative onset only", sparseBoundary ? "Wide P10–P90 — indicative" : (analysis.boundaryModel?.distanceConfidenceScore >= 55 ? "P50 with range" : "Screening"), "Do not book", sparseBoundary ? "Late-time data sparse — distance is not proved" : "Correlate with geology"),
-        row("Composite inversion", "Fitted parameters OK", approved ? "Best model + fitted ω/λ or layer k" : "Screening", "Do not book", "Fitted parameters are screening-grade, not commercial multilayer inversion"),
-        row("Curve interpretation", analysis.curveDominance?.dominantLabel || "See dominance guide", approved ? "Follow dominance guide for final call" : "Compare all curves", "Do not book", analysis.curveDominance?.dominantLabel || "Load analysis first")
+        row("Permeability k", "P10–P90 / bootstrap always", approved && (prob?.qualityScore >= 48 || bayes?.posteriorQuality !== "diffuse") ? "P50 + 90% CrI for office file" : "P50 screening only — finalize after gates pass", "Confirm Horner/derivative agreement and arbitration verdict"),
+        row("p*", "Range always OK", approved ? "P50 if gates pass" : "Screening only", "Confirm gauge QC, phase behavior, and extrapolation basis"),
+        row("Skin", "Screening", approved ? "Office with completion review" : "Screening", "Large |S| needs stimulation/damage context"),
+        row("PI", "Screening", approved ? "Office screening" : "Screening", "Depends on flowing bottomhole and rate allocation"),
+        row("Boundary distance", "Qualitative onset only", sparseBoundary ? "Wide P10–P90 — indicative" : (analysis.boundaryModel?.distanceConfidenceScore >= 55 ? "P50 with range" : "Screening"), sparseBoundary ? "Late-time data sparse — distance is not proved" : "Correlate with geology"),
+        row("Composite inversion", "Fitted parameters OK", approved ? "Best model + fitted ω/λ or layer k" : "Screening", "Fitted parameters are screening-grade, not commercial multilayer inversion"),
+        row("Curve interpretation", analysis.curveDominance?.dominantLabel || "See dominance guide", approved ? "Follow dominance guide for final call" : "Compare all curves", analysis.curveDominance?.dominantLabel || "Load analysis first"),
+        row("Superposition / variable rate", analysis.superposition?.highVariability ? "Raw curve + segment audit" : "Standard superposition", approved && !analysis.superposition?.highVariability ? "Office after rate QC" : "Screening — validate Δq allocation", analysis.superposition?.curveRecommendation || "Review kernel matrix")
       ];
 
       const headline = gates?.status === "BLOCKED"
         ? "Blocked — use for QC, period review, and data cleanup only."
         : gates?.status === "SCREENING_ONLY"
-          ? "Screening and internal correlation only — do not finalize k/skin or enter reserves tables."
+          ? "Screening and internal correlation only — do not finalize k/skin for office distribution."
           : gates?.status === "REVIEW_REQUIRED"
-            ? "Review required before office report; reserves usage not supported."
+            ? "Review required before office report — major gates open."
             : approved
-              ? "Office report candidate after engineer sign-off — still not reserves-booking grade without corporate workflow."
-              : "Analyze buildup and pass gates before office or reserves use.";
+              ? "Office report candidate after engineer sign-off."
+              : "Analyze buildup and pass gates before office use.";
 
       return {headline, rows, reviewOnly, approved, officeSignOffReady: analysis.signOffWorkflow?.officeReady, summary: `${headline} Bayesian: ${bayes?.reservoirContext?.idealization || "n/a"} (${bayes?.posteriorQuality || "n/a"}). Sign-off: ${analysis.signOffWorkflow?.officeReady ? "office checklist complete" : "incomplete"}.`};
+    }
+
+    function buildEngineeringAudit(analysis, quality) {
+      if (!analysis) return null;
+      const gates = analysis.interpretationGates;
+      const arbitration = analysis.modelArbitration || analysis.modelSelection;
+      const qcAlerts = quality.filter(item => item.severity === "alert");
+      const qcWarns = quality.filter(item => item.severity === "warn");
+      const item = (area, label, value, status, detail) => ({area, label, value, status, detail});
+      const items = [
+        item("Fit window", "Horner straight-line", `${fmt(analysis.window.start, 2)}–${fmt(analysis.window.end, 2)} hr`, analysis.fit?.r2 >= 0.94 ? "pass" : analysis.fit?.r2 >= 0.90 ? "warn" : "fail", `${analysis.selected.length} points, R² ${fmt(analysis.fit?.r2, 3)}, SE ${fmt(analysis.fit?.stderr, 1)} psi`),
+        item("Fit window", "Radial derivative plateau", analysis.radialRegime ? `${fmt(analysis.radialRegime.startDt, 2)}–${fmt(analysis.radialRegime.endDt, 2)} hr` : "n/a", analysis.radialRegime?.confidence === "high" ? "pass" : analysis.radialRegime ? "warn" : "fail", analysis.radialRegime?.basis || "No radial-flow window identified"),
+        item("Fit window", "Boundary contamination", analysis.boundaryModel?.fitContaminated ? "Yes" : "No", analysis.boundaryModel?.fitContaminated ? "fail" : "pass", analysis.boundaryModel?.fitContaminated ? `Truncate before ${fmt(analysis.boundaryModel.recommendExcludeAfterHr, 3)} hr` : "Fit window pre-boundary or no onset"),
+        item("QC", "Alert flags", `${qcAlerts.length}`, qcAlerts.length ? "fail" : "pass", qcAlerts.length ? qcAlerts.map(row => row.check).join("; ") : "No alert-level QC items"),
+        item("QC", "Warning flags", `${qcWarns.length}`, qcWarns.length >= 2 ? "warn" : "pass", qcWarns.length ? qcWarns.map(row => row.check).join("; ") : "No QC warnings"),
+        item("Superposition", "Variable-rate kernel", analysis.superposition?.highVariability ? "High variability" : "Within tolerance", analysis.superposition?.highVariability ? "warn" : "pass", analysis.superposition?.summary?.split("\n\n")[0] || analysis.deconvolution?.summary || "Single-rate or stable superposition"),
+        item("Horner", "k from slope", `${fmt(analysis.k, 2)} md`, Number.isFinite(analysis.k) ? "pass" : "fail", `m = ${fmt(analysis.m, 2)} psi/cycle; p* ${fmt(analysis.pStar, 1)} psi`),
+        item("Derivative", "k from Bourdet plateau", `${fmt(analysis.kDerivative, 2)} md`, Number.isFinite(analysis.kDerivative) ? "pass" : "fail", `Plateau ${fmt(analysis.plateau, 1)} psi/hr; L = ${fmt(analysis.bourdetL, 2)}`),
+        item("Boundary", "Onset / type", analysis.boundaryModel?.onsetDt ? `${fmt(analysis.boundaryModel.onsetDt, 3)} hr` : "Not detected", analysis.boundaryModel?.dominant ? "warn" : analysis.boundaryModel?.onsetDt ? "pass" : "warn", analysis.boundaryModel ? `${analysis.boundaryModel.model}; ${analysis.boundaryModel.boundaryType}` : "No boundary screen"),
+        item("Boundary", "Shut-in adequacy", analysis.boundaryModel?.shutinRequirements?.adequate ? "Adequate" : "Extend shut-in", analysis.boundaryModel?.shutinRequirements?.adequate ? "pass" : "warn", analysis.boundaryModel?.shutinRequirements?.recommendation || analysis.boundaryModel?.sparseLateTimeGuidance || "n/a"),
+        item("Composite", "Multilayer screen", analysis.compositeScreen?.severity || "none", analysis.compositeScreen?.severity === "strong" || analysis.compositeScreen?.severity === "flagged" ? "warn" : "pass", analysis.compositeScreen?.summary || "Single-layer plausible"),
+        item("Composite", "Inversion best", analysis.compositeInversion?.best?.label || "n/a", analysis.compositeInversion?.best?.verdict === "preferred" ? "pass" : "warn", analysis.compositeInversion?.summary || "n/a"),
+        item("Uncertainty", "Bayesian posterior", analysis.uncertainty?.bayesian?.posteriorQuality || "n/a", analysis.uncertainty?.bayesian?.posteriorQuality === "diffuse" ? "warn" : "pass", analysis.uncertainty?.bayesian?.summary || "n/a"),
+        item("Uncertainty", "Probabilistic k spread", analysis.uncertainty?.probabilistic ? `${fmt(analysis.uncertainty.probabilistic.k.spreadPct, 0)}%` : "n/a", (analysis.uncertainty?.probabilistic?.qualityScore || 0) >= 48 ? "pass" : "warn", analysis.uncertainty?.probabilistic?.summary || "n/a"),
+        item("Model selection", "Arbitration winner", arbitration?.best?.method || "none", arbitration?.best?.verdict === "accepted" ? "pass" : "warn", arbitration?.transparencySummary || arbitration?.selectionSummary || "No arbitration"),
+        item("Model selection", "Selection rationale", arbitration?.best?.verdict || "n/a", arbitration?.agreement === "poor" ? "warn" : "pass", (arbitration?.arbitrationLog || []).slice(0, 3).join(" | ") || arbitration?.best?.basis || "n/a"),
+        item("Curve call", "Dominant curve", analysis.curveDominance?.dominantLabel || "n/a", analysis.curveDominance ? "pass" : "warn", analysis.curveDominance?.finalDecisionRationale || "n/a"),
+        item("Gating", "Interpretation status", gates?.outputLabel || gates?.status || "n/a", gates?.status === "APPROVED_FOR_REPORT" ? "pass" : gates?.status === "BLOCKED" ? "fail" : "warn", gates?.summary || "n/a")
+      ];
+      const screeningLanguage = gates?.status === "SCREENING_ONLY" || gates?.status === "BLOCKED"
+        ? "SCREENING ONLY — internal correlation and QC; do not distribute as office-final k/skin/p*."
+        : gates?.status === "REVIEW_REQUIRED"
+          ? "REVIEW REQUIRED — present ranges and audit trail; do not finalize point estimates."
+          : "Screening ranges always available; office point estimates require gate approval and sign-off.";
+      const officeLanguage = gates?.status === "APPROVED_FOR_REPORT"
+        ? "OFFICE REVIEW CLEARED — suitable to draft office report after engineer sign-off checklist."
+        : "Office distribution blocked until gates pass and sign-off checklist is complete.";
+      return {
+        items,
+        screeningLanguage,
+        officeLanguage,
+        headline: `${gates?.outputLabel || "Not ready"} — ${items.filter(row => row.status === "fail").length} fail, ${items.filter(row => row.status === "warn").length} warn, ${items.filter(row => row.status === "pass").length} pass across engineering audit.`,
+        modelRationale: arbitration?.transparencySummary || arbitration?.selectionSummary || "",
+        summary: [screeningLanguage, officeLanguage, arbitration?.best ? `Model: ${arbitration.best.method} (${arbitration.best.verdict}, score ${fmt(arbitration.best.score, 0)}).` : ""].filter(Boolean).join(" ")
+      };
     }
 
     function buildCurveDominanceGuide(analysis) {
@@ -3087,7 +3139,7 @@
       const summary = [
         `Superposition audit across ${matrix.length} pre-buildup segment(s): ${materialSegments.length} material, ${rateSteps} significant rate step(s), ${signChanges} sign change(s).`,
         `Rate CV ${fmt(deconv.rateCv * 100, 1)}%; mean correction ${fmt(deconv.meanCorrectionPct, 1)}%; max ${fmt(deconv.maxCorrectionPct, 1)}%.`,
-        highVariability ? "HIGH VARIABILITY: superposition kernel is sensitive to rate allocation — tighten gating and do not book reserves from this buildup alone." : "Variable-rate superposition is within screening tolerance.",
+        highVariability ? "HIGH VARIABILITY: superposition kernel is sensitive to rate allocation — tighten gating and keep interpretation at screening level until rate QC is complete." : "Variable-rate superposition is within screening tolerance.",
         `Curve recommendation: ${curveRecommendation}. ${recommendationDetail}`
       ].join("\n\n");
       return {
@@ -3188,25 +3240,6 @@
       const kP50 = prob?.k?.p50 ?? analysis.k;
       const kRange = prob?.k ? `${fmt(prob.k.p10, 2)}–${fmt(prob.k.p90, 2)} md (P50 ${fmt(kP50, 2)} md)` : `${fmt(cal?.k.low, 2)}–${fmt(cal?.k.high, 2)} md`;
       const pRange = prob?.pStar ? `${fmt(prob.pStar.p10, 1)}–${fmt(prob.pStar.p90, 1)} psi (P50 ${fmt(prob.pStar.p50, 1)} psi)` : `${fmt(cal?.pStar.low, 1)}–${fmt(cal?.pStar.high, 1)} psi`;
-
-      if (mode === "reserves") {
-        return {
-          mode,
-          headline: approved ? "Internal screening estimate — not reserves-booking grade" : "Not suitable for reserves or resource booking",
-          permeabilityStatement: `Permeability probabilistic range (P10–P90): ${kRange}.`,
-          pressureStatement: `Extrapolated reservoir pressure range (P10–P90): ${pRange}.`,
-          skinStatement: `Skin P50 ${fmt(prob?.skin?.p50 ?? analysis.skin, 1)} (P10–P90 ${fmt(prob?.skin?.p10, 1)}–${fmt(prob?.skin?.p90, 1)}).`,
-          modelStatement: composite?.best ? `Reservoir idealization screen: ${composite.best.label} (${composite.best.verdict}).` : "Single-layer radial not confirmed.",
-          boundaryStatement: boundary?.lateTimeSummary || "Boundary distance not established for booking.",
-          superpositionStatement: superposition?.highVariability ? "Variable-rate superposition is too unstable for reserves use without rate reallocation and independent validation." : superposition?.curveRecommendation || "Superposition reviewed.",
-          curveDominanceStatement: analysis.curveDominance?.dominantLabel ? `Final curve call for screening: ${analysis.curveDominance.dominantLabel}.` : "Curve dominance not established.",
-          usageGuidanceStatement: analysis.usageGuidance?.headline || "Reserves usage not supported.",
-          disclaimer: "This DST PTA output is screening-grade only. It is not deterministic or probabilistic reserves reporting. No permeability, skin, or pressure estimate may be booked without qualified engineering sign-off, validated rate and phase allocation, geologic boundary review, and alignment with corporate reserves definitions.",
-          conclusion: approved
-            ? `Screening P50 permeability ${fmt(kP50, 2)} md and P50 p* ${fmt(prob?.pStar?.p50 ?? analysis.pStar, 1)} psi may support internal correlation only. Do not enter reserves tables without independent corroboration.`
-            : `Interpretation is ${gates?.outputLabel || gates?.label || "not approved"}. Do not use for reserves or resource booking.`
-        };
-      }
 
       if (mode === "regulatory") {
         return {
@@ -4453,14 +4486,14 @@
         const u = state.analysis.uncertainty;
         checks.push(qc(u.calibrationScore >= 60 ? "ok" : u.calibrationScore >= 45 ? "warn" : "alert", "Uncertainty calibration", `${u.calibrationGrade} (${u.calibrationScore}/100). ${u.summary}`, u.calibrationScore < 60 ? "Widen interpretation language or collect more radial-flow data before finalizing." : "Use calibrated bands as screening envelope."));
         if (u.probabilistic) {
-          checks.push(qc(u.probabilistic.qualityScore >= 55 ? "ok" : u.probabilistic.qualityScore >= 40 ? "warn" : "alert", "Probabilistic uncertainty", `${u.probabilistic.summary}`, u.probabilistic.quality === "wide" ? "Prefer P10–P90 language over point estimates." : "P10/P50/P90 available for reserves-style screening."));
+          checks.push(qc(u.probabilistic.qualityScore >= 55 ? "ok" : u.probabilistic.qualityScore >= 40 ? "warn" : "alert", "Probabilistic uncertainty", `${u.probabilistic.summary}`, u.probabilistic.quality === "wide" ? "Prefer P10–P90 language over point estimates." : "P10/P50/P90 available for office screening language."));
         }
       }
       if (state.analysis?.superposition?.highVariability) {
         checks.push(qc("warn", "Superposition variability", state.analysis.superposition.summary.split("\n\n")[2] || state.analysis.superposition.curveRecommendation, "Validate rate allocation; use raw buildup and segment audit before reporting."));
       }
       if (state.analysis?.boundaryModel?.distanceConfidenceGrade === "low" && state.analysis.boundaryModel?.onsetDt) {
-        checks.push(qc("warn", "Boundary distance confidence", state.analysis.boundaryModel.lateTimeSummary, state.analysis.boundaryModel.lateTimeDataLimited ? "Late-time data sparse — use boundary distance qualitatively only." : "Late-time boundary distance is low confidence — do not use for reserves or drainage mapping."));
+        checks.push(qc("warn", "Boundary distance confidence", state.analysis.boundaryModel.lateTimeSummary, state.analysis.boundaryModel.lateTimeDataLimited ? "Late-time data sparse — use boundary distance qualitatively only." : "Late-time boundary distance is low confidence — use wide P10–P90 and correlate with geology."));
       }
       if (state.analysis?.uncertainty?.bayesian) {
         const b = state.analysis.uncertainty.bayesian;
@@ -4574,6 +4607,7 @@
       renderCompositeScreen();
       renderDeconvolution();
       renderUsageGuidance();
+      renderEngineeringAudit();
       renderSignOffWorkflow();
       renderGates();
       renderSufficiency();
@@ -4710,7 +4744,7 @@
       const u = analysis.uncertainty;
       els.hornerSummary.innerHTML = `
         <strong>Buildup #${analysis.buildup.number}:</strong> ${fmt(analysis.buildup.durationHr, 2)} hr after equivalent ${fmt(analysis.equivalentFlowTime, 2)} hr production at reference ${fmt(analysis.q, 1)} bpd.
-        Fit window ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr, ${analysis.selected.length} points, R2 ${fmt(analysis.fit.r2, 3)}, standard error ${fmt(analysis.fit.stderr, 1)} psi.
+        Fit window ${fmt(analysis.window.start, 2)}–${fmt(analysis.window.end, 2)} hr (${analysis.selected.length} pts, R² ${fmt(analysis.fit.r2, 3)}, orange on Horner plot; radial/boundary bands on derivative plot).
         Slope ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}, p* ${fmt(analysis.pStar, 1)} psi (${fmt(u?.pStar.low, 1)}–${fmt(u?.pStar.high, 1)}).
         Horner k ${fmt(analysis.k, 2)} md (95% ${fmt(u?.k.low, 2)}–${fmt(u?.k.high, 2)}; P10/P50/P90 ${fmt(u?.probabilistic?.k.p10, 2)}/${fmt(u?.probabilistic?.k.p50, 2)}/${fmt(u?.probabilistic?.k.p90, 2)}), derivative k ${fmt(analysis.kDerivative, 2)} md, skin ${fmt(analysis.skin, 1)} (${fmt(u?.skin.low, 1)}–${fmt(u?.skin.high, 1)}), PI ${fmt(analysis.pi, 3)} (${fmt(u?.pi?.low, 3)}–${fmt(u?.pi?.high, 3)}) bpd/psi.
         Uncertainty: ${escapeHtml(u?.method || "n/a")}. Probabilistic: ${escapeHtml(u?.probabilistic?.summary || "n/a")}.
@@ -4731,7 +4765,12 @@
         delta: analysis.points.filter(point => point.dt > 0 && point.deltaP > 0).map(point => ({x: point.dt, y: point.deltaP})),
         derivative: analysis.derivatives.filter(point => point.dt > 0 && point.derivative > 0).map(point => ({x: point.dt, y: point.derivative})),
         regimes: analysis.regimes,
-        typeCurve: showTypeCurve ? analysis.typeCurve : null
+        typeCurve: showTypeCurve ? analysis.typeCurve : null,
+        highlightWindows: [
+          {start: analysis.window.start, end: analysis.window.end, label: "Horner fit", color: "rgba(255,186,102,0.12)", stroke: "#ffba66"},
+          analysis.radialRegime ? {start: analysis.radialRegime.startDt, end: analysis.radialRegime.endDt, label: "Radial plateau", color: "rgba(61,215,182,0.10)", stroke: "#3dd7b6"} : null,
+          analysis.boundaryModel?.onsetDt ? {start: analysis.boundaryModel.onsetDt, end: analysis.points[analysis.points.length - 1]?.dt || analysis.boundaryModel.onsetDt, label: "Late-time / boundary", color: "rgba(199,166,255,0.08)", stroke: "#c7a6ff"} : null
+        ].filter(Boolean)
       });
       if (els.typeCurveNote) {
         els.typeCurveNote.textContent = showTypeCurve && analysis.typeCurve
@@ -4806,7 +4845,7 @@
       const workflow = state.analysis?.signOffWorkflow;
       if (!els.signOffSteps) return;
       if (!workflow) {
-        if (els.signOffHeadline) els.signOffHeadline.textContent = "Complete the checklist before distributing an office interpretation. Reserves booking remains blocked in-app.";
+        if (els.signOffHeadline) els.signOffHeadline.textContent = "Complete the checklist before distributing an office interpretation.";
         els.signOffSteps.innerHTML = "";
         if (els.signOffSummary) els.signOffSummary.textContent = "Sign-off status appears after analysis.";
         return;
@@ -4815,7 +4854,6 @@
       if (els.signOffSummary) {
         els.signOffSummary.textContent = [
           workflow.officeReady ? "Office checklist: COMPLETE" : "Office checklist: INCOMPLETE",
-          workflow.reservesReason,
           workflow.usageHeadline
         ].filter(Boolean).join("\n\n");
       }
@@ -4841,7 +4879,7 @@
       if (!els.usageGuidanceBody) return;
       if (!guidance) {
         if (els.usageGuidanceHeadline) els.usageGuidanceHeadline.textContent = "Load and analyze data to see what each output may be used for.";
-        els.usageGuidanceBody.innerHTML = '<tr><td colspan="5" class="muted">Usage matrix appears after analysis.</td></tr>';
+        els.usageGuidanceBody.innerHTML = '<tr><td colspan="4" class="muted">Usage matrix appears after analysis.</td></tr>';
         return;
       }
       if (els.usageGuidanceHeadline) els.usageGuidanceHeadline.textContent = guidance.headline;
@@ -4849,8 +4887,28 @@
         <td>${escapeHtml(row.param)}</td>
         <td>${escapeHtml(row.screening)}</td>
         <td>${escapeHtml(row.office)}</td>
-        <td>${escapeHtml(row.reserves)}</td>
         <td>${escapeHtml(row.note)}</td>
+      </tr>`).join("");
+    }
+
+    function renderEngineeringAudit() {
+      const audit = state.analysis?.engineeringAudit;
+      if (!els.engineeringAuditBody) return;
+      if (!audit) {
+        if (els.engineeringAuditHeadline) els.engineeringAuditHeadline.textContent = "Fit windows, QC flags, model selection rationale, and gating status appear after analysis.";
+        els.engineeringAuditBody.innerHTML = '<tr><td colspan="5" class="muted">Engineering audit trail appears after analysis.</td></tr>';
+        return;
+      }
+      if (els.engineeringAuditHeadline) {
+        els.engineeringAuditHeadline.textContent = [audit.headline, audit.screeningLanguage, audit.officeLanguage].filter(Boolean).join("\n\n");
+      }
+      const badge = status => status === "pass" ? "flow" : status === "warn" ? "shutin" : "alert";
+      els.engineeringAuditBody.innerHTML = audit.items.map(row => `<tr>
+        <td>${escapeHtml(row.area)}</td>
+        <td>${escapeHtml(row.label)}</td>
+        <td>${escapeHtml(row.value)}</td>
+        <td><span class="badge ${badge(row.status)}">${escapeHtml(row.status)}</span></td>
+        <td>${escapeHtml(row.detail)}</td>
       </tr>`).join("");
     }
 
@@ -5327,7 +5385,7 @@
       </svg>`;
     }
 
-    function logLogSvg({delta, derivative, regimes = [], typeCurve = null}) {
+    function logLogSvg({delta, derivative, regimes = [], typeCurve = null, highlightWindows = []}) {
       const width = 920;
       const height = 310;
       const pad = {l: 68, r: 28, t: 24, b: 48};
@@ -5354,6 +5412,13 @@
         <path d="${pathFor(typeCurve.pressure, xScale, yScale)}" fill="none" stroke="#c7a6ff" stroke-width="2.1" stroke-dasharray="8 5" opacity="0.95"/>
         <path d="${pathFor(typeCurve.derivative, xScale, yScale)}" fill="none" stroke="#e59cff" stroke-width="2.1" stroke-dasharray="4 4" opacity="0.95"/>
       ` : "";
+      const windowBands = highlightWindows.map((win, index) => {
+        if (!Number.isFinite(win.start) || !Number.isFinite(win.end)) return "";
+        const x1 = xScale(Math.max(win.start, xMin));
+        const x2 = xScale(Math.min(win.end, xMax));
+        const widthPx = Math.max(x2 - x1, 1);
+        return `<rect x="${x1.toFixed(2)}" y="${pad.t}" width="${widthPx.toFixed(2)}" height="${height - pad.t - pad.b}" fill="${win.color || "rgba(61,215,182,0.08)"}" stroke="${win.stroke || "#3dd7b6"}" stroke-width="1" stroke-dasharray="4 3"/><text x="${(x1 + 4).toFixed(2)}" y="${pad.t + 14 + index * 12}" fill="${win.stroke || "#3dd7b6"}" font-size="10">${escapeHtml(win.label || "")}</text>`;
+      }).join("");
       const labels = regimes.map((regime, index) => {
         const x = xScale(Math.sqrt(regime.startDt * Math.max(regime.endDt, regime.startDt)));
         const y = pad.t + 18 + index * 15;
@@ -5361,6 +5426,7 @@
       }).join("");
       return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
         ${makeGrid(width, height, pad)}
+        ${windowBands}
         ${unitSlope.length ? `<path d="${pathFor(unitSlope, xScale, yScale)}" fill="none" stroke="#7ee787" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
         ${halfSlope.length ? `<path d="${pathFor(halfSlope, xScale, yScale)}" fill="none" stroke="#9be7ff" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
         ${typePaths}
@@ -5596,11 +5662,13 @@
         analysis?.uncertainty?.probabilistic ? `PROBABILISTIC UNCERTAINTY (P10/P50/P90 — ${analysis.uncertainty.probabilistic.quality}, score ${analysis.uncertainty.probabilistic.qualityScore}/100)\n${analysis.uncertainty.probabilistic.method}\n${analysis.uncertainty.probabilistic.summary}\n- k P10/P50/P90: ${fmt(analysis.uncertainty.probabilistic.k.p10, 2)} / ${fmt(analysis.uncertainty.probabilistic.k.p50, 2)} / ${fmt(analysis.uncertainty.probabilistic.k.p90, 2)} md\n- p* P10/P50/P90: ${fmt(analysis.uncertainty.probabilistic.pStar.p10, 1)} / ${fmt(analysis.uncertainty.probabilistic.pStar.p50, 1)} / ${fmt(analysis.uncertainty.probabilistic.pStar.p90, 1)} psi\n- skin P10/P50/P90: ${fmt(analysis.uncertainty.probabilistic.skin.p10, 1)} / ${fmt(analysis.uncertainty.probabilistic.skin.p50, 1)} / ${fmt(analysis.uncertainty.probabilistic.skin.p90, 1)}\n- PI P10/P50/P90: ${fmt(analysis.uncertainty.probabilistic.pi.p10, 3)} / ${fmt(analysis.uncertainty.probabilistic.pi.p50, 3)} / ${fmt(analysis.uncertainty.probabilistic.pi.p90, 3)} bpd/psi` : ``,
         analysis?.uncertainty?.bayesian ? `BAYESIAN POSTERIOR (${analysis.uncertainty.bayesian.posteriorQuality})\n${analysis.uncertainty.bayesian.framework}\nIdealization: ${analysis.uncertainty.bayesian.reservoirContext?.idealization}\nPhysics basis: ${(analysis.uncertainty.bayesian.reservoirContext?.physicsBasis || analysis.uncertainty.bayesian.reservoirContext?.adjustments || []).join("; ")}\n${analysis.uncertainty.bayesian.summary}` : ``,
         ``,
-        analysis?.usageGuidance ? `SCREENING VS OFFICE VS RESERVES USAGE\n${analysis.usageGuidance.headline}\n${analysis.usageGuidance.rows.map(row => `${row.param}: screening=${row.screening}; office=${row.office}; reserves=${row.reserves}`).join("\n")}` : ``,
+        analysis?.usageGuidance ? `SCREENING VS OFFICE REVIEW USAGE\n${analysis.usageGuidance.headline}\n${analysis.usageGuidance.rows.map(row => `${row.param}: screening=${row.screening}; office=${row.office}`).join("\n")}` : ``,
+        ``,
+        analysis?.engineeringAudit ? `ENGINEERING AUDIT TRAIL\n${analysis.engineeringAudit.headline}\n${analysis.engineeringAudit.screeningLanguage}\n${analysis.engineeringAudit.officeLanguage}\n${analysis.engineeringAudit.modelRationale}\n${analysis.engineeringAudit.items.map(row => `${row.area} | ${row.label} | ${row.value} | ${row.status} | ${row.detail}`).join("\n")}` : ``,
         ``,
         analysis?.curveDominance ? `CURVE DOMINANCE GUIDE\n${analysis.curveDominance.summary}\n${analysis.curveDominance.finalDecisionRationale || ""}\n${analysis.curveDominance.meetingBrief}\nPAIRWISE COMPARISON TRACE\n${(analysis.curveDominance.comparisonTrace || []).map(entry => `${entry.winner} vs ${entry.loser}: +${entry.scoreGap} — ${entry.rationale}`).join("\n")}\nREJECTED CURVES\n${(analysis.curveDominance.rejectedCurves || []).map(item => item.rejectionSummary).join("\n")}\nAUDIT LOG\n${(analysis.curveDominance.auditLog || []).map(entry => `${entry.ruleId} | ${entry.curve} | ${entry.delta >= 0 ? "+" : ""}${entry.delta} | ${entry.evidence}`).join("\n")}` : ``,
         ``,
-        analysis?.signOffWorkflow ? `OFFICE / RESERVES SIGN-OFF WORKFLOW\n${analysis.signOffWorkflow.headline}\n${analysis.signOffWorkflow.reservesReason}\nExport formal package (JSON + HTML certificate) from Report tab for distribution.\n${analysis.signOffWorkflow.steps.map(step => `${step.pass ? "DONE" : "OPEN"} — ${step.label}: ${step.detail}`).join("\n")}` : ``,
+        analysis?.signOffWorkflow ? `OFFICE SIGN-OFF WORKFLOW\n${analysis.signOffWorkflow.headline}\nExport formal package (JSON + HTML certificate) from Report tab for distribution.\n${analysis.signOffWorkflow.steps.map(step => `${step.pass ? "DONE" : "OPEN"} — ${step.label}: ${step.detail}`).join("\n")}` : ``,
         ``,
         `INTERPRETATION GATING`,
         analysis?.interpretationGates ? `${analysis.interpretationGates.label || analysis.interpretationGates.status.replaceAll("_", " ")} — ${analysis.interpretationGates.summary}\n${analysis.interpretationGates.gates.map(gate => `${gate.pass ? "PASS" : "FAIL"} [${gate.severity}] ${gate.label}: ${gate.detail}`).join("\n")}` : `No interpretation gates available.`,
@@ -5674,6 +5742,9 @@
           analysis.compositeInversion.candidates.forEach(candidate => push("Composite inversion", candidate.label, candidate.verdict, candidate.basis, `score ${candidate.score}`));
         }
         push("Interpretation", "Gating", analysis.interpretationGates?.status || "n/a", analysis.interpretationGates?.summary || "", "");
+        if (analysis.engineeringAudit?.items) {
+          analysis.engineeringAudit.items.slice(0, 8).forEach(row => push("Engineering audit", row.label, row.status, `${row.value} — ${row.detail}`, row.area));
+        }
       }
       return rows;
     }
@@ -5690,9 +5761,6 @@
       const analysis = state.analysis;
       if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup was detected.";
       const official = buildOfficialReportLanguage(analysis);
-      if (reportLanguageMode() === "reserves") {
-        return [official.headline, official.conclusion, official.disclaimer].filter(Boolean).join(" ");
-      }
       if (reportLanguageMode() === "regulatory") {
         return [official.headline, official.conclusion, official.disclaimer].filter(Boolean).join(" ");
       }
@@ -5760,9 +5828,10 @@
           refinement: analysis.compositeInversion?.refinement
         },
         usageGuidance: analysis.usageGuidance,
+        engineeringAudit: analysis.engineeringAudit,
         engineerTable: buildEngineerTableRows(),
         reportText: report,
-        disclaimer: "Formal sign-off package for office distribution only. Not reserves-booking grade. Engineer must verify QC, rate allocation, gauge calibration, and geologic context before external release."
+        disclaimer: "Formal sign-off package for office distribution. Engineer must verify QC, rate allocation, gauge calibration, and geologic context before external release."
       };
     }
 
@@ -5771,6 +5840,7 @@
       const signOffRows = (pkg.signOffWorkflow?.steps || []).map(step => `<tr><td>${escapeHtml(step.label)}</td><td>${step.pass ? "DONE" : "OPEN"}</td><td>${escapeHtml(step.detail)}</td></tr>`).join("");
       const comparisonRows = (pkg.curveDominance?.comparisonTrace || []).map(row => `<tr><td>${escapeHtml(row.winner)}</td><td>${escapeHtml(row.loser)}</td><td>+${row.scoreGap}</td><td>${escapeHtml(row.rationale)}</td></tr>`).join("");
       const auditRows = (pkg.curveDominance?.auditLog || []).map(row => `<tr><td>${escapeHtml(row.ruleId)}</td><td>${escapeHtml(row.curve)}</td><td>${row.delta >= 0 ? "+" : ""}${row.delta}</td><td>${escapeHtml(row.evidence)}</td></tr>`).join("");
+      const engineeringRows = (pkg.engineeringAudit?.items || []).map(row => `<tr><td>${escapeHtml(row.area)}</td><td>${escapeHtml(row.label)}</td><td>${escapeHtml(row.value)}</td><td>${escapeHtml(row.status)}</td><td>${escapeHtml(row.detail)}</td></tr>`).join("");
       const physicsBasis = (pkg.bayesian?.reservoirContext?.physicsBasis || []).map(item => `<li>${escapeHtml(item)}</li>`).join("");
       return `<!doctype html><html><head><meta charset="utf-8"><title>${title} — Formal Package</title><style>
         body{font-family:Arial,sans-serif;line-height:1.45;color:#172033;margin:2rem;max-width:980px}
@@ -5792,6 +5862,10 @@
         <table><thead><tr><th>Winner</th><th>Loser</th><th>Gap</th><th>Rationale</th></tr></thead><tbody>${comparisonRows || "<tr><td colspan='4'>No comparisons</td></tr>"}</tbody></table>
         <h3>Audit log</h3>
         <table><thead><tr><th>Rule</th><th>Curve</th><th>Δ</th><th>Evidence</th></tr></thead><tbody>${auditRows || "<tr><td colspan='4'>No audit</td></tr>"}</tbody></table>
+        <h2>Engineering audit trail</h2>
+        <p>${escapeHtml(pkg.engineeringAudit?.screeningLanguage || "")}</p>
+        <p>${escapeHtml(pkg.engineeringAudit?.officeLanguage || "")}</p>
+        <table><thead><tr><th>Area</th><th>Item</th><th>Value</th><th>Status</th><th>Detail</th></tr></thead><tbody>${engineeringRows || "<tr><td colspan='5'>No audit</td></tr>"}</tbody></table>
         <h2>Physics-propagated Bayesian prior</h2>
         <ul>${physicsBasis || "<li>No physics basis recorded</li>"}</ul>
         <p>${escapeHtml(pkg.bayesian?.summary || "")}</p>
@@ -5985,6 +6059,7 @@
         compositeInversion: a.compositeInversion,
         curveDominance: a.curveDominance,
         usageGuidance: a.usageGuidance,
+        engineeringAudit: a.engineeringAudit,
         signOffWorkflow: a.signOffWorkflow,
         superposition: a.superposition,
         productivityIndexBpdPerPsi: a.pi,
