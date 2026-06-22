@@ -7,8 +7,9 @@ Well testing and completion engineering tools (single-file HTML apps).
 | File | Purpose |
 |------|---------|
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
-| `dst-pressure-transient-analysis-pro-v2.5.html` | **DST PTA Pro v2.5** (open this one) — uncertainty bands, interpretation gating, boundary/model logic, deconvolution audit, data-sufficiency QC, Bourdet derivative, type curves |
-| `dst-pressure-transient-analysis.html` | Older DST analyzer v2.0 — superseded by Pro v2.5 |
+| `dst-pressure-transient-analysis-pro-v2.6.html` | **DST PTA Pro v2.6** (open this one) — fit-based 95% uncertainty, strict interpretation gating, boundary classification, formal model selection, auditable deconvolution, configurable sufficiency, composite screening, multi-buildup deltas, engineer table export |
+| `dst-pressure-transient-analysis-pro-v2.5.html` | DST PTA Pro v2.5 — prior release |
+| `dst-pressure-transient-analysis.html` | Older DST analyzer v2.0 — superseded by Pro v2.6 |
 | `DST-2 BHA GD Chetna D_33#G 17.2 ppg, Final.xlsx` | Reference Halliburton BHA worksheet (ONGC / GD Chetna / DST-2) |
 | `dst-2-bha-reference.js` | Embedded reference string for one-click load in the tally app |
 | `vertical-kill-sheet-app.html` | Vertical well kill sheet with live formulas |
