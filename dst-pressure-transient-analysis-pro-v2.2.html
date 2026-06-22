@@ -1788,6 +1788,16 @@
       const fit = linearRegression(points.map(point => Math.log10(point.dt)), points.map(point => point.pressure));
       return {period: falloffPeriod, points, fit};
     }
+
+    function piecewiseError(stages, fit) {
+      if (!stages?.length || !fit) return 0;
+      return stages.reduce((sum, stage) => {
+        const predicted = fit.intercept + fit.slope * stage.rate;
+        const residual = stage.pressure - predicted;
+        return sum + residual * residual;
+      }, 0);
+    }
+
     function bestTwoSegmentFracturePick(stages, baseFit) {
       if (!stages || stages.length < 4) return null;
       let best = null;
