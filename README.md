@@ -7,7 +7,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 | File | Purpose |
 |------|---------|
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
-| `dst-pressure-transient-analysis-pro-v2.2.html` | DST pressure transient analyzer Pro — live BHP/rates, Horner, derivative, PI, skin, step-rate fracture screening, multi-buildup comparison, office report |
+| `dst-pressure-transient-analysis-pro-v2.2.html` | DST PTA Pro v2.3 — Bourdet derivative, buildup selection, spike filter, semilog/log-log diagnostics, Horner vs derivative k cross-check, step-rate screening, multi-buildup comparison |
 | `dst-pressure-transient-analysis.html` | DST real-time pressure transient analysis (v2.0) — BHP, rates, Horner, derivative, PI, skin, office report |
 | `DST-2 BHA GD Chetna D_33#G 17.2 ppg, Final.xlsx` | Reference Halliburton BHA worksheet (ONGC / GD Chetna / DST-2) |
 | `dst-2-bha-reference.js` | Embedded reference string for one-click load in the tally app |

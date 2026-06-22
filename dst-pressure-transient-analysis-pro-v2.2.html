@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.3 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <style>
     :root {
@@ -542,7 +542,7 @@
         </div>
         <div>
           <h1>DST Pressure Transient Analyzer Pro</h1>
-          <p class="sub">Office dashboard for real-time bottomhole pressure, surface well-test rates, wellhead pressure, and temperature. Import CSV, paste rows, key in readings, or poll a JSON endpoint, then screen buildup, derivative, Horner, PI, mobility, skin, step-rate slope changes, injectivity/falloff behavior, and rate-history superposition while the job is running.</p>
+          <p class="sub">Kappa-style office PTA workflow: Bourdet pressure derivative, buildup selection, spike filtering, log-log and semilog diagnostics, Horner and derivative permeability cross-check, flow-regime ID, PI, skin, step-rate fracture screening, multi-buildup comparison, and live JSON/CSV import.</p>
         </div>
       </div>
       <div class="hero-actions">
@@ -772,13 +772,28 @@
             <label>Horner fit end, hr
               <input id="hornerEnd" type="number" step="0.01" value="999" />
             </label>
+            <label>Active buildup shut-in
+              <select id="buildupSelect">
+                <option value="">Latest usable shut-in</option>
+              </select>
+            </label>
+            <label>Bourdet smoothing L, log cycles
+              <input id="bourdetSmoothing" type="number" min="0.05" max="0.6" step="0.01" value="0.15" />
+            </label>
+            <label>Pressure spike filter
+              <select id="spikeFilter">
+                <option value="none">Off</option>
+                <option value="mild">Mild (local median)</option>
+                <option value="standard" selected>Standard (local median)</option>
+              </select>
+            </label>
           </div>
           <div class="row" style="margin-top:0.85rem">
             <button id="recalculate" class="primary">Recalculate</button>
             <button id="saveInputs">Save inputs</button>
-            <button id="resetFitWindow">Auto fit window</button>
+            <button id="resetFitWindow">Auto fit from derivative</button>
           </div>
-          <p class="help" style="margin-top:0.65rem">The Horner fit window excludes early wellbore storage/afterflow and late boundary effects. Adjust it before using p*, k, skin, or PI for engineering decisions.</p>
+          <p class="help" style="margin-top:0.65rem">Select the shut-in to interpret, tune Bourdet L for derivative smoothing, and set the Horner fit window on the radial-flow plateau. Spike filtering despikes gauge glitches before period detection and PTA.</p>
         </div>
 
         <div class="card span-8">
@@ -850,13 +865,37 @@
       <div class="grid">
         <div class="card span-7">
           <div class="chart-toolbar">
-            <h2 style="margin-bottom:0">Log-log buildup derivative</h2>
+            <h2 style="margin-bottom:0">Log-log buildup derivative (Bourdet)</h2>
             <button class="small" data-export-plot="derivativeChart">Export PNG</button>
           </div>
           <div id="derivativeChart" class="chart" aria-label="Pressure derivative chart"></div>
           <div class="legend">
             <span style="--c:#63a7ff">Delta pressure</span>
-            <span style="--c:#ffba66">Derivative dP/dln(t)</span>
+            <span style="--c:#ffba66">Bourdet derivative</span>
+            <span style="--c:#7ee787">Unit / half-slope guides</span>
+          </div>
+        </div>
+        <div class="card span-5">
+          <div class="chart-toolbar">
+            <h2 style="margin-bottom:0">Semilog buildup (MDH)</h2>
+            <button class="small" data-export-plot="semilogChart">Export PNG</button>
+          </div>
+          <div id="semilogChart" class="chart" aria-label="Semilog pressure chart"></div>
+          <div class="legend">
+            <span style="--c:#63a7ff">Shut-in pressure</span>
+            <span style="--c:#3dd7b6">Horner fit window</span>
+          </div>
+        </div>
+        <div class="card span-5">
+          <h2>Model cross-check (Kappa-style)</h2>
+          <div id="modelCompareSummary" class="report" style="min-height:10rem">Load a buildup to compare Horner, Bourdet derivative, and storage indicators.</div>
+          <div class="scroll" style="margin-top:0.75rem">
+            <table>
+              <thead><tr><th>Method</th><th>k md</th><th>Skin</th><th>Basis</th><th>Status</th></tr></thead>
+              <tbody id="modelCompareBody">
+                <tr><td colspan="5" class="muted">No model comparison yet.</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
         <div class="card span-5">
@@ -1028,7 +1067,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2.2.0";
+    const APP_VERSION = "2.3.0";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1071,10 +1110,12 @@
       "stepImport", "stepQc", "stepPeriods", "stepAnalysis", "stepReport",
       "netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor",
       "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd",
+      "buildupSelect", "bourdetSmoothing", "spikeFilter",
       "eventTime", "eventType", "eventNote", "eventList",
       "caseWell", "caseZone", "caseEngineer", "reportText",
       "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups",
-      "stepRateSummary", "stepRateChart", "stepRateBody", "injectivityChart", "buildupCompareSummary", "buildupCompareBody"
+      "stepRateSummary", "stepRateChart", "stepRateBody", "injectivityChart", "buildupCompareSummary", "buildupCompareBody",
+      "semilogChart", "modelCompareSummary", "modelCompareBody"
     ];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -1142,13 +1183,13 @@
         refresh("Cleared event annotations.");
       });
       document.querySelectorAll("[data-export-plot]").forEach(button => button.addEventListener("click", () => exportPlotAsPng(button.dataset.exportPlot)));
-      [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups"].forEach(id => {
+      [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "buildupSelect", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups"].forEach(id => {
         els[id]?.addEventListener("change", () => refresh());
       });
     }
 
     function analysisInputIds() {
-      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd"];
+      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd", "bourdetSmoothing", "spikeFilter"];
     }
 
     function showTab(tabName) {
@@ -1482,18 +1523,54 @@
     /* Analysis */
     function refresh(message) {
       normalizeRows();
-      state.periods = detectPeriods(state.rows);
+      const rows = applySpikeFilter(state.rows);
+      state.periods = detectPeriods(rows);
       state.analysis = null;
       state.quality = buildQualityChecks();
-      state.multiBuildup = analyzeMultipleBuildups(state.rows, state.periods, state.events);
-      state.analysis = analyzeBuildup(state.rows, state.periods, state.multiBuildup);
-      state.stepRate = analyzeStepRate(state.rows, state.periods, state.events, state.multiBuildup);
+      state.multiBuildup = analyzeMultipleBuildups(rows, state.periods, state.events);
+      updateBuildupSelector();
+      state.analysis = analyzeBuildup(rows, state.periods, state.multiBuildup);
+      state.stepRate = analyzeStepRate(rows, state.periods, state.events, state.multiBuildup);
       state.quality = buildQualityChecks();
       if (state.analysis) {
-        state.analysis.confidence = analysisConfidence({fit: state.analysis.fit, fitPoints: state.analysis.selected, points: state.analysis.points, regimes: state.analysis.regimes, quality: state.quality});
+        state.analysis.confidence = analysisConfidence({fit: state.analysis.fit, fitPoints: state.analysis.selected, points: state.analysis.points, regimes: state.analysis.regimes, quality: state.quality, modelCheck: state.analysis.modelCheck});
       }
       renderAll(message);
       persistCase();
+    }
+
+    function applySpikeFilter(rows) {
+      const mode = els.spikeFilter?.value || "none";
+      if (mode === "none" || rows.length < 5) return rows;
+      const halfWindow = mode === "mild" ? 2 : 3;
+      const threshold = mode === "mild" ? 4.5 : 3.2;
+      return rows.map((row, index) => {
+        const start = Math.max(0, index - halfWindow);
+        const end = Math.min(rows.length, index + halfWindow + 1);
+        const neighbors = rows.slice(start, end).map(item => item.bhp).filter(Number.isFinite);
+        if (neighbors.length < 3) return row;
+        const med = median(neighbors);
+        const mad = median(neighbors.map(value => Math.abs(value - med))) || 1;
+        const robustSigma = Math.max(mad * 1.4826, 0.5);
+        if (Math.abs(row.bhp - med) > threshold * robustSigma) {
+          return {...row, bhp: med, spikeCorrected: true};
+        }
+        return row;
+      });
+    }
+
+    function updateBuildupSelector() {
+      const select = els.buildupSelect;
+      if (!select) return;
+      const previous = select.value;
+      const shutins = state.periods.filter(period => period.type === "shut-in");
+      if (!shutins.length) {
+        select.innerHTML = '<option value="">No shut-in detected</option>';
+        return;
+      }
+      select.innerHTML = shutins.map(period => `<option value="${period.key}">#${period.number} ${formatTime(period.start.timeMs)} (${fmt(period.durationHr, 2)} hr)</option>`).join("");
+      if (previous && shutins.some(period => period.key === previous)) select.value = previous;
+      else select.value = shutins[shutins.length - 1].key;
     }
 
     function detectPeriods(rows) {
@@ -1576,8 +1653,13 @@
 
 
     function analyzeBuildup(rows, periods, multiBuildup) {
-      if (multiBuildup?.all?.length) return multiBuildup.all[multiBuildup.all.length - 1];
-      return null;
+      if (!multiBuildup?.all?.length) return null;
+      const key = els.buildupSelect?.value;
+      if (key) {
+        const selected = multiBuildup.all.find(item => item.buildup.key === key);
+        if (selected) return selected;
+      }
+      return multiBuildup.all[multiBuildup.all.length - 1];
     }
     function analyzeMultipleBuildups(rows, periods, events) {
       if (!periods?.length) return null;
@@ -1635,15 +1717,52 @@
         ? 1.151 * ((p1hr - pwf) / m - Math.log10(k / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
         : NaN;
       const pi = fit.intercept > pwf ? qRef / (fit.intercept - pwf) : NaN;
-      const derivatives = derivativePoints(points);
+      const bourdetL = clamp(inputNumber("bourdetSmoothing", 0.15), 0.05, 0.6);
+      const derivatives = bourdetDerivative(points, bourdetL);
       const regimes = classifyRegimes(points, derivatives);
-      const plateau = median(derivatives.slice(Math.floor(derivatives.length * 0.25), Math.ceil(derivatives.length * 0.75)).map(point => point.derivative).filter(Number.isFinite));
+      const radialRegime = regimes.find(regime => regime.name === "radial flow");
+      const plateauWindow = derivatives.filter(point => radialRegime && point.dt >= radialRegime.startDt && point.dt <= radialRegime.endDt && point.derivative > 0);
+      const plateau = plateauWindow.length
+        ? median(plateauWindow.map(point => point.derivative))
+        : median(derivatives.slice(Math.floor(derivatives.length * 0.25), Math.ceil(derivatives.length * 0.75)).map(point => point.derivative).filter(Number.isFinite));
+      const kDerivative = Number.isFinite(plateau) && plateau > 0
+        ? 70.6 * qRef * inputs.fvfRbStb * inputs.viscosityCp / (Math.max(inputs.netPayFt, 0.0001) * plateau)
+        : NaN;
+      const skinDerivative = Number.isFinite(kDerivative) && kDerivative > 0 && m > 0
+        ? 1.151 * ((p1hr - pwf) / m - Math.log10(kDerivative / (inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv * inputs.wellboreRadiusFt * inputs.wellboreRadiusFt)) + 3.23)
+        : NaN;
+      const storageRegime = regimes.find(regime => regime.name === "wellbore storage");
+      const storageSlope = storageRegime
+        ? median(derivatives.filter(point => point.dt >= storageRegime.startDt && point.dt <= storageRegime.endDt).map(point => point.slope).filter(Number.isFinite))
+        : NaN;
+      const wellboreStorageCoeff = Number.isFinite(storageSlope) && storageSlope > 0.75
+        ? (qRef * inputs.fvfRbStb / 24) / storageSlope
+        : NaN;
+      const modelCheck = buildModelCrossCheck({kHorner: k, kDerivative, skinHorner: skin, skinDerivative, plateau, bourdetL, radialRegime, wellboreStorageCoeff});
       const lastDt = points[points.length - 1]?.dt || 0;
       const investigationRadius = Number.isFinite(k) && k > 0
         ? 0.029 * Math.sqrt((k * lastDt) / Math.max(inputs.porosityFraction * inputs.viscosityCp * inputs.totalCompressibilityPsiInv, 1e-12))
         : NaN;
-      const confidence = analysisConfidence({fit, fitPoints, points, regimes, quality: state.quality});
-      return {buildup, previousFlow, flowPeriods, q: qRef, equivalentFlowTime, pwf, startPressure, points, selected: fitPoints, window, fit, m, pStar: fit.intercept, kh, k, p1hr, skin, pi, derivatives, regimes, plateau, investigationRadius, confidence};
+      const confidence = analysisConfidence({fit, fitPoints, points, regimes, quality: state.quality, modelCheck});
+      return {buildup, previousFlow, flowPeriods, q: qRef, equivalentFlowTime, pwf, startPressure, points, selected: fitPoints, window, fit, m, pStar: fit.intercept, kh, k, p1hr, skin, pi, derivatives, regimes, plateau, investigationRadius, confidence, bourdetL, kDerivative, skinDerivative, radialRegime, wellboreStorageCoeff, modelCheck};
+    }
+
+    function buildModelCrossCheck(context) {
+      const rows = [];
+      const add = (method, k, skin, basis, status) => rows.push({method, k, skin, basis, status});
+      add("Horner straight line", context.kHorner, context.skinHorner, "Superposition Horner fit on selected radial-flow window.", Number.isFinite(context.kHorner) ? "primary" : "unavailable");
+      add("Bourdet derivative plateau", context.kDerivative, context.skinDerivative, `Radial-flow derivative level ${fmt(context.plateau, 1)} psi with L=${fmt(context.bourdetL, 2)}.`, Number.isFinite(context.kDerivative) ? "cross-check" : "unavailable");
+      if (Number.isFinite(context.wellboreStorageCoeff)) {
+        add("Early-time storage", NaN, NaN, `Storage trend coefficient estimate ${fmt(context.wellboreStorageCoeff, 1)} bbl/psi (screening).`, "indicator");
+      }
+      let agreement = "not available";
+      if (Number.isFinite(context.kHorner) && Number.isFinite(context.kDerivative) && context.kHorner > 0) {
+        const deltaPct = Math.abs(context.kDerivative - context.kHorner) / context.kHorner * 100;
+        agreement = deltaPct <= 20 ? "good" : deltaPct <= 35 ? "moderate" : "poor";
+      }
+      return {rows, agreement, deltaKPct: Number.isFinite(context.kHorner) && Number.isFinite(context.kDerivative) && context.kHorner > 0
+        ? Math.abs(context.kDerivative - context.kHorner) / context.kHorner * 100
+        : NaN};
     }
     function analyzeStepRate(rows, periods, events, multiBuildup) {
       const options = {
@@ -1869,9 +1988,28 @@
     }
     function selectedFitWindow(points) {
       const maxDt = Math.max(...points.map(point => point.dt));
-      return {
+      const manual = {
         start: Math.max(0.001, inputNumber("hornerStart", Math.max(0.05, maxDt * 0.15))),
         end: Math.min(inputNumber("hornerEnd", maxDt), maxDt)
+      };
+      if (manual.end > manual.start + 0.02) return manual;
+      return suggestRadialFitWindow(points);
+    }
+
+    function suggestRadialFitWindow(points, derivatives = null) {
+      const maxDt = Math.max(...points.map(point => point.dt));
+      const derivs = derivatives || bourdetDerivative(points, clamp(inputNumber("bourdetSmoothing", 0.15), 0.05, 0.6));
+      const regimes = classifyRegimes(points, derivs);
+      const radial = regimes.find(regime => regime.name === "radial flow");
+      if (radial) {
+        return {
+          start: clamp(radial.startDt * 0.95, 0.001, maxDt * 0.9),
+          end: clamp(radial.endDt * 1.05, 0.02, maxDt)
+        };
+      }
+      return {
+        start: Math.max(0.05, maxDt * 0.18),
+        end: Math.max(0.1, maxDt * 0.82)
       };
     }
 
@@ -1880,12 +2018,13 @@
       if (!analysis || !analysis.points.length) {
         els.hornerStart.value = 0.25;
         els.hornerEnd.value = 999;
-      } else {
-        const maxDt = Math.max(...analysis.points.map(point => point.dt));
-        els.hornerStart.value = fmtPlain(Math.max(0.05, maxDt * 0.18), 2);
-        els.hornerEnd.value = fmtPlain(maxDt * 0.82, 2);
+        refresh("Reset Horner fit window.");
+        return;
       }
-      refresh("Reset Horner fit window.");
+      const suggested = suggestRadialFitWindow(analysis.points, analysis.derivatives);
+      els.hornerStart.value = fmtPlain(suggested.start, 3);
+      els.hornerEnd.value = fmtPlain(suggested.end, 3);
+      refresh("Set Horner fit window from Bourdet radial-flow screen.");
     }
 
     function equivalentProducingTime(flowPeriods, qRef) {
@@ -1911,6 +2050,39 @@
         const derivative = (next.deltaP - prev.deltaP) / denom;
         const slope = localLogSlope(points, i, "deltaP");
         result.push({...points[i], derivative, slope});
+      }
+      return result;
+    }
+
+    function bourdetDerivative(points, L = 0.15) {
+      if (!points?.length) return [];
+      const clean = points.filter(point => point.dt > 0 && point.deltaP > 0);
+      if (clean.length < 3) return derivativePoints(points);
+      const result = [];
+      for (let i = 0; i < clean.length; i += 1) {
+        const ti = clean[i].dt;
+        let bestJ = Math.max(0, i - 1);
+        let bestK = Math.min(clean.length - 1, i + 1);
+        let bestScore = Infinity;
+        for (let j = 0; j < i; j += 1) {
+          const dLj = Math.log10(ti / clean[j].dt);
+          if (dLj <= 0) continue;
+          for (let k = i + 1; k < clean.length; k += 1) {
+            const dLk = Math.log10(clean[k].dt / ti);
+            if (dLk <= 0) continue;
+            const score = Math.abs(dLj - L) + Math.abs(dLk - L);
+            if (score < bestScore) {
+              bestScore = score;
+              bestJ = j;
+              bestK = k;
+            }
+          }
+        }
+        const denom = Math.log(clean[bestK].dt) - Math.log(clean[bestJ].dt);
+        if (denom <= 0) continue;
+        const derivative = (clean[bestK].deltaP - clean[bestJ].deltaP) / denom;
+        const slope = localLogSlope(clean, i, "deltaP");
+        result.push({...clean[i], derivative, slope, bourdetJ: bestJ, bourdetK: bestK});
       }
       return result;
     }
@@ -2001,6 +2173,9 @@
       else notes.push("Fit window has few points.");
       if (context.regimes.some(regime => regime.name === "radial flow")) score += 18;
       else notes.push("No confident radial-flow window detected.");
+      if (context.modelCheck?.agreement === "good") { score += 12; notes.push("Horner and Bourdet derivative k agree within 20%."); }
+      else if (context.modelCheck?.agreement === "moderate") { score += 4; notes.push("Horner and derivative k differ moderately; review fit window and Bourdet L."); }
+      else if (context.modelCheck?.agreement === "poor") { score -= 10; notes.push("Horner and derivative k disagree; treat as screening only."); }
       if (context.points.length >= 10) score += 8;
       const alerts = (context.quality || []).filter(check => check.severity === "alert").length;
       const warnings = (context.quality || []).filter(check => check.severity === "warn").length;
@@ -2039,6 +2214,18 @@
       const temp = temperatureAnomalyFlag();
       checks.push(qc(temp ? "warn" : "ok", "Temperature anomalies", temp || "No temperature jump above 10 F between adjacent readings."));
       checks.push(qc(state.analysis ? "ok" : "warn", "Buildup availability", state.analysis ? "Detected a usable flow plus shut-in sequence." : "Need flow followed by at least 4 shut-in points for Horner and derivative analysis."));
+      const spikeCount = applySpikeFilter(state.rows).filter(row => row.spikeCorrected).length;
+      checks.push(qc(spikeCount ? "warn" : "ok", "Gauge spike filter", spikeCount ? `${spikeCount} pressure point(s) replaced by local median (${els.spikeFilter?.value || "none"} mode).` : "No despiked pressure points in the active filter mode."));
+      if (state.analysis?.modelCheck) {
+        const agreement = state.analysis.modelCheck.agreement;
+        checks.push(qc(agreement === "poor" ? "warn" : agreement === "good" ? "ok" : agreement === "moderate" ? "warn" : "ok", "Horner vs derivative k", agreement === "good"
+          ? `Horner k ${fmt(state.analysis.k, 2)} md and derivative k ${fmt(state.analysis.kDerivative, 2)} md agree within ${fmt(state.analysis.modelCheck.deltaKPct, 1)}%.`
+          : agreement === "moderate"
+            ? `Horner k ${fmt(state.analysis.k, 2)} md and derivative k ${fmt(state.analysis.kDerivative, 2)} md differ by ${fmt(state.analysis.modelCheck.deltaKPct, 1)}%; review Bourdet L and fit window.`
+            : agreement === "poor"
+              ? `Horner k ${fmt(state.analysis.k, 2)} md and derivative k ${fmt(state.analysis.kDerivative, 2)} md differ by ${fmt(state.analysis.modelCheck.deltaKPct, 1)}%; do not finalize without review.`
+              : "Need both Horner and Bourdet derivative plateau estimates."));
+      }
       const suitability = suitabilityFlag(checks, state.analysis);
       checks.push(qc(suitability.severity, "Interpretation suitability", suitability.detail));
       return checks;
@@ -2054,6 +2241,7 @@
       if (!analysis) return {severity: "warn", detail: "Screening only: no usable buildup analysis yet."};
       if (alerts || warnings > 3 || analysis.fit.r2 < 0.94) return {severity: "warn", detail: "Screening only: resolve QC flags and validate rate/gauge history before final interpretation."};
       if (!analysis.regimes.some(regime => regime.name === "radial flow")) return {severity: "warn", detail: "Screening only: no clear radial-flow window identified."};
+      if (analysis.modelCheck?.agreement === "poor") return {severity: "warn", detail: "Screening only: Horner and Bourdet derivative permeability disagree materially."};
       return {severity: "ok", detail: "Candidate for final interpretation after engineering review of gauges, rates, phase behavior, and assumptions."};
     }
 
@@ -2102,10 +2290,12 @@
       renderTrend();
       renderHorner();
       renderDerivative();
+      renderSemilog();
       renderQuality();
       renderDiagnostics();
       renderRegimes();
       renderSuperposition();
+      renderModelComparison();
       renderStepRate();
       renderBuildupComparison();
       renderEvents();
@@ -2235,10 +2425,10 @@
         yLabel: "BHP psi"
       });
       els.hornerSummary.innerHTML = `
-        <strong>Last buildup:</strong> ${fmt(analysis.buildup.durationHr, 2)} hr after equivalent ${fmt(analysis.equivalentFlowTime, 2)} hr production at reference ${fmt(analysis.q, 1)} bpd.
+        <strong>Buildup #${analysis.buildup.number}:</strong> ${fmt(analysis.buildup.durationHr, 2)} hr after equivalent ${fmt(analysis.equivalentFlowTime, 2)} hr production at reference ${fmt(analysis.q, 1)} bpd.
         Fit window ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr, ${analysis.selected.length} points, R2 ${fmt(analysis.fit.r2, 3)}, standard error ${fmt(analysis.fit.stderr, 1)} psi.
         Slope ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}, p* ${fmt(analysis.pStar, 1)} psi +/- ${fmt(analysis.fit.interceptStdErr, 1)}.
-        kh ${fmt(analysis.kh, 1)} md-ft, k ${fmt(analysis.k, 2)} md, skin ${fmt(analysis.skin, 1)}, PI ${fmt(analysis.pi, 3)} bpd/psi.
+        Horner k ${fmt(analysis.k, 2)} md, derivative k ${fmt(analysis.kDerivative, 2)} md (Bourdet L ${fmt(analysis.bourdetL, 2)}), skin ${fmt(analysis.skin, 1)}, PI ${fmt(analysis.pi, 3)} bpd/psi.
       `;
     }
 
@@ -2270,7 +2460,8 @@
       els.confidenceBar.style.setProperty("--w", `${analysis.confidence.score}%`);
       els.confidenceNotes.textContent = analysis.confidence.notes.join(" ");
       const notes = [];
-      notes.push(`Derivative screen: ${Number.isFinite(analysis.plateau) ? `middle-time derivative around ${fmt(analysis.plateau, 1)} psi` : "not enough stable derivative points"}.`);
+      notes.push(`Bourdet derivative (L=${fmt(analysis.bourdetL, 2)}): ${Number.isFinite(analysis.plateau) ? `middle-time plateau around ${fmt(analysis.plateau, 1)} psi` : "not enough stable derivative points"}.`);
+      notes.push(`Permeability cross-check: Horner ${fmt(analysis.k, 2)} md vs derivative ${fmt(analysis.kDerivative, 2)} md (${analysis.modelCheck?.agreement || "n/a"} agreement).`);
       notes.push(`Radius of investigation estimate at last shut-in point: ${Number.isFinite(analysis.investigationRadius) ? `${fmt(analysis.investigationRadius, 0)} ft` : "not available"}.`);
       notes.push(analysis.regimes.length ? `Likely regimes: ${analysis.regimes.map(regime => `${regime.name} (${regime.confidence})`).join(", ")}.` : "No flow regime was identified with useful confidence.");
       notes.push(Math.abs(analysis.skin) > 15 ? "Skin magnitude is large; check completion damage/stimulation, multiphase cleanup, or fluid inputs." : "Skin is in a moderate screening range.");
@@ -2301,11 +2492,43 @@
       const rateChanges = analysis.flowPeriods.length;
       els.superpositionBox.textContent = [
         `Reference rate: ${fmt(analysis.q, 1)} bpd.`,
-        `Detected ${rateChanges} flowing/restart/cleanup period(s) before the active buildup.`,
+        `Active buildup: #${analysis.buildup.number} starting ${formatTime(analysis.buildup.start.timeMs)}.`,
+        `Detected ${rateChanges} flowing/restart/cleanup period(s) before the selected buildup.`,
         `Buildup Horner points use rate-history superposition based on stage-by-stage Δq rather than equivalent-flow-time-only screening.`,
         `Equivalent flow time shown (${fmt(analysis.equivalentFlowTime, 2)} hr) remains as a planning indicator, while the fit itself uses the rate-history superposition ratio.`,
         `For final work, still verify all rate steps, separator shrinkage, gas allocation, phase behavior, and any gauge drift.`
       ].join("\n\n");
+    }
+
+    function renderSemilog() {
+      const analysis = state.analysis;
+      if (!analysis || analysis.points.length < 3) {
+        els.semilogChart.innerHTML = emptySvg("Need shut-in pressure points for semilog MDH plot.");
+        return;
+      }
+      els.semilogChart.innerHTML = semilogSvg(analysis);
+    }
+
+    function renderModelComparison() {
+      const analysis = state.analysis;
+      if (!analysis?.modelCheck?.rows?.length) {
+        els.modelCompareSummary.textContent = "Load a buildup to compare Horner, Bourdet derivative, and storage indicators.";
+        els.modelCompareBody.innerHTML = '<tr><td colspan="5" class="muted">No model comparison yet.</td></tr>';
+        return;
+      }
+      const lines = [];
+      lines.push(`Model agreement: ${analysis.modelCheck.agreement}.`);
+      if (Number.isFinite(analysis.modelCheck.deltaKPct)) lines.push(`Horner vs derivative permeability delta: ${fmt(analysis.modelCheck.deltaKPct, 1)}%.`);
+      if (analysis.radialRegime) lines.push(`Radial-flow window from Bourdet screen: ${fmt(analysis.radialRegime.startDt, 3)}-${fmt(analysis.radialRegime.endDt, 3)} hr (${analysis.radialRegime.confidence}).`);
+      if (Number.isFinite(analysis.wellboreStorageCoeff)) lines.push(`Early-time storage indicator: ${fmt(analysis.wellboreStorageCoeff, 1)} bbl/psi (screening only).`);
+      els.modelCompareSummary.textContent = lines.join("\n\n");
+      els.modelCompareBody.innerHTML = analysis.modelCheck.rows.map(row => `<tr>
+        <td>${escapeHtml(row.method)}</td>
+        <td>${fmt(row.k, 2)}</td>
+        <td>${fmt(row.skin, 1)}</td>
+        <td>${escapeHtml(row.basis)}</td>
+        <td><span class="badge ${row.status === "primary" ? "flow" : row.status === "cross-check" ? "cleanup" : row.status === "indicator" ? "restart" : "shutin"}">${escapeHtml(row.status)}</span></td>
+      </tr>`).join("");
     }
 
     function renderQuality() {
@@ -2529,6 +2752,16 @@
       const yMax = Math.max(...all.map(p => p.y));
       const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
       const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
+      const anchorX = derivative.length ? derivative[Math.floor(derivative.length * 0.35)]?.x || xMin : xMin;
+      const anchorY = derivative.length ? derivative[Math.floor(derivative.length * 0.35)]?.y || yMin : yMin;
+      const unitSlope = anchorX > 0 && anchorY > 0 ? [
+        {x: xMin, y: anchorY * (xMin / anchorX)},
+        {x: xMax, y: anchorY * (xMax / anchorX)}
+      ] : [];
+      const halfSlope = anchorX > 0 && anchorY > 0 ? [
+        {x: xMin, y: anchorY * Math.sqrt(xMin / anchorX)},
+        {x: xMax, y: anchorY * Math.sqrt(xMax / anchorX)}
+      ] : [];
       const labels = regimes.map((regime, index) => {
         const x = xScale(Math.sqrt(regime.startDt * Math.max(regime.endDt, regime.startDt)));
         const y = pad.t + 18 + index * 15;
@@ -2536,12 +2769,48 @@
       }).join("");
       return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
         ${makeGrid(width, height, pad)}
+        ${unitSlope.length ? `<path d="${pathFor(unitSlope, xScale, yScale)}" fill="none" stroke="#7ee787" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
+        ${halfSlope.length ? `<path d="${pathFor(halfSlope, xScale, yScale)}" fill="none" stroke="#9be7ff" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.75"/>` : ""}
         <path d="${pathFor(delta, xScale, yScale)}" fill="none" stroke="#63a7ff" stroke-width="2.4"/>
         <path d="${pathFor(derivative, xScale, yScale)}" fill="none" stroke="#ffba66" stroke-width="2.4"/>
         ${labels}
         ${axisLabels(width, height, pad, "shut-in time hr (log)", "pressure psi (log)", "")}
         ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
         ${yTicks(value => yScale(10 ** value), Math.log10(yMin), Math.log10(yMax), pad.l, "left", value => fmt(10 ** value, 0))}
+      </svg>`;
+    }
+
+    function semilogSvg(analysis) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 68, r: 28, t: 24, b: 48};
+      const points = analysis.points.filter(point => point.dt > 0).map(point => ({
+        x: point.dt,
+        y: point.pressure,
+        selected: analysis.selected.includes(point)
+      }));
+      if (points.length < 2) return emptySvg("Need shut-in pressure points for semilog MDH plot.");
+      const xMin = Math.min(...points.map(point => point.x));
+      const xMax = Math.max(...points.map(point => point.x));
+      const yMin = Math.min(...points.map(point => point.y));
+      const yMax = Math.max(...points.map(point => point.y));
+      const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
+      const yScale = makeScale(yMin, yMax, height - pad.b, pad.t);
+      const selected = analysis.selected.filter(point => point.dt > 0);
+      const mdhFit = selected.length >= 2
+        ? linearRegression(selected.map(point => Math.log10(point.dt)), selected.map(point => point.pressure))
+        : null;
+      const fitLine = mdhFit ? [
+        {x: xMin, y: mdhFit.intercept + mdhFit.slope * Math.log10(Math.max(xMin, 1e-6))},
+        {x: xMax, y: mdhFit.intercept + mdhFit.slope * Math.log10(Math.max(xMax, 1e-6))}
+      ] : [];
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        ${fitLine.length ? `<path d="${pathFor(fitLine, xScale, yScale)}" fill="none" stroke="#3dd7b6" stroke-width="2.2" stroke-dasharray="7 5"/>` : ""}
+        ${points.map(point => `<circle cx="${xScale(point.x)}" cy="${yScale(point.y)}" r="${point.selected ? 4.2 : 3}" fill="${point.selected ? "#ffba66" : "#63a7ff"}" opacity="${point.selected ? "0.95" : "0.65"}"/>`).join("")}
+        ${axisLabels(width, height, pad, "shut-in time hr (log)", "BHP psi", "")}
+        ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
+        ${yTicks(yScale, yMin, yMax, pad.l, "left")}
       </svg>`;
     }
 
@@ -2635,7 +2904,7 @@
     }
 
     function exportAllPlots() {
-      ["trendChart", "hornerChart", "derivativeChart", "stepRateChart", "injectivityChart"].forEach((chartId, index) => setTimeout(() => exportPlotAsPng(chartId), index * 250));
+      ["trendChart", "hornerChart", "derivativeChart", "semilogChart", "stepRateChart", "injectivityChart"].forEach((chartId, index) => setTimeout(() => exportPlotAsPng(chartId), index * 250));
     }
 
     /* Report, case save/load, and export */
@@ -2677,7 +2946,11 @@
         `HORNER RESULTS`,
         analysis ? `Fit window: ${fmt(analysis.window.start, 2)}-${fmt(analysis.window.end, 2)} hr; points: ${analysis.selected.length}; R2: ${fmt(analysis.fit.r2, 3)}; standard error: ${fmt(analysis.fit.stderr, 1)} psi.` : `No usable Horner buildup detected.`,
         analysis ? `p*: ${fmt(analysis.pStar, 1)} psi +/- ${fmt(analysis.fit.interceptStdErr, 1)}; slope: ${fmt(analysis.m, 2)} psi/cycle +/- ${fmt(analysis.fit.slopeStdErr, 2)}.` : ``,
-        analysis ? `kh: ${fmt(analysis.kh, 1)} md-ft; k: ${fmt(analysis.k, 2)} md; skin: ${fmt(analysis.skin, 1)}; PI: ${fmt(analysis.pi, 3)} bpd/psi.` : ``,
+        analysis ? `Horner k: ${fmt(analysis.k, 2)} md; Bourdet derivative k: ${fmt(analysis.kDerivative, 2)} md (L=${fmt(analysis.bourdetL, 2)}); skin: ${fmt(analysis.skin, 1)}; PI: ${fmt(analysis.pi, 3)} bpd/psi.` : ``,
+        analysis?.modelCheck ? `Model agreement: ${analysis.modelCheck.agreement}${Number.isFinite(analysis.modelCheck.deltaKPct) ? ` (${fmt(analysis.modelCheck.deltaKPct, 1)}% k delta)` : ""}.` : ``,
+        ``,
+        `DERIVATIVE / MODEL CROSS-CHECK`,
+        analysis?.modelCheck?.rows?.length ? analysis.modelCheck.rows.map(row => `${row.method}: k ${fmt(row.k, 2)} md, skin ${fmt(row.skin, 1)} - ${row.basis} [${row.status}]`).join("\n") : `No model cross-check available.`,
         ``,
         `DERIVATIVE INTERPRETATION`,
         analysis && analysis.regimes.length ? analysis.regimes.map(regime => `${regime.name}: ${fmt(regime.startDt, 3)}-${fmt(regime.endDt, 3)} hr (${regime.confidence}) - ${regime.basis}`).join("\n") : `No confident flow-regime labels identified.`,
@@ -2712,7 +2985,7 @@
       const analysis = state.analysis;
       const suitability = state.quality.find(check => check.check === "Interpretation suitability");
       if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup was detected.";
-      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
+      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md (derivative k ${fmt(analysis.kDerivative, 2)} md) and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
     }
 
     function reportToHtml(report) {
@@ -2833,7 +3106,12 @@
         perforatedBaseFt: inputNumber("perfBase", NaN),
         tubingIdIn: inputNumber("tubingId", 2.441),
         packerDepthFt: inputNumber("packerDepth", NaN),
-        wellboreVolumeBbl: inputNumber("wellboreVolume", computedWellboreVolume())
+        wellboreVolumeBbl: inputNumber("wellboreVolume", computedWellboreVolume()),
+        bourdetSmoothing: inputNumber("bourdetSmoothing", 0.15),
+        spikeFilter: els.spikeFilter?.value || "standard",
+        hornerStartHr: inputNumber("hornerStart", 0.25),
+        hornerEndHr: inputNumber("hornerEnd", 999),
+        activeBuildupKey: els.buildupSelect?.value || ""
       };
       return inputs;
     }
@@ -2852,11 +3130,14 @@
         totalCompressibilityPsiInv: "ct", wellboreRadiusFt: "rw", shutInThresholdBpd: "shutThreshold",
         gasToLiquidEquivalent: "gasFactor", zFactor: "zFactor", perforatedTopFt: "perfTop",
         perforatedBaseFt: "perfBase", tubingIdIn: "tubingId", packerDepthFt: "packerDepth",
-        wellboreVolumeBbl: "wellboreVolume"
+        wellboreVolumeBbl: "wellboreVolume", bourdetSmoothing: "bourdetSmoothing",
+        hornerStartHr: "hornerStart", hornerEndHr: "hornerEnd"
       };
       Object.entries(map).forEach(([key, id]) => {
         if (inputs[key] !== undefined && Number.isFinite(Number(inputs[key])) && els[id]) els[id].value = inputs[key];
       });
+      if (inputs.spikeFilter && els.spikeFilter) els.spikeFilter.value = inputs.spikeFilter;
+      if (inputs.activeBuildupKey && els.buildupSelect) els.buildupSelect.value = inputs.activeBuildupKey;
     }
 
     function applyUnits(units) {
@@ -2882,7 +3163,11 @@
         standardErrorPsi: a.fit.stderr,
         khMdFt: a.kh,
         permeabilityMd: a.k,
+        derivativePermeabilityMd: a.kDerivative,
         skin: a.skin,
+        derivativeSkin: a.skinDerivative,
+        bourdetSmoothing: a.bourdetL,
+        modelCheck: a.modelCheck,
         productivityIndexBpdPerPsi: a.pi,
         buildupDurationHr: a.buildup.durationHr,
         equivalentFlowTimeHr: a.equivalentFlowTime,
