@@ -669,6 +669,7 @@
       <button class="tab" data-tab="diagnostics">Diagnostics</button>
       <button class="tab" data-tab="steprate">Step-rate</button>
       <button class="tab" data-tab="reporting">Report</button>
+      <button class="tab" data-tab="extend">Extend</button>
     </nav>
 
     <section id="connect" class="tab-panel active">
@@ -1324,10 +1325,73 @@
         </div>
       </div>
     </section>
+
+    <section id="extend" class="tab-panel">
+      <div class="grid">
+        <div class="card span-12">
+          <h2>AI / developer prompts for extending this app</h2>
+          <div class="callout">
+            Copy these prompts into Cursor, Copilot, or another coding assistant when you add modules, fix bugs, or refactor <span class="mono">dst-pressure-transient-analysis-pro-v2.11.html</span>. They keep the app local-first, single-file, and engineering-grade. Append your specific request after the prompt (for example: “Add variable-rate superposition” or “CSV upload returns empty plots”).
+          </div>
+          <div class="row" style="margin:0.75rem 0 1rem">
+            <button id="downloadDevPrompts" class="primary">Download all prompts (.txt)</button>
+            <button id="copyAllDevPrompts">Copy all prompts</button>
+          </div>
+        </div>
+        <div class="card span-4">
+          <h3 style="margin:0 0 0.5rem;font-size:1rem">New feature</h3>
+          <p class="help" style="margin-top:0">Use for modules such as variable-rate superposition, boundary-onset detection, composite/dual-porosity screening, Bayesian uncertainty, or exportable reports.</p>
+          <pre id="devPromptFeature" class="report" style="min-height:9rem;font-size:0.82rem;margin:0.65rem 0"></pre>
+          <button id="copyDevPromptFeature" class="small">Copy feature prompt</button>
+        </div>
+        <div class="card span-4">
+          <h3 style="margin:0 0 0.5rem;font-size:1rem">Bug fix</h3>
+          <p class="help" style="margin-top:0">Use when upload, calculations, plots, period detection, exports, rate/time handling, or unit conversion misbehaves.</p>
+          <pre id="devPromptBug" class="report" style="min-height:9rem;font-size:0.82rem;margin:0.65rem 0"></pre>
+          <button id="copyDevPromptBug" class="small">Copy bug-fix prompt</button>
+        </div>
+        <div class="card span-4">
+          <h3 style="margin:0 0 0.5rem;font-size:1rem">Refactor</h3>
+          <p class="help" style="margin-top:0">Use when you want cleaner structure around QC, Horner, boundary, or uncertainty logic without changing user-facing behavior.</p>
+          <pre id="devPromptRefactor" class="report" style="min-height:9rem;font-size:0.82rem;margin:0.65rem 0"></pre>
+          <button id="copyDevPromptRefactor" class="small">Copy refactor prompt</button>
+        </div>
+        <div class="card span-12">
+          <h3 style="margin:0 0 0.5rem;font-size:1rem">How to use</h3>
+          <ol class="help" style="margin:0;padding-left:1.2rem;line-height:1.55">
+            <li>Pick <strong>Feature</strong>, <strong>Bug fix</strong>, or <strong>Refactor</strong> and copy the prompt.</li>
+            <li>Add one concrete sentence: what to build, what is broken, or what to clean up.</li>
+            <li>Require visible outputs in plots and summary panels when Horner, derivative, boundary, composite, or uncertainty logic changes.</li>
+            <li>Verify import → QC → periods → analysis → report still works on a demo case after the change.</li>
+          </ol>
+          <p class="help" style="margin:0.75rem 0 0">Current file: <span class="mono">dst-pressure-transient-analysis-pro-v2.11.html</span> | App version <span id="extendAppVersion">—</span> | Offline/local-first — no server required.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
-    const APP_VERSION = "2.11.0";
+    const APP_VERSION = "2.11.1";
+    const DEV_PROMPTS = {
+      feature: [
+        "Add this feature to my DST/PTA app. Keep it local-first, single-file HTML/JavaScript, and preserve all existing behavior.",
+        "Make the feature engineering-grade, transparent, and visible in the plots and summary panels.",
+        "Do not break existing import, QC, Horner, derivative, or report logic."
+      ].join(" "),
+      bug: [
+        "Fix this bug in my DST/PTA app with the smallest safe change.",
+        "Keep the offline/local-first workflow intact and do not break any existing calculations, plots, or imports.",
+        "First identify the root cause, then patch it and verify the affected workflow still works."
+      ].join(" "),
+      refactor: [
+        "Refactor this DST pressure transient analysis app to make the code cleaner, more modular, and easier to extend, but do not change the user-facing behavior.",
+        "Keep it as a single-file HTML/JavaScript app unless there is a strong reason not to.",
+        "Split logic into readable functions, reduce duplication, standardize naming, and keep calculations traceable for engineering review.",
+        "Preserve all outputs, plots, and gating logic.",
+        "If you improve structure, make sure the app still behaves exactly the same from the user's perspective."
+      ].join(" ")
+    };
+
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1399,6 +1463,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       fieldIds.forEach(id => els[id] = document.getElementById(id));
       bindEvents();
+      renderDevPrompts();
       setManualTimeNow();
       setEventTimeNow();
       loadSavedCase();
@@ -1457,6 +1522,11 @@
       document.getElementById("exportAllPlots").addEventListener("click", exportAllPlots);
       document.getElementById("downloadEngineerTable")?.addEventListener("click", downloadEngineerTable);
       document.getElementById("downloadFormalPackage")?.addEventListener("click", downloadFormalReportPackage);
+      document.getElementById("copyDevPromptFeature")?.addEventListener("click", () => copyDevPrompt("feature"));
+      document.getElementById("copyDevPromptBug")?.addEventListener("click", () => copyDevPrompt("bug"));
+      document.getElementById("copyDevPromptRefactor")?.addEventListener("click", () => copyDevPrompt("refactor"));
+      document.getElementById("copyAllDevPrompts")?.addEventListener("click", copyAllDevPrompts);
+      document.getElementById("downloadDevPrompts")?.addEventListener("click", downloadDevPrompts);
       document.getElementById("addEvent").addEventListener("click", addEvent);
       document.getElementById("clearEvents").addEventListener("click", () => {
         state.events = [];
@@ -1535,6 +1605,56 @@
     function showTab(tabName) {
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === tabName));
       document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabName));
+    }
+
+    function renderDevPrompts() {
+      const featureEl = document.getElementById("devPromptFeature");
+      const bugEl = document.getElementById("devPromptBug");
+      const refactorEl = document.getElementById("devPromptRefactor");
+      const versionEl = document.getElementById("extendAppVersion");
+      if (featureEl) featureEl.textContent = DEV_PROMPTS.feature;
+      if (bugEl) bugEl.textContent = DEV_PROMPTS.bug;
+      if (refactorEl) refactorEl.textContent = DEV_PROMPTS.refactor;
+      if (versionEl) versionEl.textContent = APP_VERSION;
+    }
+
+    function devPromptsExportText() {
+      return [
+        "DST PTA Pro — developer / AI assistant prompts",
+        `App version: ${APP_VERSION}`,
+        `File: dst-pressure-transient-analysis-pro-v2.11.html`,
+        "",
+        "=== NEW FEATURE ===",
+        DEV_PROMPTS.feature,
+        "",
+        "Examples: variable-rate superposition; boundary-onset detection; composite or dual-porosity screening; Bayesian uncertainty; exportable reports.",
+        "",
+        "=== BUG FIX ===",
+        DEV_PROMPTS.bug,
+        "",
+        "Examples: file upload not working; wrong volume or pressure calculation; empty plots; wrong period detection; broken export buttons; incorrect rate or time handling.",
+        "",
+        "=== REFACTOR ===",
+        DEV_PROMPTS.refactor,
+        "",
+        "Examples: cleaner code structure; easier maintenance; better separation between QC, analysis, and reporting; less duplicated Horner/boundary/uncertainty logic."
+      ].join("\n");
+    }
+
+    async function copyDevPrompt(kind) {
+      const text = DEV_PROMPTS[kind];
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      alert(`Copied ${kind} prompt to clipboard. Add your specific request on the next line.`);
+    }
+
+    async function copyAllDevPrompts() {
+      await navigator.clipboard.writeText(devPromptsExportText());
+      alert("Copied all developer prompts to clipboard.");
+    }
+
+    function downloadDevPrompts() {
+      download(`dst-pta-dev-prompts-v${APP_VERSION}-${stamp()}.txt`, devPromptsExportText(), "text/plain");
     }
 
     /* Parsing and unit normalization */

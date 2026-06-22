@@ -22,3 +22,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 | `Carbonate Acid Job Calculator.html` | Carbonate acid job planner |
 
 Open any `.html` file in a browser — no build step required.
+
+### Extending DST PTA Pro
+
+Use the **Extend** tab inside `dst-pressure-transient-analysis-pro-v2.11.html` for copy-paste **Feature**, **Bug fix**, and **Refactor** prompts (or download them as `.txt`). Cursor agents also read `.cursor/rules/dst-pta.mdc` when editing PTA HTML files.
