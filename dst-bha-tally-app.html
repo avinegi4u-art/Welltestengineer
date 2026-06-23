@@ -373,8 +373,14 @@
     }
     .inventory-table th { font-size: 0.72rem; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
     .inventory-table .inv-desc { text-align: left; min-width: 10rem; max-width: 18rem; }
-    .diagram-wrap { overflow: auto; padding: var(--space-2); max-height: 85vh; }
-    .diagram-wrap svg { min-width: 720px; display: block; }
+    .diagram-wrap {
+      overflow: hidden; padding: var(--space-2);
+      max-height: calc(100dvh - 11rem); min-height: 420px;
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .diagram-wrap svg { width: 100%; height: auto; max-height: calc(100dvh - 12rem); min-width: 0; display: block; }
+    #tab-diagram .card { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - 9rem); }
+    #tab-diagram .diagram-wrap { flex: 1 1 auto; min-height: 0; }
     .save-dot {
       font-size: var(--text-xs); color: var(--color-text-muted); padding: .35rem .6rem;
       border-radius: var(--radius-full); background: var(--color-surface-offset);
@@ -575,6 +581,10 @@
                 <div class="field"><label for="formation">Formation</label><input id="formation" placeholder="e.g. Panna / Sandstone"></div>
                 <div class="field"><label for="engineer">Engineer</label><input id="engineer" placeholder="Name"></div>
                 <div class="field"><label for="jobDate">Date</label><input id="jobDate" type="date"></div>
+                <div class="field"><label for="wellMdFt">Well depth MD</label><input id="wellMdFt" type="number" step="0.1" placeholder="e.g. 12500"><small>ft</small></div>
+                <div class="field"><label for="wellTvdFt">Well depth TVD</label><input id="wellTvdFt" type="number" step="0.1" placeholder="e.g. 11800"><small>ft</small></div>
+                <div class="field"><label for="perfTopFt">Perforation top MD</label><input id="perfTopFt" type="number" step="0.1" placeholder="Top of perf"><small>ft</small></div>
+                <div class="field"><label for="perfBottomFt">Perforation bottom MD</label><input id="perfBottomFt" type="number" step="0.1" placeholder="Bottom of perf"><small>ft</small></div>
                 <div class="field"><label for="objective">Test objective</label><input id="objective" placeholder="e.g. DST flow test"></div>
               </div>
             </article>
@@ -951,7 +961,7 @@
     const INVENTORY_SECTION_META = [
       { key: 'dstTools', title: 'DST Tool Inventory' },
       { key: 'tubing', title: 'Tubing Inventory' },
-      { key: 'upJoint', title: 'Up Joint Inventory' },
+      { key: 'upJoint', title: 'Pup Joint Inventory' },
       { key: 'xover', title: 'X-over Inventory' },
       { key: 'sampling', title: 'Sampling Inventory' },
       { key: 'gauge', title: 'Gauge Inventory' },
@@ -1002,6 +1012,7 @@
       well: {
         name: '', customer: '', field: '', rig: '', formation: '', dstRun: '', engineer: '', date: '',
         objective: '', fluidPpg: 17.2, datumElev: 0, hangoff: 0, depthMode: 'imported',
+        wellMdFt: '', wellTvdFt: '', perfTopFt: '', perfBottomFt: '',
         steelPpg: STEEL_PPG_DEFAULT, fluidLevelMd: 0,
         casingOd: '', casings: [], tubingNom: '3-1/2', displayUnit: 'm', hydBasis: 'bottom', notes: ''
       },
@@ -1161,30 +1172,29 @@
     }
 
     function annotateRunningTubingDisplay(rows) {
-      const out = rows.map(r => ({ ...r, isTubing: isRunningCosmoTubing(r), displayJoint: '', displayStand: '', standRowspan: 1, renderStandCell: true }));
+      const out = rows.map(r => ({ ...r, isTubing: isRunningCosmoTubing(r), displayJoint: '', displayStand: '', renderStandCell: true }));
       let tubingN = 0;
       for (let i = 0; i < out.length; i++) {
-        if (!out[i].isTubing) {
-          out[i].renderStandCell = true;
-          continue;
-        }
+        if (!out[i].isTubing) continue;
         tubingN++;
         out[i].displayJoint = String(tubingN);
         const posInStand = (tubingN - 1) % 3;
-        if (posInStand === 0) {
-          let span = 1;
-          for (let j = i + 1; j < out.length && out[j].isTubing; j++) {
-            span++;
-            if (span >= 3) break;
-          }
-          out[i].displayStand = String(Math.ceil(tubingN / 3));
-          out[i].standRowspan = span;
-          out[i].renderStandCell = true;
-        } else {
-          out[i].renderStandCell = false;
-        }
+        out[i].displayStand = posInStand === 2 ? String(Math.ceil(tubingN / 3)) : '';
       }
       return out;
+    }
+
+    function mapInventoryLabelToKey(label) {
+      const t = String(label || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!t) return null;
+      return matchInventorySectionHeader(t) || null;
+    }
+
+    function isInventoryHeaderRow(row) {
+      const line = (row || []).map(normHeaderCell);
+      if (!line.some(Boolean)) return false;
+      const keys = ['description', 'item', 'tool', 'part', 'material', 'name', 'qty', 'quantity', 'serial', 'od', 'id', 'length', 'section'];
+      return keys.filter(k => line.some(h => h.includes(k))).length >= 2;
     }
 
     function matchInventorySectionHeader(text) {
@@ -1192,9 +1202,9 @@
       if (!t || t.length > 120) return null;
       if (/consumable/.test(t) && /critical/.test(t)) return 'consumables';
       if (/^consumables?\b/.test(t)) return 'consumables';
-      if (/dst\s*tool/.test(t) || /^tool\s*inventory/.test(t)) return 'dstTools';
+      if (/dst\s*tool|bha\s*tool|dst\s*equipment|^dst\b/.test(t) || /^tool\s*inventory/.test(t)) return 'dstTools';
       if (/tubing\s*inventory/.test(t) || /^tubing\b/.test(t)) return 'tubing';
-      if (/up\s*joint/.test(t)) return 'upJoint';
+      if (/pup\s*joint|up\s*joint/.test(t)) return 'upJoint';
       if (/x-?over|cross\s*over/.test(t)) return 'xover';
       if (/sampl/.test(t)) return 'sampling';
       if (/gauge/.test(t)) return 'gauge';
@@ -1204,24 +1214,26 @@
     function matchSheetNameToInventorySection(name) {
       const t = String(name || '').toLowerCase();
       if (/consumable/.test(t)) return 'consumables';
-      if (/dst\s*tool|^tools?$/.test(t)) return 'dstTools';
+      if (/dst\s*tool|^tools?$|^bha$|dst\s*equipment/.test(t)) return 'dstTools';
       if (/tubing/.test(t)) return 'tubing';
-      if (/up\s*joint/.test(t)) return 'upJoint';
+      if (/pup\s*joint|up\s*joint/.test(t)) return 'upJoint';
       if (/x-?over|crossover/.test(t)) return 'xover';
       if (/sampl/.test(t)) return 'sampling';
       if (/gauge/.test(t)) return 'gauge';
       return null;
     }
 
-    function classifyInventorySection(name, cat) {
+    function classifyInventorySection(name, cat, sectionHint) {
+      if (sectionHint) return sectionHint;
       const n = String(name || '').toLowerCase();
       const c = String(cat || guessCat(name) || '').toLowerCase();
-      if (/consumable|critical|o-?ring|element|backup\s*ring|seal\s*kit/i.test(n)) return 'consumables';
-      if (/up\s*joint|upper\s*joint/i.test(n)) return 'upJoint';
-      if (/sample|scar-|sampling/i.test(n) || /sampling/i.test(c)) return 'sampling';
-      if ((/gauge|dga-|symphony\s*measure/i.test(n) || /gauge/i.test(c)) && !/sample/i.test(n)) return 'gauge';
+      if (/consumable|critical|o-?ring|backup\s*ring|seal\s*kit|element\b/i.test(n)) return 'consumables';
+      if (/pup\s*joint|pup\s*jt|up\s*joint/i.test(n)) return 'upJoint';
+      if (/sample\s*carrier|scar-|sampling/i.test(n) || /sampling/i.test(c)) return 'sampling';
+      if (/gauge\s*carrier|dga-|symphony\s*measure/i.test(n) || (/gauge/i.test(c) && !/valve/i.test(n))) return 'gauge';
       if (/x-?over|crossover/i.test(n) || c.includes('x-over')) return 'xover';
-      if (/tubing|tub\s*joint|blast\s*joint/i.test(n) || c === 'tubing') return 'tubing';
+      if ((/^(tubing|tub\s*joint|blast\s*joint)\b|3[\s-]*1\/2.*tubing/i.test(n) && !/valve|packer|fill|test/i.test(n))
+        || (c === 'tubing' && !/valve/i.test(n))) return 'tubing';
       return 'dstTools';
     }
 
@@ -1255,14 +1267,14 @@
       return INVENTORY_SECTION_META.reduce((n, s) => n + (sections[s.key]?.length || 0), 0);
     }
 
-    function parseInventoryItemRows(rows) {
+    function parseInventoryItemRows(rows, forcedSection) {
       if (!rows?.length) return [];
       const hi = findHeaderRow(rows);
       if (hi < 0) return [];
       const header = (rows[hi] || []).map(normHeaderCell);
-      const nameI = pickCol(header, ['description', 'item description', 'item', 'tool', 'part', 'material', 'name', 'component']);
-      const qtyI = pickCol(header, ['qty', 'quantity', 'count', 'on hand', 'available', 'no on rig']);
-      const serialI = pickCol(header, ['serial', 's n', 'serial no', 'tool serial', 'serial number']);
+      const nameI = pickCol(header, ['description', 'item description', 'item', 'tool', 'part', 'material', 'name', 'component', 'tool description']);
+      const qtyI = pickCol(header, ['qty', 'quantity', 'count', 'on hand', 'available', 'no on rig', 'no']);
+      const serialI = pickCol(header, ['serial', 's n', 'serial no', 'tool serial', 'serial number', 'tool no', 'tool number']);
       const condI = pickCol(header, ['condition', 'status']);
       const odI = pickCol(header, ['od in', 'od', 'outer dia', 'o d']);
       const idI = pickCol(header, ['id in', 'id', 'inner dia', 'i d']);
@@ -1272,39 +1284,80 @@
       const coI = pickCol(header, ['company', 'vendor', 'manufacturer']);
       const notesI = pickCol(header, ['notes', 'remark', 'comments']);
       const catI = pickCol(header, ['category', 'type']);
+      const secI = pickCol(header, ['section', 'inventory', 'inventory type', 'tool type', 'group', 'list']);
       const lenUnit = header[lenI] && header[lenI].includes('ft') ? 'ft' : 'm';
       const out = [];
       for (const r of rows.slice(hi + 1)) {
         const cells = (r || []).map(v => String(v ?? '').trim());
-        const name = (nameI >= 0 ? cells[nameI] : '') || cells.find((c, i) => i <= 4 && c.length > 2) || '';
+        const name = (nameI >= 0 ? cells[nameI] : '') || cells.find((c, i) => i <= 5 && c.length > 2) || '';
         if (!name) continue;
-        if (matchInventorySectionHeader(name)) continue;
+        const headerSec = matchInventorySectionHeader(name);
+        if (headerSec) break;
         if (/^(total|subtotal|remarks|prepared by|end of)/i.test(name)) break;
         const length = toNum(cells[lenI]);
-        if (!length && !cells[odI] && !cells[idI] && !cells[qtyI]) continue;
-        out.push(normalizeInventoryItem({
+        if (!length && !cells[odI] && !cells[idI] && !(qtyI >= 0 && cells[qtyI]) && !forcedSection) continue;
+        const rowCat = (catI >= 0 && cells[catI]) ? cells[catI] : guessCat(name);
+        const sectionHint = forcedSection
+          || (secI >= 0 ? mapInventoryLabelToKey(cells[secI]) : null)
+          || (catI >= 0 ? mapInventoryLabelToKey(cells[catI]) : null);
+        const sec = classifyInventorySection(name, rowCat, sectionHint);
+        out.push({ section: sec, item: normalizeInventoryItem({
           name,
-          cat: (catI >= 0 && cells[catI]) ? cells[catI] : guessCat(name),
+          cat: rowCat,
           length: length || 0,
           unit: lenUnit,
           od: cleanOdId(cells[odI]),
           id: cleanOdId(cells[idI]),
           qty: qtyI >= 0 ? (toNum(cells[qtyI]) || 1) : 1,
           serial: serialI >= 0 ? cells[serialI] : '',
+          toolNo: serialI >= 0 ? cells[serialI] : '',
           condition: condI >= 0 ? cells[condI] : '',
           box: boxI >= 0 ? cells[boxI] : '',
           pin: pinI >= 0 ? cells[pinI] : '',
           company: coI >= 0 ? cells[coI] : '',
           notes: notesI >= 0 ? cells[notesI] : ''
-        }));
+        }) });
       }
       return out;
     }
 
-    function parseInventorySheetWithSectionHeaders(rows) {
+    function pushParsedInventoryRows(sections, parsedRows) {
+      let count = 0;
+      for (const row of parsedRows) {
+        const sec = row.section || classifyInventorySection(row.item.name, row.item.cat);
+        if (!sections[sec]) sections[sec] = [];
+        sections[sec].push(row.item);
+        count++;
+      }
+      return count;
+    }
+
+    function parseInventorySheetBlocks(rows) {
       const sections = emptyInventorySections();
       let current = null;
+      let headerIdx = -1;
+      let blockStart = 0;
       let count = 0;
+
+      const flushBlock = (endRow) => {
+        if (!current) return;
+        if (headerIdx >= 0) {
+          const block = rows.slice(headerIdx, endRow);
+          count += pushParsedInventoryRows(sections, parseInventoryItemRows(block, current));
+        } else if (endRow > blockStart) {
+          for (let ri = blockStart; ri < endRow; ri++) {
+            const cells = (rows[ri] || []).map(v => String(v ?? '').trim());
+            const name = cells.find(c => c.length > 2) || '';
+            if (!name || matchInventorySectionHeader(name) || /^(total|subtotal|remarks)/i.test(name)) continue;
+            sections[current].push(normalizeInventoryItem({
+              name, cat: guessCat(name), qty: toNum(cells.find(c => /^\d+$/.test(c))) || 1
+            }));
+            count++;
+          }
+        }
+        headerIdx = -1;
+      };
+
       for (let ri = 0; ri < rows.length; ri++) {
         const cells = (rows[ri] || []).map(v => String(v ?? '').trim());
         const rowText = cells.filter(Boolean).join(' ');
@@ -1314,58 +1367,65 @@
           const sec = matchInventorySectionHeader(cell);
           if (sec) { secHit = sec; break; }
         }
-        if (!secHit && cells.length <= 2) secHit = matchInventorySectionHeader(rowText);
-        if (secHit) { current = secHit; continue; }
-        if (!current) continue;
-        const name = cells.find(c => c.length > 2) || '';
-        if (!name || matchInventorySectionHeader(name)) continue;
-        if (/^(total|subtotal|remarks)/i.test(name)) continue;
-        const nums = cells.map(c => toNum(c)).filter(n => n > 0);
-        sections[current].push(normalizeInventoryItem({
-          name,
-          cat: guessCat(name),
-          length: nums[0] || 0,
-          unit: 'ft',
-          od: cells.find(c => /^\d+(\.\d+)?$/.test(c) && parseFloat(c) > 2 && parseFloat(c) < 12) || '',
-          qty: 1
-        }));
-        count++;
+        if (!secHit && cells.length <= 3) secHit = matchInventorySectionHeader(rowText);
+        if (secHit) {
+          flushBlock(ri);
+          current = secHit;
+          blockStart = ri + 1;
+          for (let j = ri + 1; j < Math.min(ri + 8, rows.length); j++) {
+            if (isInventoryHeaderRow(rows[j])) { headerIdx = j; break; }
+          }
+          continue;
+        }
+        if (current && headerIdx < 0 && isInventoryHeaderRow(rows[ri])) headerIdx = ri;
       }
+      flushBlock(rows.length);
       return { sections, count };
     }
 
     function parseInventoryFromWorkbook(wb) {
       const sections = emptyInventorySections();
+      const sheetOrder = [...wb.SheetNames].sort((a, b) => {
+        const score = n => (/inventory|stock|material/i.test(n) ? 12 : 0) + (matchSheetNameToInventorySection(n) ? 8 : 0);
+        return score(b) - score(a);
+      });
       let total = 0;
-      for (const sn of wb.SheetNames) {
+
+      for (const sn of sheetOrder) {
         const rows = sheetRows(wb, sn);
         const sheetSec = matchSheetNameToInventorySection(sn);
         if (sheetSec) {
-          const items = parseInventoryItemRows(rows);
-          sections[sheetSec].push(...items);
-          total += items.length;
+          total += pushParsedInventoryRows(sections, parseInventoryItemRows(rows, sheetSec));
           continue;
         }
-        const inline = parseInventorySheetWithSectionHeaders(rows);
-        if (inline.count > 0) {
-          mergeInventorySections(sections, inline.sections);
-          total += inline.count;
+        const blocks = parseInventorySheetBlocks(rows);
+        if (blocks.count > 0) {
+          mergeInventorySections(sections, blocks.sections);
+          total += blocks.count;
+          continue;
+        }
+        const withSectionCol = parseInventoryItemRows(rows);
+        if (withSectionCol.length) total += pushParsedInventoryRows(sections, withSectionCol);
+      }
+
+      if (!total) {
+        for (const sn of wb.SheetNames) {
+          const rows = sheetRows(wb, sn);
+          const blocks = parseInventorySheetBlocks(rows);
+          if (blocks.count > 0) {
+            mergeInventorySections(sections, blocks.sections);
+            total += blocks.count;
+          }
         }
       }
+
       if (!total) {
         const sn = wb.SheetNames.find(n => /inventory|stock|material/i.test(n)) || pickBestSheet(wb.SheetNames);
-        const rows = sheetRows(wb, sn);
-        const inline = parseInventorySheetWithSectionHeaders(rows);
-        if (inline.count > 0) {
-          mergeInventorySections(sections, inline.sections);
-          total = inline.count;
-        } else {
-          const tallyItems = extractRowsFromSheet(rows);
-          for (const item of tallyItems) {
-            const sec = classifyInventorySection(item.name, item.cat);
-            sections[sec].push(normalizeInventoryItem(item));
-            total++;
-          }
+        const tallyItems = extractRowsFromSheet(sheetRows(wb, sn));
+        for (const item of tallyItems) {
+          const sec = classifyInventorySection(item.name, item.cat);
+          sections[sec].push(normalizeInventoryItem(item));
+          total++;
         }
       }
       return { sections, total };
@@ -1759,9 +1819,7 @@
         const rowClass = isRun ? 'run-done' : (isNext ? 'run-next' : 'run-pending');
         const runCumVol = (isRun && i < prog.runCount) ? rows.slice(0, i + 1).reduce((a, x) => a + x.vol, 0) : null;
         const runCumWir = (isRun && i < prog.runCount) ? toKlbf(rows.slice(0, i + 1).reduce((a, x) => a + x.buoyedLb, 0)) : null;
-        const standCell = r.renderStandCell
-          ? `<td class="run-stand"${r.isTubing && r.standRowspan > 1 ? ` rowspan="${r.standRowspan}"` : ''}>${esc(r.displayStand)}</td>`
-          : '';
+        const standCell = `<td class="run-stand">${esc(r.displayStand)}</td>`;
         return `<tr class="${rowClass}" data-run-i="${i}">
           <td><input type="checkbox" class="run-chk" data-i="${i}" ${isRun ? 'checked' : ''} aria-label="Mark tool ${r.idx} as run"></td>
           ${standCell}
@@ -1850,6 +1908,10 @@
       state.well.engineer = $('engineer').value.trim();
       state.well.date = $('jobDate').value;
       state.well.objective = $('objective').value.trim();
+      state.well.wellMdFt = $('wellMdFt').value.trim();
+      state.well.wellTvdFt = $('wellTvdFt').value.trim();
+      state.well.perfTopFt = $('perfTopFt').value.trim();
+      state.well.perfBottomFt = $('perfBottomFt').value.trim();
       state.well.fluidPpg = Number($('fluidPpg').value) || 17.2;
       state.well.depthMode = $('depthMode').value;
       state.well.datumElev = Number($('datumElev').value) || 0;
@@ -1873,6 +1935,10 @@
       $('engineer').value = state.well.engineer;
       $('jobDate').value = state.well.date || '';
       $('objective').value = state.well.objective;
+      $('wellMdFt').value = state.well.wellMdFt ?? '';
+      $('wellTvdFt').value = state.well.wellTvdFt ?? '';
+      $('perfTopFt').value = state.well.perfTopFt ?? '';
+      $('perfBottomFt').value = state.well.perfBottomFt ?? '';
       $('fluidPpg').value = state.well.fluidPpg;
       $('depthMode').value = state.well.depthMode || 'calculated';
       $('datumElev').value = state.well.datumElev;
@@ -2008,6 +2074,9 @@
         ['Well', state.well.name || '—'], ['Client', state.well.customer || '—'],
         ['Rig', state.well.rig || '—'], ['DST', state.well.dstRun || '—'],
         ['Formation', state.well.formation || '—'], ['Date', state.well.date || '—'],
+        ['Well MD', state.well.wellMdFt ? `${state.well.wellMdFt} ft` : '—'],
+        ['Well TVD', state.well.wellTvdFt ? `${state.well.wellTvdFt} ft` : '—'],
+        ['Perforation', (state.well.perfTopFt || state.well.perfBottomFt) ? `${state.well.perfTopFt || '—'} – ${state.well.perfBottomFt || '—'} ft` : '—'],
         ['Fluid', `${state.well.fluidPpg} ppg`], ['Engineer', state.well.engineer || '—'],
         ['Casing', casingMeta || '—']
       ].map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
@@ -2097,16 +2166,31 @@
       return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
     }
 
+    function diagramAvailableHeight() {
+      const panel = document.getElementById('tab-diagram');
+      const vh = window.innerHeight || 800;
+      if (panel && panel.offsetParent !== null) {
+        const top = panel.getBoundingClientRect().top;
+        return Math.max(400, Math.min(vh - top - 28, 760));
+      }
+      return Math.max(400, vh - 200);
+    }
+
     function diagramStringLayout(rows) {
       const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
       const n = rows.length;
-      const targetPlotH = Math.min(3600, Math.max(520, n * 16));
+      const plotH = diagramAvailableHeight() - 48;
+      const itemGap = n > 45 ? 1 : n > 22 ? 2 : 3;
+      const gapsTotal = Math.max(0, n - 1) * itemGap;
+      const drawable = Math.max(320, plotH - gapsTotal);
+      const scaleY = drawable / totalLen;
       return {
         totalLen,
-        scaleY: targetPlotH / totalLen,
-        minItemH: n > 60 ? 6 : n > 35 ? 7 : 8,
-        itemGap: n > 60 ? 2 : 4,
-        labelSize: n > 60 ? 10 : n > 35 ? 11 : 12
+        scaleY,
+        minItemH: 2,
+        itemGap,
+        labelSize: n > 50 ? 8 : n > 28 ? 9 : 10,
+        plotH
       };
     }
 
@@ -2290,7 +2374,7 @@
         totalH = padTop + plotH + 32;
       }
 
-      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${totalH}px;width:100%">${parts.join('')}</svg>`;
+      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="width:100%;height:auto;max-height:${diagramAvailableHeight()}px">${parts.join('')}</svg>`;
     }
 
     function normHeaderCell(v) {
@@ -2341,6 +2425,10 @@
             if (label === 'TEST' || label.includes('DST')) meta.dstRun = val;
             if (label.includes('FORMATION')) meta.formation = val.replace(/\n/g, ' / ');
             if (label === 'DATE') meta.date = String(val).slice(0, 10);
+            if (/^MD\b|MEASURED DEPTH|WELL DEPTH/.test(label) && !/TVD/.test(label)) meta.wellMdFt = val;
+            if (/TVD|TRUE VERT/.test(label)) meta.wellTvdFt = val;
+            if (/PERF.*TOP|TOP.*PERF/.test(label)) meta.perfTopFt = val;
+            if (/PERF.*BOTTOM|BOTTOM.*PERF|BASE.*PERF/.test(label)) meta.perfBottomFt = val;
             if (label.includes('KILL FLUID') || label.includes('FLUID DENSITY')) {
               const ppg = parseFloat(String(val).replace(/[^0-9.]/g, ''));
               if (ppg > 8 && ppg < 25) meta.fluidPpg = ppg;
@@ -3022,6 +3110,8 @@
         ['DST BHA TALLY'], [],
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
         ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
+        ['Well MD (ft)', w.wellMdFt || ''], ['Well TVD (ft)', w.wellTvdFt || ''],
+        ['Perf top (ft)', w.perfTopFt || ''], ['Perf bottom (ft)', w.perfBottomFt || ''],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
         ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
       ];
@@ -3285,8 +3375,18 @@
     // Tabs — labels use CSS radio (work without JS); JS adds scroll-into-view
     document.querySelectorAll('.tab[data-tab]').forEach(tab => {
       tab.addEventListener('click', () => {
-        setTimeout(() => switchTab(tab.dataset.tab), 0);
+        setTimeout(() => {
+          switchTab(tab.dataset.tab);
+          if (tab.dataset.tab === 'diagram') render();
+        }, 0);
       });
+    });
+    let diagramResizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(diagramResizeTimer);
+      diagramResizeTimer = setTimeout(() => {
+        if (document.getElementById('rtab-diagram')?.checked) render();
+      }, 150);
     });
     if ($('bannerLoadBtn')) $('bannerLoadBtn').onclick = () => { switchTab('reference'); };
     if ($('bannerImportBtn')) $('bannerImportBtn').onclick = () => switchTab('import');
@@ -3517,7 +3617,7 @@
       switchTab('builder');
     };
 
-    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','objective','fluidPpg','depthMode','datumElev','hangoff','steelPpg','fluidLevelMd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
+    ['wellName','customer','fieldName','rigName','formation','dstRun','engineer','jobDate','wellMdFt','wellTvdFt','perfTopFt','perfBottomFt','objective','fluidPpg','depthMode','datumElev','hangoff','steelPpg','fluidLevelMd','tubingNom','displayUnit','hydBasis','jobNotes'].forEach(id => {
       $(id).addEventListener('input', render);
       $(id).addEventListener('change', render);
     });
