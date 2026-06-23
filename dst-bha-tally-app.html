@@ -695,14 +695,15 @@
             <article class="card span-6">
               <h2>Import from file</h2>
               <div class="fields">
-                <div class="field"><label for="fileUp">Excel or PDF</label><input id="fileUp" type="file" accept=".xlsx,.xls,.pdf"></div>
+                <div class="field"><label for="fileUp">Excel, PDF, or image</label><input id="fileUp" type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,image/*"></div>
                 <div class="field" id="sheetField" hidden><label for="sheetPick">Worksheet</label><select id="sheetPick"></select></div>
               </div>
               <div class="actions" style="margin-top:var(--space-3)">
                 <button class="btn primary" id="parseFileBtn" type="button">Parse file</button>
               </div>
               <p class="row-note" style="margin-top:var(--space-3)">Excel: reads Halliburton-style BHA sheets (Description col C, Box/Pin, OD/ID, Length m, Top/Bottom MD). Auto-picks tally worksheet and fills well header from CUSTOMER / WELL NAME / RIG rows.</p>
-              <p class="muted" id="parseStatus" style="margin-top:var(--space-2)">Select a .xlsx file — import runs automatically.</p>
+              <p class="row-note">PDF / image: text-based PDFs are read directly. Scanned PDFs and photos (PNG, JPG, etc.) use OCR — keep the tally table straight and readable for best results.</p>
+              <p class="muted" id="parseStatus" style="margin-top:var(--space-2)">Select a file — import runs automatically.</p>
             </article>
             <article class="card span-6">
               <h2>JSON paste</h2>
@@ -1678,6 +1679,21 @@
       return [...names].sort((a, b) => score(b) - score(a))[0];
     }
 
+    const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i;
+
+    function isImageFile(file) {
+      return IMAGE_EXT.test(file.name) || /^image\//i.test(file.type);
+    }
+
+    function normalizeOcrText(text) {
+      return String(text || '')
+        .replace(/\r/g, '\n')
+        .replace(/[|¦]/g, ' ')
+        .split(/\n+/)
+        .map(s => s.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+    }
+
     function extractTextLines(lines) {
       const out = [];
       for (const line of lines) {
@@ -1686,17 +1702,34 @@
         if (!/\d/.test(t)) continue;
         const lenM = t.match(/(\d+(?:\.\d+)?)\s*m\b/i);
         const lenFt = t.match(/(\d+(?:\.\d+)?)\s*ft\b/i);
-        const length = lenM ? parseFloat(lenM[1]) : lenFt ? parseFloat(lenFt[1]) / FT_PER_M : 0;
-        if (!length || length > 500) continue;
-        const thread = (t.match(/(?:BOX|PIN|ACME|EUE|VAM|IF|CAS|BGT|VAS|SA|BOWEN|BXP|XHP|CHAMP|RTTS)[^\n]*/i) || [''])[0].slice(0, 90).trim();
+        let length = lenM ? parseFloat(lenM[1]) : lenFt ? parseFloat(lenFt[1]) / FT_PER_M : 0;
         const odM = t.match(/OD\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
         const idM = t.match(/ID\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
-        const name = t.replace(/\s+\d+(?:\.\d+)?\s*(?:m|ft)\b/i, '').slice(0, 100).trim();
-        if (!name) continue;
+        let od = odM ? odM[1] : '';
+        let id = idM ? idM[1] : '';
+        if (!length) {
+          const bareLen = t.match(/\b(\d+(?:\.\d+)?)\s*(?:m|meter|metre)\b/i);
+          if (bareLen) length = parseFloat(bareLen[1]);
+        }
+        if (!od && !id) {
+          const pair = t.match(/(\d+(?:\.\d+)?)\s*(?:["″]|in)?\s*(?:x|×)\s*(\d+(?:\.\d+)?)/i);
+          if (pair) {
+            od = pair[1];
+            id = pair[2];
+          }
+        }
+        if (!length || length > 500) continue;
+        const thread = (t.match(/(?:BOX|PIN|ACME|EUE|VAM|IF|CAS|BGT|VAS|SA|BOWEN|BXP|XHP|CHAMP|RTTS)[^\n]*/i) || [''])[0].slice(0, 90).trim();
+        const name = t
+          .replace(/\s+\d+(?:\.\d+)?\s*(?:m|ft|meter|metre)\b/i, '')
+          .replace(/\bOD\s*[:=]?\s*\d+(?:\.\d+)?/gi, '')
+          .replace(/\bID\s*[:=]?\s*\d+(?:\.\d+)?/gi, '')
+          .slice(0, 100).trim();
+        if (!name || name.length < 3) continue;
         const parts = thread.split(/\s+x\s+/i);
         out.push({
           name, cat: guessCat(name), length, unit: 'm',
-          od: odM ? odM[1] : '', id: idM ? idM[1] : '',
+          od, id,
           box: parts[0] || '', pin: parts[1] || thread
         });
       }
@@ -1757,7 +1790,79 @@
       return pdfjsLib;
     }
 
-    async function parsePdfFile(file) {
+    async function ensureTesseract() {
+      if (window.Tesseract) return window.Tesseract;
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('OCR library failed to load — check internet connection'));
+        document.head.appendChild(s);
+      });
+      return window.Tesseract;
+    }
+
+    async function ocrCanvas(canvas, onProgress) {
+      const Tesseract = await ensureTesseract();
+      const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+        logger: m => {
+          if (onProgress && m.status === 'recognizing text') {
+            onProgress(`OCR… ${Math.round((m.progress || 0) * 100)}%`);
+          }
+        }
+      });
+      return text;
+    }
+
+    async function fileToCanvas(file) {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0);
+      if (bitmap.close) bitmap.close();
+      return canvas;
+    }
+
+    async function ocrImageFile(file, onProgress) {
+      onProgress?.('Preparing image for OCR…');
+      const canvas = await fileToCanvas(file);
+      const text = await ocrCanvas(canvas, onProgress);
+      return normalizeOcrText(text);
+    }
+
+    async function ocrPdfPages(doc, onProgress) {
+      const lines = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        onProgress?.(`OCR page ${i}/${doc.numPages}…`);
+        const pg = await doc.getPage(i);
+        const viewport = pg.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await pg.render({ canvasContext: ctx, viewport }).promise;
+        const text = await ocrCanvas(canvas, msg => onProgress?.(`Page ${i}/${doc.numPages}: ${msg}`));
+        lines.push(...normalizeOcrText(text));
+      }
+      return lines;
+    }
+
+    async function parseImageFile(file, onProgress) {
+      const lines = await ocrImageFile(file, onProgress);
+      let items = extractTextLines(lines);
+      if (!items.length && lines.length) {
+        items = extractTextLines([lines.join(' '), ...lines]);
+      }
+      return items;
+    }
+
+    async function parsePdfFile(file, onProgress) {
       const pdfjs = await ensurePdfJs();
       const buf = await file.arrayBuffer();
       const doc = await pdfjs.getDocument({ data: buf }).promise;
@@ -1767,7 +1872,18 @@
         const tc = await pg.getTextContent();
         text += tc.items.map(x => x.str).join(' ') + '\n';
       }
-      return extractTextLines(text.split(/\n+/).map(s => s.trim()).filter(Boolean));
+      let lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      let items = extractTextLines(lines);
+      const sparse = text.replace(/\s/g, '').length < 80 || items.length < 2;
+      if (sparse) {
+        onProgress?.('Little selectable text in PDF — running OCR on pages…');
+        lines = await ocrPdfPages(doc, onProgress);
+        items = extractTextLines(lines);
+        if (!items.length && lines.length) {
+          items = extractTextLines([lines.join(' '), ...lines]);
+        }
+      }
+      return items;
     }
 
     function applyProject(data, sourceLabel) {
@@ -1858,10 +1974,12 @@
           const sheetEl = statusEl === $('refFileStatus') ? $('refSheetPick') : $('sheetPick');
           items = await parseExcelFile(file, sheetEl?.value);
         } else if (/\.pdf$/i.test(file.name)) {
-          items = await parsePdfFile(file);
+          items = await parsePdfFile(file, setStatus);
+        } else if (isImageFile(file)) {
+          items = await parseImageFile(file, setStatus);
         } else {
           setStatus('Unsupported file type.', false);
-          return alert('Unsupported file type');
+          return alert('Unsupported file type — use Excel, PDF, or an image (PNG, JPG, etc.).');
         }
         if (!items.length) {
           setStatus('No tally rows detected.', false);
