@@ -361,6 +361,18 @@
       border-radius: var(--radius-md); background: var(--color-bg); border: 1px solid var(--color-border);
     }
     .inventory-import .field { margin: 0; min-width: 200px; flex: 1 1 200px; }
+    .inventory-pool-panel {
+      padding: var(--space-3); margin-bottom: var(--space-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg);
+    }
+    .inventory-pool-panel h3 { margin: 0 0 var(--space-2); font-size: 1rem; }
+    .inventory-pool-toolbar {
+      display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;
+      margin-bottom: var(--space-2);
+    }
+    .inventory-pool-toolbar select { padding: .5rem .65rem; min-width: 11rem; }
+    .inventory-pool-scroll { overflow: auto; max-height: 340px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
     .inventory-sections { display: flex; flex-direction: column; gap: var(--space-3); }
     .inventory-section { padding: var(--space-3); }
     .inventory-section h3 {
@@ -373,6 +385,9 @@
     }
     .inventory-table th { font-size: 0.72rem; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
     .inventory-table .inv-desc { text-align: left; min-width: 10rem; max-width: 18rem; }
+    .inventory-table .inv-actions { white-space: nowrap; }
+    .inventory-table .inv-actions select { padding: .25rem .4rem; font-size: 0.72rem; max-width: 9rem; }
+    .inventory-table .inv-actions .btn.sm { padding: .2rem .45rem; font-size: 0.68rem; }
     .diagram-wrap { overflow: auto; padding: var(--space-2); max-height: 85vh; }
     .diagram-wrap svg { min-width: 720px; display: block; }
     .save-dot {
@@ -898,17 +913,21 @@
         <section class="tab-panel" id="tab-inventory">
           <article class="card">
             <h2>DST Inventory</h2>
-            <p class="muted" id="inventorySource">Import Excel or PDF to populate rig inventory lists automatically.</p>
+            <p class="muted" id="inventorySource">Upload Excel — items go to the import pool. You choose which section each item belongs in.</p>
             <div class="inventory-import no-print">
               <div class="field">
                 <label for="invFileUp">Inventory file</label>
                 <input id="invFileUp" type="file" accept=".xlsx,.xls,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,image/*">
               </div>
-              <button class="btn primary" id="invParseBtn" type="button">Import inventory</button>
-              <button class="btn" id="invClearBtn" type="button">Clear inventory</button>
+              <button class="btn primary" id="invParseBtn" type="button">Load into pool</button>
+              <button class="btn" id="invClearPoolBtn" type="button">Clear pool</button>
+              <button class="btn" id="invClearBtn" type="button">Clear all</button>
             </div>
-            <p class="muted" id="invParseStatus" style="margin-bottom:var(--space-2)">Select Excel or PDF — import runs automatically.</p>
-            <div class="inventory-sections" id="inventorySections"></div>
+            <p class="muted" id="invParseStatus" style="margin-bottom:var(--space-2)">Select Excel — rows load into the pool for manual assignment.</p>
+            <div id="inventoryWorkspace">
+              <div class="inventory-pool-panel no-print" id="inventoryPoolPanel"></div>
+              <div class="inventory-sections" id="inventorySections"></div>
+            </div>
           </article>
         </section>
       </div>
@@ -1019,7 +1038,7 @@
         comments: '', startedAt: null, lastUpdate: null, unit: 'ft',
         items: initRunningTallyItems(DEFAULT_RUNNING_TALLY_ITEMS())
       },
-      dstInventory: { source: '', sections: emptyInventorySections() }
+      dstInventory: { source: '', pool: [], sections: emptyInventorySections() }
     };
 
     let editIndex = -1;
@@ -1261,6 +1280,140 @@
       return INVENTORY_SECTION_META.reduce((n, s) => n + (sections[s.key]?.length || 0), 0);
     }
 
+    function inventoryItemKey(item) {
+      return [item.name, item.serial, item.od, item.id].map(s => String(s ?? '').trim().toLowerCase()).join('|');
+    }
+
+    function dedupeToPool(pool, item) {
+      const n = normalizeInventoryItem(item);
+      if (!n.name) return false;
+      const key = inventoryItemKey(n);
+      if (pool.some(x => inventoryItemKey(x) === key)) return false;
+      pool.push(n);
+      return true;
+    }
+
+    function parsePoolRowsFromSheet(rows) {
+      if (!rows?.length) return [];
+      const hi = findHeaderRow(rows);
+      if (hi < 0) return [];
+      const header = (rows[hi] || []).map(normHeaderCell);
+      const nameI = pickCol(header, ['description', 'item description', 'item', 'tool', 'part', 'material', 'name', 'component', 'tool description']);
+      const qtyI = pickCol(header, ['qty', 'quantity', 'count', 'on hand', 'available', 'no on rig', 'no']);
+      const serialI = pickCol(header, ['serial', 's n', 'serial no', 'tool serial', 'serial number', 'tool no', 'tool number']);
+      const condI = pickCol(header, ['condition', 'status']);
+      const odI = pickCol(header, ['od in', 'od', 'outer dia', 'o d']);
+      const idI = pickCol(header, ['id in', 'id', 'inner dia', 'i d']);
+      const lenI = pickCol(header, ['length m', 'length ft', 'length', 'len']);
+      const boxI = pickCol(header, ['box', 'top conn']);
+      const pinI = pickCol(header, ['pin', 'bottom conn']);
+      const coI = pickCol(header, ['company', 'vendor', 'manufacturer']);
+      const notesI = pickCol(header, ['notes', 'remark', 'comments']);
+      const catI = pickCol(header, ['category', 'type']);
+      const lenUnit = header[lenI] && header[lenI].includes('ft') ? 'ft' : 'm';
+      const out = [];
+      for (const r of rows.slice(hi + 1)) {
+        const cells = (r || []).map(v => String(v ?? '').trim());
+        const name = (nameI >= 0 ? cells[nameI] : '') || cells.find((c, i) => i <= 6 && c.length > 2) || '';
+        if (!name) continue;
+        if (matchInventorySectionHeader(name)) continue;
+        if (/^(total|subtotal|remarks|prepared by|end of|sheet|page)\b/i.test(name)) break;
+        const length = toNum(cells[lenI]);
+        const hasData = length || cells[odI] || cells[idI] || (qtyI >= 0 && cells[qtyI]) || cells[serialI] || cells[boxI];
+        if (!hasData && name.length < 4) continue;
+        out.push(normalizeInventoryItem({
+          name,
+          cat: (catI >= 0 && cells[catI]) ? cells[catI] : guessCat(name),
+          length: length || 0,
+          unit: lenUnit,
+          od: cleanOdId(cells[odI]),
+          id: cleanOdId(cells[idI]),
+          qty: qtyI >= 0 ? (toNum(cells[qtyI]) || 1) : 1,
+          serial: serialI >= 0 ? cells[serialI] : '',
+          toolNo: serialI >= 0 ? cells[serialI] : '',
+          condition: condI >= 0 ? cells[condI] : '',
+          box: boxI >= 0 ? cells[boxI] : '',
+          pin: pinI >= 0 ? cells[pinI] : '',
+          company: coI >= 0 ? cells[coI] : '',
+          notes: notesI >= 0 ? cells[notesI] : ''
+        }));
+      }
+      return out;
+    }
+
+    function parseInventoryPoolFromWorkbook(wb) {
+      const pool = [];
+      for (const sn of wb.SheetNames) {
+        const rows = sheetRows(wb, sn);
+        parsePoolRowsFromSheet(rows).forEach(it => dedupeToPool(pool, it));
+      }
+      if (!pool.length) {
+        for (const sn of wb.SheetNames) {
+          extractRowsFromSheet(sheetRows(wb, sn)).forEach(it => dedupeToPool(pool, it));
+        }
+      }
+      return pool;
+    }
+
+    function parseInventoryPoolFromOcrLines(lines) {
+      const pool = [];
+      for (const line of lines) {
+        const t = line.trim();
+        if (t.length < 4 || matchInventorySectionHeader(t)) continue;
+        if (/^(od|id|qty|serial|description|item)\b/i.test(t)) continue;
+        dedupeToPool(pool, { name: t, cat: guessCat(t) });
+      }
+      if (!pool.length) {
+        parseOcrTallyFromLines(lines).forEach(it => dedupeToPool(pool, it));
+      }
+      return pool;
+    }
+
+    function inventorySectionOptions(selected) {
+      return INVENTORY_SECTION_META.map(s =>
+        `<option value="${s.key}"${selected === s.key ? ' selected' : ''}>${esc(s.title)}</option>`
+      ).join('');
+    }
+
+    function movePoolItemsToSection(indices, sectionKey) {
+      if (!sectionKey || !INVENTORY_SECTION_META.some(s => s.key === sectionKey)) return;
+      const sorted = [...new Set(indices)].filter(i => i >= 0).sort((a, b) => b - a);
+      const moved = [];
+      for (const i of sorted) {
+        const item = state.dstInventory.pool[i];
+        if (item) moved.unshift(item);
+      }
+      for (const i of sorted) state.dstInventory.pool.splice(i, 1);
+      state.dstInventory.sections[sectionKey].push(...moved);
+      render();
+    }
+
+    function moveSectionItemToPool(sectionKey, index) {
+      const item = state.dstInventory.sections[sectionKey]?.splice(index, 1)[0];
+      if (item) {
+        dedupeToPool(state.dstInventory.pool, item);
+        render();
+      }
+    }
+
+    function moveSectionItemToSection(fromKey, index, toKey) {
+      if (!toKey || fromKey === toKey) return;
+      const item = state.dstInventory.sections[fromKey]?.splice(index, 1)[0];
+      if (item) {
+        state.dstInventory.sections[toKey].push(item);
+        render();
+      }
+    }
+
+    function removeSectionItem(sectionKey, index) {
+      state.dstInventory.sections[sectionKey]?.splice(index, 1);
+      render();
+    }
+
+    function getSelectedPoolIndices() {
+      return [...document.querySelectorAll('.inv-pool-chk:checked')].map(el => +el.dataset.i);
+    }
+
     function parseInventoryItemRows(rows, forcedSection) {
       if (!rows?.length) return [];
       const hi = findHeaderRow(rows);
@@ -1453,6 +1606,9 @@
       if (!data?.dstInventory) return;
       state.dstInventory = {
         source: data.dstInventory.source || '',
+        pool: Array.isArray(data.dstInventory.pool)
+          ? data.dstInventory.pool.map(normalizeInventoryItem)
+          : [],
         sections: { ...emptyInventorySections(), ...(data.dstInventory.sections || {}) }
       };
     }
@@ -3154,7 +3310,7 @@
           state.items = data.items;
           loaded = true;
         }
-        if (inventorySectionCount(state.dstInventory.sections)) loaded = true;
+        if (inventorySectionCount(state.dstInventory.sections) || (state.dstInventory.pool?.length || 0)) loaded = true;
         if (loaded) writeWellToDom();
         return loaded;
       } catch (e) { return false; }
@@ -3258,25 +3414,70 @@
     }
 
     function renderInventory() {
+      const poolPanel = $('inventoryPoolPanel');
       const host = $('inventorySections');
       if (!host) return;
+      const inv = state.dstInventory;
+      const assigned = inventorySectionCount(inv.sections);
+      const poolN = inv.pool?.length || 0;
       const srcEl = $('inventorySource');
-      const total = inventorySectionCount(state.dstInventory.sections);
       if (srcEl) {
-        srcEl.textContent = state.dstInventory.source
-          ? `${total} item(s) from ${state.dstInventory.source}`
-          : 'Import Excel or PDF to populate rig inventory lists automatically.';
+        srcEl.textContent = inv.source
+          ? `${poolN} in pool · ${assigned} assigned — from ${inv.source}`
+          : 'Upload Excel — items go to the import pool. You choose which section each item belongs in.';
       }
+
+      if (poolPanel) {
+        poolPanel.innerHTML = `
+          <h3>Import pool <span class="chip chip-other">${poolN} unassigned</span></h3>
+          <p class="muted" style="margin:0 0 var(--space-2);font-size:var(--text-xs)">Select rows and move to a section, or use the dropdown on each row.</p>
+          <div class="inventory-pool-toolbar">
+            <button class="btn sm" id="invSelectAll" type="button">Select all</button>
+            <button class="btn sm" id="invSelectNone" type="button">Clear</button>
+            <select id="invMoveTarget" aria-label="Target section">
+              <option value="">Move selected to…</option>
+              ${inventorySectionOptions()}
+            </select>
+            <button class="btn primary sm" id="invMoveBtn" type="button">Move</button>
+          </div>
+          <div class="inventory-pool-scroll">
+            <table class="inventory-table" id="inventoryPoolTable">
+              <thead><tr>
+                <th><input type="checkbox" id="invPoolChkAll" title="Select all"></th>
+                <th>Description</th><th>Category</th><th>OD</th><th>ID</th><th>Len</th><th>Qty</th><th>Serial</th>
+                <th>Assign to section</th>
+              </tr></thead>
+              <tbody>${poolN ? inv.pool.map((it, i) => `<tr>
+                <td><input type="checkbox" class="inv-pool-chk" data-i="${i}"></td>
+                <td class="inv-desc">${esc(it.description || it.name)}</td>
+                <td>${esc(it.cat)}</td>
+                <td>${esc(it.od)}</td><td>${esc(it.id)}</td>
+                <td>${it.length ? `${fmt(it.length, 2)} ${esc(it.unit)}` : '—'}</td>
+                <td>${it.qty || 1}</td>
+                <td>${esc(it.serial)}</td>
+                <td class="inv-actions">
+                  <select class="inv-pool-assign" data-i="${i}">
+                    <option value="">— choose —</option>
+                    ${inventorySectionOptions()}
+                  </select>
+                </td>
+              </tr>`).join('') : '<tr><td colspan="9" class="muted">Pool empty — load an Excel file above.</td></tr>'}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
       host.innerHTML = INVENTORY_SECTION_META.map(sec => {
-        const items = state.dstInventory.sections[sec.key] || [];
+        const items = inv.sections[sec.key] || [];
         return `<article class="inventory-section card">
           <h3>${esc(sec.title)} <span class="chip chip-other">${items.length}</span></h3>
           <div class="inventory-scroll">
             <table class="inventory-table">
               <thead><tr>
                 <th>Description</th><th>OD</th><th>ID</th><th>Len</th><th>Qty</th><th>Serial</th><th>Condition</th><th>Notes</th>
+                <th class="no-print">Actions</th>
               </tr></thead>
-              <tbody>${items.length ? items.map(it => `<tr>
+              <tbody>${items.length ? items.map((it, i) => `<tr>
                 <td class="inv-desc">${esc(it.description || it.name)}</td>
                 <td>${esc(it.od)}</td><td>${esc(it.id)}</td>
                 <td>${it.length ? `${fmt(it.length, 2)} ${esc(it.unit)}` : '—'}</td>
@@ -3284,7 +3485,16 @@
                 <td>${esc(it.serial)}</td>
                 <td>${esc(it.condition)}</td>
                 <td>${esc(it.notes)}</td>
-              </tr>`).join('') : '<tr><td colspan="8" class="muted">No items — import Excel/PDF or items will be auto-classified.</td></tr>'}
+                <td class="inv-actions no-print">
+                  <select class="inv-sec-move" data-sec="${sec.key}" data-i="${i}" title="Move to section">
+                    <option value="">Move…</option>
+                    ${INVENTORY_SECTION_META.filter(s => s.key !== sec.key).map(s =>
+                      `<option value="${s.key}">${esc(s.title)}</option>`).join('')}
+                  </select>
+                  <button class="btn sm" data-invac="pool" data-sec="${sec.key}" data-i="${i}" type="button">↩ Pool</button>
+                  <button class="btn sm danger" data-invac="del" data-sec="${sec.key}" data-i="${i}" type="button">×</button>
+                </td>
+              </tr>`).join('') : '<tr><td colspan="9" class="muted">No items — assign from the import pool above.</td></tr>'}
               </tbody>
             </table>
           </div>
@@ -3292,7 +3502,44 @@
       }).join('');
     }
 
-    async function importInventoryFile(file, replaceConfirm) {
+    function handleInventoryWorkspace(e) {
+      const assign = e.target.closest('.inv-pool-assign');
+      if (assign && assign.value) {
+        movePoolItemsToSection([+assign.dataset.i], assign.value);
+        return;
+      }
+      const secMove = e.target.closest('.inv-sec-move');
+      if (secMove && secMove.value) {
+        moveSectionItemToSection(secMove.dataset.sec, +secMove.dataset.i, secMove.value);
+        return;
+      }
+      const btn = e.target.closest('button[data-invac]');
+      if (btn) {
+        const act = btn.dataset.invac, sec = btn.dataset.sec, i = +btn.dataset.i;
+        if (act === 'pool') moveSectionItemToPool(sec, i);
+        if (act === 'del' && confirm('Remove this item from the section?')) removeSectionItem(sec, i);
+        return;
+      }
+      if (e.target.id === 'invSelectAll' || e.target.id === 'invPoolChkAll') {
+        document.querySelectorAll('.inv-pool-chk').forEach(c => { c.checked = true; });
+        if ($('invPoolChkAll')) $('invPoolChkAll').checked = true;
+        return;
+      }
+      if (e.target.id === 'invSelectNone') {
+        document.querySelectorAll('.inv-pool-chk, #invPoolChkAll').forEach(c => { c.checked = false; });
+        return;
+      }
+      if (e.target.id === 'invMoveBtn') {
+        const sec = $('invMoveTarget')?.value;
+        const sel = getSelectedPoolIndices();
+        if (!sec) return alert('Choose a section to move items into.');
+        if (!sel.length) return alert('Select at least one pool item.');
+        movePoolItemsToSection(sel, sec);
+        if ($('invMoveTarget')) $('invMoveTarget').value = '';
+      }
+    }
+
+    async function importInventoryFile(file) {
       if (!file) return alert('Choose a file first');
       const setStatus = (msg, ok) => {
         const el = $('invParseStatus');
@@ -3301,13 +3548,13 @@
         el.style.color = ok ? 'var(--color-success)' : ok === false ? 'var(--color-error)' : 'var(--color-text-muted)';
       };
       try {
-        setStatus('Parsing inventory…');
-        let parsed;
+        setStatus('Reading file…');
+        let pool = [];
         if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
           if (typeof XLSX === 'undefined') return alert('Excel library not loaded — check internet connection and refresh.');
           const buf = await file.arrayBuffer();
           const wb = XLSX.read(buf, { type: 'array' });
-          parsed = parseInventoryFromWorkbook(wb);
+          pool = parseInventoryPoolFromWorkbook(wb);
         } else if (/\.pdf$/i.test(file.name)) {
           const pdfjs = await ensurePdfJs();
           const buf = await file.arrayBuffer();
@@ -3322,32 +3569,31 @@
           if (text.replace(/\s/g, '').length < 80 || lines.length < 5) {
             lines = await ocrPdfPages(doc, setStatus);
           }
-          parsed = parseInventoryFromOcrLines(lines);
+          pool = parseInventoryPoolFromOcrLines(lines);
         } else if (isImageFile(file)) {
-        const lines = await ocrImageFile(file, setStatus);
-          parsed = parseInventoryFromOcrLines(lines);
+          const lines = await ocrImageFile(file, setStatus);
+          pool = parseInventoryPoolFromOcrLines(lines);
         } else {
           setStatus('Unsupported file type.', false);
           return alert('Use Excel, PDF, or an image file.');
         }
-        const total = parsed.total || inventorySectionCount(parsed.sections);
-        if (!total) {
-          setStatus('No inventory rows detected.', false);
-          return alert('No inventory rows detected — check file layout or section headers.');
+        if (!pool.length) {
+          setStatus('No rows detected in file.', false);
+          return alert('No rows detected — check that the sheet has a Description (or Item) column with data.');
         }
-        const existing = inventorySectionCount(state.dstInventory.sections);
-        if (replaceConfirm && existing && !confirm(`Replace ${existing} existing inventory item(s) with ${total} imported rows?`)) {
-          setStatus('Import cancelled.', false);
+        if (state.dstInventory.pool.length && !confirm(`Replace ${state.dstInventory.pool.length} item(s) in the pool with ${pool.length} new rows?\n\nAssigned sections are not changed.`)) {
+          setStatus('Load cancelled.', false);
           return;
         }
-        state.dstInventory = { source: file.name, sections: parsed.sections };
+        state.dstInventory.source = file.name;
+        state.dstInventory.pool = pool;
         render();
-        setStatus(`Loaded ${total} inventory item(s) from ${file.name}.`, true);
+        setStatus(`Loaded ${pool.length} row(s) into the import pool — assign each to a section below.`, true);
         switchTab('inventory');
       } catch (err) {
         console.error(err);
         setStatus(err.message, false);
-        alert('Inventory import error: ' + err.message);
+        alert('Import error: ' + err.message);
       }
     }
 
@@ -3468,18 +3714,27 @@
       } catch (e) { alert('Invalid JSON'); }
     };
 
-    $('invParseBtn').onclick = () => importInventoryFile($('invFileUp').files[0], true);
+    $('invParseBtn').onclick = () => importInventoryFile($('invFileUp').files[0]);
     $('invFileUp').onchange = () => {
       const f = $('invFileUp').files[0];
-      if (f) importInventoryFile(f, true);
+      if (f) importInventoryFile(f);
+    };
+    $('invClearPoolBtn').onclick = () => {
+      if (!state.dstInventory.pool.length) return;
+      if (!confirm(`Clear ${state.dstInventory.pool.length} unassigned item(s) from the pool?`)) return;
+      state.dstInventory.pool = [];
+      $('invParseStatus').textContent = 'Import pool cleared.';
+      render();
     };
     $('invClearBtn').onclick = () => {
-      const n = inventorySectionCount(state.dstInventory.sections);
-      if (n && !confirm(`Clear all ${n} inventory item(s)?`)) return;
-      state.dstInventory = { source: '', sections: emptyInventorySections() };
+      const n = inventorySectionCount(state.dstInventory.sections) + (state.dstInventory.pool?.length || 0);
+      if (n && !confirm(`Clear pool and all ${n} inventory item(s)?`)) return;
+      state.dstInventory = { source: '', pool: [], sections: emptyInventorySections() };
       $('invParseStatus').textContent = 'Inventory cleared.';
       render();
     };
+    $('inventoryWorkspace')?.addEventListener('click', handleInventoryWorkspace);
+    $('inventoryWorkspace')?.addEventListener('change', handleInventoryWorkspace);
 
     $('copyJsonBtn').onclick = () => navigator.clipboard.writeText($('jsonArea').value);
     $('exportCsvBtn').onclick = exportCsv;
