@@ -222,12 +222,18 @@
     .app:has(#rtab-running:checked) .kpi-wrap,
     .app:has(#rtab-running:checked) #startBanner { display: none !important; }
     .app:has(#rtab-running:checked) .topbar .sub { display: none; }
+    .app:has(#rtab-running:checked) #tab-running { display: flex; flex-direction: column; min-height: 0; }
+    .app:has(#rtab-running:checked) #tab-running .card { flex: 1 1 auto; min-height: 0; }
+    .app:has(#rtab-running:checked) .running-layout {
+      height: calc(100dvh - 14rem);
+      min-height: 780px;
+    }
     #tab-running .card { display: flex; flex-direction: column; min-height: 0; padding: var(--space-3) var(--space-4); }
     #tab-running h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
+    #tab-running .card > .muted { margin: 0 0 var(--space-2); font-size: var(--text-xs); }
     .running-layout {
-      display: flex; flex-direction: column; gap: var(--space-3);
+      display: flex; flex-direction: column; gap: var(--space-2);
       flex: 1 1 auto; min-height: 0;
-      height: calc(100vh - 200px); min-height: 520px;
     }
     .running-toolbar {
       display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end;
@@ -249,8 +255,9 @@
     .running-kpi .value { font-size: 1.25rem; font-weight: 700; margin-top: .25rem; }
     .running-kpi .sub { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .15rem; }
     .running-scroll {
-      flex: 1 1 auto; min-height: 0; overflow: auto;
+      flex: 1 1 auto; min-height: 500px; overflow: auto;
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg);
     }
     #runningTable th, #runningTable td {
       text-align: center; vertical-align: middle; padding: .5rem .4rem; font-size: 0.8rem;
@@ -273,7 +280,7 @@
     }
     .running-comments label { font-size: var(--text-sm); font-weight: 600; display: block; margin-bottom: .35rem; }
     .running-comments textarea {
-      width: 100%; min-height: 72px; padding: .65rem .75rem; resize: vertical;
+      width: 100%; min-height: 44px; padding: .55rem .75rem; resize: vertical;
       border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-2);
       font-size: var(--text-sm);
     }
@@ -673,30 +680,16 @@
                 <button class="btn primary" id="runNextBtn" type="button">Run next (#1 → shoe)</button>
                 <button class="btn" id="runUndoBtn" type="button">Undo last</button>
                 <button class="btn" id="runResetBtn" type="button">Reset run marks</button>
-                <button class="btn" id="runAddTubingBtn" type="button">+ 3-1/2 tubing</button>
+                <button class="btn" id="runAddTubingBtn" type="button">+ 3-1/2 tubing (30 ft)</button>
                 <button class="btn" id="runAddToolBtn" type="button">+ Add tool</button>
                 <button class="btn" id="runLoadDefaultBtn" type="button">Reset tool list</button>
                 <button class="btn" id="exportRunningBtn" type="button">Export</button>
               </div>
-              <div class="running-add-panel no-print" id="runAddPanel">
-                <div class="field" style="grid-column:1/-1"><label for="runItemName">Description</label><input id="runItemName" placeholder="Tool description"></div>
-                <div class="field"><label for="runItemLen">Length</label><input id="runItemLen" type="number" step="0.01"></div>
-                <div class="field"><label for="runItemLenUnit">Unit</label><select id="runItemLenUnit"><option value="ft" selected>ft</option><option value="m">m</option></select></div>
-                <div class="field"><label for="runItemOd">OD (in)</label><input id="runItemOd"></div>
-                <div class="field"><label for="runItemId">ID (in)</label><input id="runItemId"></div>
-                <div class="field"><label for="runItemQty">Qty</label><input id="runItemQty" type="number" min="1" value="1"></div>
-                <div class="field" style="align-self:end"><button class="btn primary" id="runInsertBtn" type="button">Insert tool</button></div>
-              </div>
               <div class="running-kpis" id="runningKpis">
                 <div class="running-kpi"><div class="label">Items run</div><div class="value" id="runKpiItems">0 / 0</div><div class="sub" id="runKpiItemsSub">—</div></div>
                 <div class="running-kpi"><div class="label">Length run</div><div class="value" id="runKpiLen">0</div><div class="sub" id="runKpiLenSub">—</div></div>
-                <div class="running-kpi"><div class="label">Depth run</div><div class="value" id="runKpiDepth">0</div><div class="sub" id="runKpiDepthSub">From shoe @ 0</div></div>
                 <div class="running-kpi"><div class="label">Cum vol (bbl)</div><div class="value" id="runKpiVol">0</div><div class="sub" id="runKpiVolSub">In hole</div></div>
                 <div class="running-kpi"><div class="label">WIR (klbf)</div><div class="value" id="runKpiWir">0</div><div class="sub" id="runKpiWirSub">Buoyed</div></div>
-              </div>
-              <div class="running-comments no-print">
-                <label for="runComments">Comments</label>
-                <textarea id="runComments" placeholder="Shift notes, tally book ref, observations…"></textarea>
               </div>
               <div class="running-scroll">
                 <table id="runningTable">
@@ -710,6 +703,19 @@
                   </thead>
                   <tbody id="runningTableBody"></tbody>
                 </table>
+              </div>
+              <div class="running-comments no-print">
+                <label for="runComments">Comments</label>
+                <textarea id="runComments" placeholder="Shift notes, tally book ref, observations…"></textarea>
+              </div>
+              <div class="running-add-panel no-print" id="runAddPanel">
+                <div class="field" style="grid-column:1/-1"><label for="runItemName">Description</label><input id="runItemName" placeholder="Tool description"></div>
+                <div class="field"><label for="runItemLen">Length</label><input id="runItemLen" type="number" step="0.01"></div>
+                <div class="field"><label for="runItemLenUnit">Unit</label><select id="runItemLenUnit"><option value="ft" selected>ft</option><option value="m">m</option></select></div>
+                <div class="field"><label for="runItemOd">OD (in)</label><input id="runItemOd"></div>
+                <div class="field"><label for="runItemId">ID (in)</label><input id="runItemId"></div>
+                <div class="field"><label for="runItemQty">Qty</label><input id="runItemQty" type="number" min="1" value="1"></div>
+                <div class="field" style="align-self:end"><button class="btn primary" id="runInsertBtn" type="button">Insert tool</button></div>
               </div>
             </div>
           </article>
@@ -901,7 +907,7 @@
     ];
 
     const RUNNING_TUBING_JOINT = {
-      name: '3 1/2" Tubing — Tubing COSMO', cat: 'Tubing', length: 90, unit: 'ft',
+      name: '3 1/2" Tubing — Tubing COSMO', cat: 'Tubing', length: 30, unit: 'ft',
       od: '3.5', id: '2.55', box: '3 1/2" TS6 Box', pin: '3 1/2" TS6 Pin'
     };
 
@@ -1274,12 +1280,11 @@
 
     function runningProgress(rows) {
       const runCount = contiguousRunCount(rows);
-      let cumLen = 0, cumVol = 0, cumWirKlbf = 0, depthRun = 0;
+      let cumLen = 0, cumVol = 0, cumWirKlbf = 0;
       for (let i = 0; i < runCount; i++) {
         cumLen += rows[i].lenMd;
         cumVol += rows[i].vol;
         cumWirKlbf += toKlbf(rows[i].buoyedLb);
-        depthRun = rows[i].depthTo;
       }
       const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       return {
@@ -1287,7 +1292,6 @@
         cumLen,
         cumVol,
         cumWirKlbf,
-        depthRun,
         nextIndex: runCount < rows.length ? runCount : -1,
         totalItems: rows.length,
         totalLen,
@@ -1418,8 +1422,6 @@
         : 'Add tools below';
       $('runKpiLen').textContent = `${fmt(prog.cumLen, 2)} ${unit}`;
       $('runKpiLenSub').textContent = rows.length ? `of ${fmt(prog.totalLen, 2)} ${unit} in list` : '—';
-      $('runKpiDepth').textContent = `${fmt(prog.depthRun, 2)} ${unit}`;
-      $('runKpiDepthSub').textContent = 'From shoe @ 0';
       $('runKpiVol').textContent = fmtVol(prog.cumVol);
       $('runKpiWir').textContent = fmt(prog.cumWirKlbf, 2);
 
@@ -2659,7 +2661,6 @@
         ['Started', rt.startedAt ? formatRunTime(rt.startedAt) : ''],
         ['Items run', `${prog.runCount} / ${prog.totalItems}`],
         ['Length run', `${fmt(prog.cumLen, 3)} ${u}`],
-        ['Depth run', `${fmt(prog.depthRun, 3)} ${u}`],
         ['Cum vol (bbl)', fmtVol(prog.cumVol)],
         ['WIR (klbf)', fmt(prog.cumWirKlbf, 2)], [],
         ['Run','No','Tool Description','OD (in)','ID (in)',`Length (${u})`,`Depth from (${u})`,`Depth to (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
@@ -2680,7 +2681,6 @@
       });
       aoa.push([], ['Planned list length', fmt(prog.totalLen, 3) + ' ' + u]);
       aoa.push(['Length run to date', fmt(prog.cumLen, 3) + ' ' + u]);
-      aoa.push(['Depth run to date', fmt(prog.depthRun, 3) + ' ' + u]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Running Tally');
@@ -3023,13 +3023,6 @@
       }
     });
 
-    function fillRunAddForm(t) {
-      $('runItemName').value = t.name || '';
-      $('runItemLen').value = t.length ?? '';
-      $('runItemLenUnit').value = t.unit || 'ft';
-      $('runItemOd').value = t.od || '';
-      $('runItemId').value = t.id || '';
-    }
     function doPrint(orientation) {
       readWellFromDom();
       render();
