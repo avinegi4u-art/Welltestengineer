@@ -95,7 +95,8 @@
     #rtab-diagram:checked ~ nav .tab[for="rtab-diagram"],
     #rtab-import:checked ~ nav .tab[for="rtab-import"],
     #rtab-reference:checked ~ nav .tab[for="rtab-reference"],
-    #rtab-library:checked ~ nav .tab[for="rtab-library"] {
+    #rtab-library:checked ~ nav .tab[for="rtab-library"],
+    #rtab-inventory:checked ~ nav .tab[for="rtab-inventory"] {
       background: var(--color-primary-highlight); border-color: var(--color-border); color: var(--color-text);
     }
     #rtab-well:checked ~ .content #tab-well,
@@ -107,7 +108,8 @@
     #rtab-diagram:checked ~ .content #tab-diagram,
     #rtab-import:checked ~ .content #tab-import,
     #rtab-reference:checked ~ .content #tab-reference,
-    #rtab-library:checked ~ .content #tab-library { display: block; }
+    #rtab-library:checked ~ .content #tab-library,
+    #rtab-inventory:checked ~ .content #tab-inventory { display: block; }
     #bootError {
       margin-bottom: var(--space-4); padding: var(--space-4);
       border: 1px solid var(--color-error); border-radius: var(--radius-lg);
@@ -181,6 +183,8 @@
     #tallyTable th { font-size: 0.72rem; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
     #tallyTable .chip { padding: .08rem .35rem; font-size: 0.62rem; vertical-align: middle; }
     #tallyTable .btn.sm { padding: .15rem .4rem; font-size: 0.68rem; }
+    #tallyTable .tally-stand { font-weight: 700; vertical-align: middle; }
+    #tallyTable .tally-joint { font-weight: 600; }
     #tallyTable .tally-desc { min-width: 9rem; max-width: 15rem; text-align: center; }
     #tallyTable .tally-name {
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -351,6 +355,24 @@
     .lib-item:hover { border-color: var(--color-primary); }
     .lib-item .t { font-weight: 700; font-size: var(--text-sm); }
     .lib-item .d { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .25rem; }
+    .inventory-import {
+      display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end;
+      padding: var(--space-3); margin-bottom: var(--space-3);
+      border-radius: var(--radius-md); background: var(--color-bg); border: 1px solid var(--color-border);
+    }
+    .inventory-import .field { margin: 0; min-width: 200px; flex: 1 1 200px; }
+    .inventory-sections { display: flex; flex-direction: column; gap: var(--space-3); }
+    .inventory-section { padding: var(--space-3); }
+    .inventory-section h3 {
+      margin: 0 0 var(--space-2); font-size: 1rem; display: flex; align-items: center; gap: var(--space-2);
+    }
+    .inventory-scroll { overflow: auto; max-height: 280px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .inventory-table th, .inventory-table td {
+      padding: .45rem .5rem; border-bottom: 1px solid var(--color-divider); text-align: center; vertical-align: middle;
+    }
+    .inventory-table th { font-size: 0.72rem; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
+    .inventory-table .inv-desc { text-align: left; min-width: 10rem; max-width: 18rem; }
     .diagram-wrap { overflow: auto; padding: var(--space-2); max-height: 85vh; }
     .diagram-wrap svg { min-width: 720px; display: block; }
     .save-dot {
@@ -522,10 +544,11 @@
       <input type="radio" name="bha-tab" id="rtab-reference" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-import" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-library" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-inventory" class="tab-radio">
       <nav class="tabs" aria-label="BHA sections">
         <label class="tab" for="rtab-well" data-tab="well">Well &amp; job</label>
         <label class="tab" for="rtab-builder" data-tab="builder">String builder</label>
-        <label class="tab" for="rtab-tally" data-tab="tally">Tally table</label>
+        <label class="tab" for="rtab-tally" data-tab="tally">DST Tally</label>
         <label class="tab" for="rtab-running" data-tab="running">Running tally</label>
         <label class="tab" for="rtab-hydraulics" data-tab="hydraulics">Volumes &amp; hydraulics</label>
         <label class="tab" for="rtab-weight" data-tab="weight">Weight / WIR</label>
@@ -533,6 +556,7 @@
         <label class="tab" for="rtab-reference" data-tab="reference">Load BHA reference</label>
         <label class="tab" for="rtab-import" data-tab="import">Import / export</label>
         <label class="tab" for="rtab-library" data-tab="library">Tool library</label>
+        <label class="tab" for="rtab-inventory" data-tab="inventory">DST Inventory</label>
       </nav>
 
       <div class="content" id="tabContent">
@@ -648,16 +672,16 @@
           </div>
         </section>
 
-        <!-- Tally table -->
+        <!-- DST Tally -->
         <section class="tab-panel" id="tab-tally">
           <article class="card">
-            <h2>Field tally</h2>
+            <h2>DST Tally</h2>
             <div class="tally-layout">
               <div class="tally-scroll">
                 <table id="tallyTable">
                   <thead>
                     <tr>
-                      <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+                      <th>Stand</th><th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
                       <th>OD (in)</th><th>ID (in)</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
                       <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
                     </tr>
@@ -674,7 +698,7 @@
         <section class="tab-panel" id="tab-running">
           <article class="card">
             <h2>Running tally</h2>
-            <p class="muted">Separate field log — tool #1 at shoe, depth from 0 ft increasing as you RIH. Not linked to the planned tally table.</p>
+            <p class="muted">Separate field log — tool #1 at shoe, depth from 0 ft increasing as you RIH. Not linked to the DST tally table.</p>
             <div class="running-layout">
               <div class="running-toolbar no-print">
                 <button class="btn primary" id="runNextBtn" type="button">Run next (#1 → shoe)</button>
@@ -704,10 +728,6 @@
                   <tbody id="runningTableBody"></tbody>
                 </table>
               </div>
-              <div class="running-comments no-print">
-                <label for="runComments">Comments</label>
-                <textarea id="runComments" placeholder="Shift notes, tally book ref, observations…"></textarea>
-              </div>
               <div class="running-add-panel no-print" id="runAddPanel">
                 <div class="field" style="grid-column:1/-1"><label for="runItemName">Description</label><input id="runItemName" placeholder="Tool description"></div>
                 <div class="field"><label for="runItemLen">Length</label><input id="runItemLen" type="number" step="0.01"></div>
@@ -716,6 +736,10 @@
                 <div class="field"><label for="runItemId">ID (in)</label><input id="runItemId"></div>
                 <div class="field"><label for="runItemQty">Qty</label><input id="runItemQty" type="number" min="1" value="1"></div>
                 <div class="field" style="align-self:end"><button class="btn primary" id="runInsertBtn" type="button">Insert tool</button></div>
+              </div>
+              <div class="running-comments no-print">
+                <label for="runComments">Comments</label>
+                <textarea id="runComments" placeholder="Shift notes, tally book ref, observations…"></textarea>
               </div>
             </div>
           </article>
@@ -865,6 +889,24 @@
             <div class="lib-grid" id="toolLibrary"></div>
           </article>
         </section>
+
+        <!-- DST Inventory -->
+        <section class="tab-panel" id="tab-inventory">
+          <article class="card">
+            <h2>DST Inventory</h2>
+            <p class="muted" id="inventorySource">Import Excel or PDF to populate rig inventory lists automatically.</p>
+            <div class="inventory-import no-print">
+              <div class="field">
+                <label for="invFileUp">Inventory file</label>
+                <input id="invFileUp" type="file" accept=".xlsx,.xls,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,image/*">
+              </div>
+              <button class="btn primary" id="invParseBtn" type="button">Import inventory</button>
+              <button class="btn" id="invClearBtn" type="button">Clear inventory</button>
+            </div>
+            <p class="muted" id="invParseStatus" style="margin-bottom:var(--space-2)">Select Excel or PDF — import runs automatically.</p>
+            <div class="inventory-sections" id="inventorySections"></div>
+          </article>
+        </section>
       </div>
     </section>
   </div>
@@ -905,6 +947,20 @@
       { name: 'Gauge carrier', cat: 'Sub', length: 0.90, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' },
       { name: 'Slotted liner sub', cat: 'Sub', length: 1.20, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' }
     ];
+
+    const INVENTORY_SECTION_META = [
+      { key: 'dstTools', title: 'DST Tool Inventory' },
+      { key: 'tubing', title: 'Tubing Inventory' },
+      { key: 'upJoint', title: 'Up Joint Inventory' },
+      { key: 'xover', title: 'X-over Inventory' },
+      { key: 'sampling', title: 'Sampling Inventory' },
+      { key: 'gauge', title: 'Gauge Inventory' },
+      { key: 'consumables', title: 'Consumables — critical' }
+    ];
+
+    function emptyInventorySections() {
+      return { dstTools: [], tubing: [], upJoint: [], xover: [], sampling: [], gauge: [], consumables: [] };
+    }
 
     const RUNNING_TUBING_JOINT = {
       name: '3 1/2" Tubing — Tubing COSMO', cat: 'Tubing', length: 30, unit: 'ft',
@@ -957,7 +1013,8 @@
       runningTally: {
         comments: '', startedAt: null, lastUpdate: null, unit: 'ft',
         items: initRunningTallyItems(DEFAULT_RUNNING_TALLY_ITEMS())
-      }
+      },
+      dstInventory: { source: '', sections: emptyInventorySections() }
     };
 
     let editIndex = -1;
@@ -1076,11 +1133,259 @@
       if (/packer|rtts|bridge/i.test(n)) return 'Packer';
       if (/valve|lubricator|circul/i.test(n)) return 'Valve';
       if (/gun|perf/i.test(n)) return 'Gun';
-      if (/tubing|joint|blast/i.test(n)) return 'Tubing';
+      if (/tubing|tub\s*joint|blast/i.test(n)) return 'Tubing';
       if (/tree|stt/i.test(n)) return 'Tree';
       if (/x-?over|crossover/i.test(n)) return 'X-over';
       if (/sub|jar|carrier/i.test(n)) return 'Sub';
       return 'Other';
+    }
+
+    function isTubingItem(item) {
+      const cat = String(item.cat || guessCat(item.name) || '').toLowerCase();
+      return cat === 'tubing' || /tubing|tub\s*joint|blast\s*joint/i.test(String(item.name || ''));
+    }
+
+    function annotateTallyDisplay(rows) {
+      const out = rows.map(r => ({ ...r, isTubing: isTubingItem(r), displayJoint: '', displayStand: '', standRowspan: 1, renderStandCell: true }));
+      let tubingN = 0;
+      for (let i = 0; i < out.length; i++) {
+        if (!out[i].isTubing) {
+          out[i].renderStandCell = true;
+          continue;
+        }
+        tubingN++;
+        out[i].displayJoint = String(tubingN);
+        const posInStand = (tubingN - 1) % 3;
+        if (posInStand === 0) {
+          let span = 1;
+          for (let j = i + 1; j < out.length && out[j].isTubing; j++) {
+            span++;
+            if (span >= 3) break;
+          }
+          out[i].displayStand = String(Math.ceil(tubingN / 3));
+          out[i].standRowspan = span;
+          out[i].renderStandCell = true;
+        } else {
+          out[i].renderStandCell = false;
+        }
+      }
+      return out;
+    }
+
+    function matchInventorySectionHeader(text) {
+      const t = String(text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!t || t.length > 120) return null;
+      if (/consumable/.test(t) && /critical/.test(t)) return 'consumables';
+      if (/^consumables?\b/.test(t)) return 'consumables';
+      if (/dst\s*tool/.test(t) || /^tool\s*inventory/.test(t)) return 'dstTools';
+      if (/tubing\s*inventory/.test(t) || /^tubing\b/.test(t)) return 'tubing';
+      if (/up\s*joint/.test(t)) return 'upJoint';
+      if (/x-?over|cross\s*over/.test(t)) return 'xover';
+      if (/sampl/.test(t)) return 'sampling';
+      if (/gauge/.test(t)) return 'gauge';
+      return null;
+    }
+
+    function matchSheetNameToInventorySection(name) {
+      const t = String(name || '').toLowerCase();
+      if (/consumable/.test(t)) return 'consumables';
+      if (/dst\s*tool|^tools?$/.test(t)) return 'dstTools';
+      if (/tubing/.test(t)) return 'tubing';
+      if (/up\s*joint/.test(t)) return 'upJoint';
+      if (/x-?over|crossover/.test(t)) return 'xover';
+      if (/sampl/.test(t)) return 'sampling';
+      if (/gauge/.test(t)) return 'gauge';
+      return null;
+    }
+
+    function classifyInventorySection(name, cat) {
+      const n = String(name || '').toLowerCase();
+      const c = String(cat || guessCat(name) || '').toLowerCase();
+      if (/consumable|critical|o-?ring|element|backup\s*ring|seal\s*kit/i.test(n)) return 'consumables';
+      if (/up\s*joint|upper\s*joint/i.test(n)) return 'upJoint';
+      if (/sample|scar-|sampling/i.test(n) || /sampling/i.test(c)) return 'sampling';
+      if ((/gauge|dga-|symphony\s*measure/i.test(n) || /gauge/i.test(c)) && !/sample/i.test(n)) return 'gauge';
+      if (/x-?over|crossover/i.test(n) || c.includes('x-over')) return 'xover';
+      if (/tubing|tub\s*joint|blast\s*joint/i.test(n) || c === 'tubing') return 'tubing';
+      return 'dstTools';
+    }
+
+    function normalizeInventoryItem(raw) {
+      const name = String(raw.name || raw.description || '').trim();
+      return {
+        name,
+        description: String(raw.description || name).trim(),
+        cat: raw.cat || guessCat(name),
+        od: raw.od || '',
+        id: raw.id || '',
+        length: Number(raw.length) || 0,
+        unit: raw.unit || 'ft',
+        qty: Math.max(1, Number(raw.qty) || 1),
+        serial: raw.serial || raw.toolNo || '',
+        company: raw.company || '',
+        box: raw.box || '',
+        pin: raw.pin || '',
+        notes: raw.notes || '',
+        condition: raw.condition || ''
+      };
+    }
+
+    function mergeInventorySections(target, source) {
+      for (const sec of INVENTORY_SECTION_META) {
+        if (Array.isArray(source[sec.key])) target[sec.key].push(...source[sec.key]);
+      }
+    }
+
+    function inventorySectionCount(sections) {
+      return INVENTORY_SECTION_META.reduce((n, s) => n + (sections[s.key]?.length || 0), 0);
+    }
+
+    function parseInventoryItemRows(rows) {
+      if (!rows?.length) return [];
+      const hi = findHeaderRow(rows);
+      if (hi < 0) return [];
+      const header = (rows[hi] || []).map(normHeaderCell);
+      const nameI = pickCol(header, ['description', 'item description', 'item', 'tool', 'part', 'material', 'name', 'component']);
+      const qtyI = pickCol(header, ['qty', 'quantity', 'count', 'on hand', 'available', 'no on rig']);
+      const serialI = pickCol(header, ['serial', 's n', 'serial no', 'tool serial', 'serial number']);
+      const condI = pickCol(header, ['condition', 'status']);
+      const odI = pickCol(header, ['od in', 'od', 'outer dia', 'o d']);
+      const idI = pickCol(header, ['id in', 'id', 'inner dia', 'i d']);
+      const lenI = pickCol(header, ['length m', 'length ft', 'length', 'len']);
+      const boxI = pickCol(header, ['box', 'top conn']);
+      const pinI = pickCol(header, ['pin', 'bottom conn']);
+      const coI = pickCol(header, ['company', 'vendor', 'manufacturer']);
+      const notesI = pickCol(header, ['notes', 'remark', 'comments']);
+      const catI = pickCol(header, ['category', 'type']);
+      const lenUnit = header[lenI] && header[lenI].includes('ft') ? 'ft' : 'm';
+      const out = [];
+      for (const r of rows.slice(hi + 1)) {
+        const cells = (r || []).map(v => String(v ?? '').trim());
+        const name = (nameI >= 0 ? cells[nameI] : '') || cells.find((c, i) => i <= 4 && c.length > 2) || '';
+        if (!name) continue;
+        if (matchInventorySectionHeader(name)) continue;
+        if (/^(total|subtotal|remarks|prepared by|end of)/i.test(name)) break;
+        const length = toNum(cells[lenI]);
+        if (!length && !cells[odI] && !cells[idI] && !cells[qtyI]) continue;
+        out.push(normalizeInventoryItem({
+          name,
+          cat: (catI >= 0 && cells[catI]) ? cells[catI] : guessCat(name),
+          length: length || 0,
+          unit: lenUnit,
+          od: cleanOdId(cells[odI]),
+          id: cleanOdId(cells[idI]),
+          qty: qtyI >= 0 ? (toNum(cells[qtyI]) || 1) : 1,
+          serial: serialI >= 0 ? cells[serialI] : '',
+          condition: condI >= 0 ? cells[condI] : '',
+          box: boxI >= 0 ? cells[boxI] : '',
+          pin: pinI >= 0 ? cells[pinI] : '',
+          company: coI >= 0 ? cells[coI] : '',
+          notes: notesI >= 0 ? cells[notesI] : ''
+        }));
+      }
+      return out;
+    }
+
+    function parseInventorySheetWithSectionHeaders(rows) {
+      const sections = emptyInventorySections();
+      let current = null;
+      let count = 0;
+      for (let ri = 0; ri < rows.length; ri++) {
+        const cells = (rows[ri] || []).map(v => String(v ?? '').trim());
+        const rowText = cells.filter(Boolean).join(' ');
+        if (!rowText) continue;
+        let secHit = null;
+        for (const cell of cells) {
+          const sec = matchInventorySectionHeader(cell);
+          if (sec) { secHit = sec; break; }
+        }
+        if (!secHit && cells.length <= 2) secHit = matchInventorySectionHeader(rowText);
+        if (secHit) { current = secHit; continue; }
+        if (!current) continue;
+        const name = cells.find(c => c.length > 2) || '';
+        if (!name || matchInventorySectionHeader(name)) continue;
+        if (/^(total|subtotal|remarks)/i.test(name)) continue;
+        const nums = cells.map(c => toNum(c)).filter(n => n > 0);
+        sections[current].push(normalizeInventoryItem({
+          name,
+          cat: guessCat(name),
+          length: nums[0] || 0,
+          unit: 'ft',
+          od: cells.find(c => /^\d+(\.\d+)?$/.test(c) && parseFloat(c) > 2 && parseFloat(c) < 12) || '',
+          qty: 1
+        }));
+        count++;
+      }
+      return { sections, count };
+    }
+
+    function parseInventoryFromWorkbook(wb) {
+      const sections = emptyInventorySections();
+      let total = 0;
+      for (const sn of wb.SheetNames) {
+        const rows = sheetRows(wb, sn);
+        const sheetSec = matchSheetNameToInventorySection(sn);
+        if (sheetSec) {
+          const items = parseInventoryItemRows(rows);
+          sections[sheetSec].push(...items);
+          total += items.length;
+          continue;
+        }
+        const inline = parseInventorySheetWithSectionHeaders(rows);
+        if (inline.count > 0) {
+          mergeInventorySections(sections, inline.sections);
+          total += inline.count;
+        }
+      }
+      if (!total) {
+        const sn = wb.SheetNames.find(n => /inventory|stock|material/i.test(n)) || pickBestSheet(wb.SheetNames);
+        const rows = sheetRows(wb, sn);
+        const inline = parseInventorySheetWithSectionHeaders(rows);
+        if (inline.count > 0) {
+          mergeInventorySections(sections, inline.sections);
+          total = inline.count;
+        } else {
+          const tallyItems = extractRowsFromSheet(rows);
+          for (const item of tallyItems) {
+            const sec = classifyInventorySection(item.name, item.cat);
+            sections[sec].push(normalizeInventoryItem(item));
+            total++;
+          }
+        }
+      }
+      return { sections, total };
+    }
+
+    function parseInventoryFromOcrLines(lines) {
+      const sections = emptyInventorySections();
+      let current = null;
+      let total = 0;
+      for (const line of lines) {
+        const sec = matchInventorySectionHeader(line);
+        if (sec) { current = sec; continue; }
+        if (!current) continue;
+        const t = line.trim();
+        if (t.length < 4 || /^(od|id|qty|serial)/i.test(t)) continue;
+        sections[current].push(normalizeInventoryItem({ name: t, cat: guessCat(t) }));
+        total++;
+      }
+      if (!total) {
+        const tallyItems = parseOcrTallyFromLines(lines);
+        for (const item of tallyItems) {
+          const sec = classifyInventorySection(item.name, item.cat);
+          sections[sec].push(normalizeInventoryItem(item));
+          total++;
+        }
+      }
+      return { sections, total };
+    }
+
+    function migrateDstInventory(data) {
+      if (!data?.dstInventory) return;
+      state.dstInventory = {
+        source: data.dstInventory.source || '',
+        sections: { ...emptyInventorySections(), ...(data.dstInventory.sections || {}) }
+      };
     }
 
     function isPackerRow(item) {
@@ -1648,20 +1953,25 @@
         </div>`).join('') : '<p class="muted">No items — add from builder, library, or import.</p>';
 
       $('tallyTable').querySelector('thead').innerHTML = `<tr>
-        <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+        <th>Stand</th><th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
         <th>OD (in)</th><th>ID (in)</th><th>Len (${unit})</th><th>Top MD (${unit})</th><th>Bot MD (${unit})</th>
         <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR (klbf)</th><th class="no-print">Actions</th>
       </tr>`;
       const tb = $('tallyTable').querySelector('tbody');
       const casingForTally = migrateCasings(state.well);
-      tb.innerHTML = rows.map(r => {
+      const displayRows = annotateTallyDisplay(rows);
+      tb.innerHTML = displayRows.map(r => {
         const hi = tallyRowHighlight(r, casingForTally);
         const trAttr = [
           hi.className ? `class="${hi.className}"` : '',
           hi.title ? `title="${esc(hi.title)}"` : ''
         ].filter(Boolean).join(' ');
+        const standCell = r.renderStandCell
+          ? `<td class="tally-stand"${r.isTubing && r.standRowspan > 1 ? ` rowspan="${r.standRowspan}"` : ''}>${esc(r.displayStand)}</td>`
+          : '';
         return `<tr${trAttr ? ' ' + trAttr : ''}>
-        <td>${r.idx}</td>
+        ${standCell}
+        <td class="tally-joint">${r.isTubing ? esc(r.displayJoint) : ''}</td>
         <td class="tally-desc"><div class="tally-name">${esc(r.name)}</div>${(r.company || r.toolNo || r.serial) ? `<div class="tally-sub">${[r.company, r.toolNo, r.serial ? 'S/N ' + r.serial : ''].filter(Boolean).join(' · ')}</div>` : ''}</td>
         <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
         <td>${esc(r.box)}</td><td>${esc(r.pin)}</td>
@@ -1757,9 +2067,10 @@
 
       drawDiagram(rows, unit);
       renderLibrary();
+      renderInventory();
       renderRunningTally();
       updateRefSourceLine();
-      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items, runningTally: state.runningTally }, null, 2);
+      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items, runningTally: state.runningTally, dstInventory: state.dstInventory }, null, 2);
       updateStartBanner();
       scheduleSave();
     }
@@ -2498,6 +2809,7 @@
       if (Array.isArray(data.items)) state.items = data.items;
       if (data.runningTally) migrateRunningTally(data);
       else if (data.running) migrateRunningTally({ running: data.running });
+      migrateDstInventory(data);
       if (sourceLabel) state.refSource = sourceLabel;
       writeWellToDom();
       render();
@@ -2635,11 +2947,11 @@
     window.switchTab = switchTab;
 
     function exportCsv() {
-      const rows = computedRows();
+      const rows = annotateTallyDisplay(computedRows());
       const u = dispUnit();
-      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
+      const header = ['Stand','Joint_No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
       const lines = [header.join(',')].concat(rows.map(r => [
-        r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
+        r.displayStand || '', r.isTubing ? r.displayJoint : '', qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
         fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
         fmt(r.cap, 4), fmtVol(r.cumVol), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
       ].join(',')));
@@ -2688,7 +3000,7 @@
     }
 
     function exportXlsx() {
-      const rows = computedRows();
+      const rows = annotateTallyDisplay(computedRows());
       const u = dispUnit();
       const w = state.well;
       const aoa = [
@@ -2696,10 +3008,10 @@
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
         ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
-        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
+        ['Stand','Joint #','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
       ];
       rows.forEach(r => aoa.push([
-        r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
+        r.displayStand || '', r.isTubing ? r.displayJoint : '', r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
         Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
         Number(fmt(r.cap, 4)), Number(fmtVol(r.cumVol)),
         Number(fmt(r.buoyedLb, 1)), Number(fmt(toKlbf(r.cumWirLb), 3)), r.serial || '', r.notes || ''
@@ -2711,13 +3023,13 @@
       aoa.push(['Buoyancy factor', fmt(rows[0]?.bf ?? buoyancyFactor(w.fluidPpg, w.steelPpg), 4)]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'BHA Tally');
+      XLSX.utils.book_append_sheet(wb, ws, 'DST Tally');
       XLSX.writeFile(wb, `${(w.dstRun || 'dst').replace(/\s+/g,'-')}-bha-tally.xlsx`);
     }
 
     function exportProject() {
       readWellFromDom();
-      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource, runningTally: state.runningTally }, null, 2), 'dst-bha-project.json', 'application/json');
+      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource, runningTally: state.runningTally, dstInventory: state.dstInventory }, null, 2), 'dst-bha-project.json', 'application/json');
     }
 
     function dlBlob(text, name, type) {
@@ -2733,7 +3045,8 @@
       saveTimer = setTimeout(() => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            well: state.well, items: state.items, refSource: state.refSource, runningTally: state.runningTally
+            well: state.well, items: state.items, refSource: state.refSource,
+            runningTally: state.runningTally, dstInventory: state.dstInventory
           }));
           $('saveStatus').textContent = 'Saved locally';
           $('saveStatus').classList.add('live');
@@ -2748,15 +3061,18 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return false;
         const data = JSON.parse(raw);
+        let loaded = false;
         if (data.well) state.well = { ...state.well, ...data.well };
+        if (data.refSource) state.refSource = data.refSource;
+        migrateRunningTally(data);
+        migrateDstInventory(data);
         if (Array.isArray(data.items) && data.items.length) {
           state.items = data.items;
-          if (data.refSource) state.refSource = data.refSource;
-          migrateRunningTally(data);
-          writeWellToDom();
-          return true;
+          loaded = true;
         }
-        return false;
+        if (inventorySectionCount(state.dstInventory.sections)) loaded = true;
+        if (loaded) writeWellToDom();
+        return loaded;
       } catch (e) { return false; }
     }
 
@@ -2855,6 +3171,100 @@
           <div class="d">${esc(t.cat)} · ${fmt(t.length, 2)} ${t.unit} · OD ${esc(t.od)} · ID ${esc(t.id)}</div>
           <div class="d">${esc(t.box)} × ${esc(t.pin)}</div>
         </div>`).join('') : '<p class="muted">Load a BHA reference to populate the library.</p>';
+    }
+
+    function renderInventory() {
+      const host = $('inventorySections');
+      if (!host) return;
+      const srcEl = $('inventorySource');
+      const total = inventorySectionCount(state.dstInventory.sections);
+      if (srcEl) {
+        srcEl.textContent = state.dstInventory.source
+          ? `${total} item(s) from ${state.dstInventory.source}`
+          : 'Import Excel or PDF to populate rig inventory lists automatically.';
+      }
+      host.innerHTML = INVENTORY_SECTION_META.map(sec => {
+        const items = state.dstInventory.sections[sec.key] || [];
+        return `<article class="inventory-section card">
+          <h3>${esc(sec.title)} <span class="chip chip-other">${items.length}</span></h3>
+          <div class="inventory-scroll">
+            <table class="inventory-table">
+              <thead><tr>
+                <th>Description</th><th>OD</th><th>ID</th><th>Len</th><th>Qty</th><th>Serial</th><th>Condition</th><th>Notes</th>
+              </tr></thead>
+              <tbody>${items.length ? items.map(it => `<tr>
+                <td class="inv-desc">${esc(it.description || it.name)}</td>
+                <td>${esc(it.od)}</td><td>${esc(it.id)}</td>
+                <td>${it.length ? `${fmt(it.length, 2)} ${esc(it.unit)}` : '—'}</td>
+                <td>${it.qty || 1}</td>
+                <td>${esc(it.serial)}</td>
+                <td>${esc(it.condition)}</td>
+                <td>${esc(it.notes)}</td>
+              </tr>`).join('') : '<tr><td colspan="8" class="muted">No items — import Excel/PDF or items will be auto-classified.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    async function importInventoryFile(file, replaceConfirm) {
+      if (!file) return alert('Choose a file first');
+      const setStatus = (msg, ok) => {
+        const el = $('invParseStatus');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.color = ok ? 'var(--color-success)' : ok === false ? 'var(--color-error)' : 'var(--color-text-muted)';
+      };
+      try {
+        setStatus('Parsing inventory…');
+        let parsed;
+        if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+          if (typeof XLSX === 'undefined') return alert('Excel library not loaded — check internet connection and refresh.');
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          parsed = parseInventoryFromWorkbook(wb);
+        } else if (/\.pdf$/i.test(file.name)) {
+          const pdfjs = await ensurePdfJs();
+          const buf = await file.arrayBuffer();
+          const doc = await pdfjs.getDocument({ data: buf }).promise;
+          let text = '';
+          for (let i = 1; i <= doc.numPages; i++) {
+            const pg = await doc.getPage(i);
+            const tc = await pg.getTextContent();
+            text += tc.items.map(x => x.str).join(' ') + '\n';
+          }
+          let lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+          if (text.replace(/\s/g, '').length < 80 || lines.length < 5) {
+            lines = await ocrPdfPages(doc, setStatus);
+          }
+          parsed = parseInventoryFromOcrLines(lines);
+        } else if (isImageFile(file)) {
+        const lines = await ocrImageFile(file, setStatus);
+          parsed = parseInventoryFromOcrLines(lines);
+        } else {
+          setStatus('Unsupported file type.', false);
+          return alert('Use Excel, PDF, or an image file.');
+        }
+        const total = parsed.total || inventorySectionCount(parsed.sections);
+        if (!total) {
+          setStatus('No inventory rows detected.', false);
+          return alert('No inventory rows detected — check file layout or section headers.');
+        }
+        const existing = inventorySectionCount(state.dstInventory.sections);
+        if (replaceConfirm && existing && !confirm(`Replace ${existing} existing inventory item(s) with ${total} imported rows?`)) {
+          setStatus('Import cancelled.', false);
+          return;
+        }
+        state.dstInventory = { source: file.name, sections: parsed.sections };
+        render();
+        setStatus(`Loaded ${total} inventory item(s) from ${file.name}.`, true);
+        switchTab('inventory');
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message, false);
+        alert('Inventory import error: ' + err.message);
+      }
     }
 
     // Tabs — labels use CSS radio (work without JS); JS adds scroll-into-view
@@ -2967,10 +3377,24 @@
           if (Array.isArray(data.items)) state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
           migrateRunningTally(data);
+          migrateDstInventory(data);
         }
         writeWellToDom();
         render();
       } catch (e) { alert('Invalid JSON'); }
+    };
+
+    $('invParseBtn').onclick = () => importInventoryFile($('invFileUp').files[0], true);
+    $('invFileUp').onchange = () => {
+      const f = $('invFileUp').files[0];
+      if (f) importInventoryFile(f, true);
+    };
+    $('invClearBtn').onclick = () => {
+      const n = inventorySectionCount(state.dstInventory.sections);
+      if (n && !confirm(`Clear all ${n} inventory item(s)?`)) return;
+      state.dstInventory = { source: '', sections: emptyInventorySections() };
+      $('invParseStatus').textContent = 'Inventory cleared.';
+      render();
     };
 
     $('copyJsonBtn').onclick = () => navigator.clipboard.writeText($('jsonArea').value);
