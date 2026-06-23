@@ -159,7 +159,7 @@
     .panel {
       background: var(--color-surface); border: 1px solid var(--color-border-subtle);
       border-radius: var(--radius-2xl); box-shadow: var(--shadow-md);
-      margin-bottom: var(--space-5); overflow: hidden;
+      margin-bottom: var(--space-5);
     }
     .tabs {
       display: flex; gap: 3px; padding: var(--space-2) var(--space-3);
@@ -304,7 +304,6 @@
     .scroll { overflow: auto; max-height: 62vh; }
     .app:has(#rtab-tally:checked) .kpi-wrap,
     .app:has(#rtab-tally:checked) #startBanner { display: none !important; }
-    .app:has(#rtab-tally:checked) .topbar .sub { display: none; }
     .app:has(#rtab-tally:checked) .tally-layout {
       height: calc(100vh - 118px);
       min-height: 640px;
@@ -379,8 +378,8 @@
     .app:has(#rtab-running:checked) #tab-running { display: flex; flex-direction: column; min-height: 0; }
     .app:has(#rtab-running:checked) #tab-running .card { flex: 1 1 auto; min-height: 0; }
     .app:has(#rtab-running:checked) .running-layout {
-      height: calc(100dvh - 14rem);
-      min-height: 780px;
+      min-height: 0;
+      height: auto;
     }
     #tab-running .card { display: flex; flex-direction: column; min-height: 0; padding: var(--space-3) var(--space-4); }
     #tab-running h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
@@ -413,7 +412,8 @@
     .running-kpi .value { font-size: 1.25rem; font-weight: 700; margin-top: .25rem; }
     .running-kpi .sub { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .15rem; }
     .running-scroll {
-      flex: 1 1 auto; min-height: 500px; overflow: auto;
+      flex: 1 1 auto; min-height: 280px; max-height: calc(100dvh - 20rem);
+      overflow: auto;
       border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md);
       background: var(--color-bg);
       box-shadow: inset 0 1px 4px color-mix(in oklab, var(--color-text) 4%, transparent);
@@ -433,21 +433,12 @@
       width: 100%; min-width: 6rem; padding: .35rem .45rem; font-size: 0.75rem;
       border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg);
     }
-    .running-comments {
-      padding: var(--space-3); border-radius: var(--radius-md);
-      background: var(--color-bg); border: 1px solid var(--color-border);
-    }
-    .running-comments label { font-size: var(--text-sm); font-weight: 600; display: block; margin-bottom: .35rem; }
-    .running-comments textarea {
-      width: 100%; min-height: 44px; padding: .55rem .75rem; resize: vertical;
-      border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-2);
-      font-size: var(--text-sm);
-    }
     .running-add-panel {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: var(--space-2); align-items: end;
       padding: var(--space-3); border-radius: var(--radius-md);
       background: var(--color-bg); border: 1px solid var(--color-border);
+      flex-shrink: 0;
     }
     .running-add-panel .field { margin: 0; }
     .running-add-panel .field label { font-size: var(--text-xs); }
@@ -960,10 +951,6 @@
                 <div class="field"><label for="runItemId">ID (in)</label><input id="runItemId"></div>
                 <div class="field"><label for="runItemQty">Qty</label><input id="runItemQty" type="number" min="1" value="1"></div>
                 <div class="field" style="align-self:end"><button class="btn primary" id="runInsertBtn" type="button">Insert tool</button></div>
-              </div>
-              <div class="running-comments no-print">
-                <label for="runComments">Comments</label>
-                <textarea id="runComments" placeholder="Shift notes, tally book ref, observations…"></textarea>
               </div>
             </div>
           </article>
@@ -2146,10 +2133,6 @@
       const rows = computedRunningRows();
       const unit = runningUnit();
       const prog = runningProgress(rows);
-      const commentsEl = $('runComments');
-      if (commentsEl && commentsEl.value !== (state.runningTally.comments || '')) {
-        commentsEl.value = state.runningTally.comments || '';
-      }
 
       $('runKpiItems').textContent = rows.length ? `${prog.runCount} / ${prog.totalItems}` : '0 / 0';
       $('runKpiItemsSub').textContent = rows.length
@@ -3976,10 +3959,6 @@
       } else {
         unmarkRunningItem(i);
       }
-    });
-    $('runComments').addEventListener('input', () => {
-      state.runningTally.comments = $('runComments').value;
-      scheduleSave();
     });
     $('runningTableBody').addEventListener('input', e => {
       const inp = e.target.closest('.run-tool-comment');
