@@ -277,6 +277,18 @@
       border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-2);
       font-size: var(--text-sm);
     }
+    .running-add-panel {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space-2); align-items: end;
+      padding: var(--space-3); border-radius: var(--radius-md);
+      background: var(--color-bg); border: 1px solid var(--color-border);
+    }
+    .running-add-panel .field { margin: 0; }
+    .running-add-panel .field label { font-size: var(--text-xs); }
+    .running-add-panel .field input, .running-add-panel .field select {
+      padding: .55rem .65rem; font-size: var(--text-sm);
+    }
+    #runningTable .run-actions { white-space: nowrap; }
     .app:has(#rtab-builder:checked) .kpi-wrap,
     .app:has(#rtab-builder:checked) #startBanner { display: none !important; }
     .app:has(#rtab-builder:checked) .topbar .sub { display: none; }
@@ -655,20 +667,32 @@
         <section class="tab-panel" id="tab-running">
           <article class="card">
             <h2>Running tally</h2>
-            <p class="muted">Bottom-up RIH — run from shoe (Symphony, cross overs, packer, PBR…) toward surface. Cum volume and WIR update as each item is marked.</p>
+            <p class="muted">Separate field log — tool #1 at shoe, depth from 0 ft increasing as you RIH. Not linked to the planned tally table.</p>
             <div class="running-layout">
               <div class="running-toolbar no-print">
-                <button class="btn primary" id="runNextBtn" type="button">Run next (from shoe)</button>
+                <button class="btn primary" id="runNextBtn" type="button">Run next (#1 → shoe)</button>
                 <button class="btn" id="runUndoBtn" type="button">Undo last</button>
-                <button class="btn" id="runResetBtn" type="button">Reset running log</button>
-                <button class="btn" id="exportRunningBtn" type="button">Export running tally</button>
+                <button class="btn" id="runResetBtn" type="button">Reset run marks</button>
+                <button class="btn" id="runAddTubingBtn" type="button">+ 3-1/2 tubing</button>
+                <button class="btn" id="runAddToolBtn" type="button">+ Add tool</button>
+                <button class="btn" id="runLoadDefaultBtn" type="button">Reset tool list</button>
+                <button class="btn" id="exportRunningBtn" type="button">Export</button>
+              </div>
+              <div class="running-add-panel no-print" id="runAddPanel">
+                <div class="field" style="grid-column:1/-1"><label for="runItemName">Description</label><input id="runItemName" placeholder="Tool description"></div>
+                <div class="field"><label for="runItemLen">Length</label><input id="runItemLen" type="number" step="0.01"></div>
+                <div class="field"><label for="runItemLenUnit">Unit</label><select id="runItemLenUnit"><option value="ft" selected>ft</option><option value="m">m</option></select></div>
+                <div class="field"><label for="runItemOd">OD (in)</label><input id="runItemOd"></div>
+                <div class="field"><label for="runItemId">ID (in)</label><input id="runItemId"></div>
+                <div class="field"><label for="runItemQty">Qty</label><input id="runItemQty" type="number" min="1" value="1"></div>
+                <div class="field" style="align-self:end"><button class="btn primary" id="runInsertBtn" type="button">Insert tool</button></div>
               </div>
               <div class="running-kpis" id="runningKpis">
-                <div class="running-kpi"><div class="label">Items run</div><div class="value" id="runKpiItems">0 / 0</div><div class="sub" id="runKpiItemsSub">Load a BHA tally first</div></div>
+                <div class="running-kpi"><div class="label">Items run</div><div class="value" id="runKpiItems">0 / 0</div><div class="sub" id="runKpiItemsSub">—</div></div>
                 <div class="running-kpi"><div class="label">Length run</div><div class="value" id="runKpiLen">0</div><div class="sub" id="runKpiLenSub">—</div></div>
-                <div class="running-kpi"><div class="label">Depth (top MD)</div><div class="value" id="runKpiDepth">—</div><div class="sub" id="runKpiDepthSub">—</div></div>
-                <div class="running-kpi"><div class="label">Cum vol (bbl)</div><div class="value" id="runKpiVol">0</div><div class="sub" id="runKpiVolSub">Internal volume in hole</div></div>
-                <div class="running-kpi"><div class="label">WIR (klbf)</div><div class="value" id="runKpiWir">0</div><div class="sub" id="runKpiWirSub">Buoyed hook load</div></div>
+                <div class="running-kpi"><div class="label">Depth run</div><div class="value" id="runKpiDepth">0</div><div class="sub" id="runKpiDepthSub">From shoe @ 0</div></div>
+                <div class="running-kpi"><div class="label">Cum vol (bbl)</div><div class="value" id="runKpiVol">0</div><div class="sub" id="runKpiVolSub">In hole</div></div>
+                <div class="running-kpi"><div class="label">WIR (klbf)</div><div class="value" id="runKpiWir">0</div><div class="sub" id="runKpiWirSub">Buoyed</div></div>
               </div>
               <div class="running-comments no-print">
                 <label for="runComments">Comments</label>
@@ -679,8 +703,9 @@
                   <thead>
                     <tr>
                       <th>Run</th><th>#</th><th>Description</th><th>OD</th><th>ID</th>
-                      <th>Len</th><th>Top MD</th><th>Bot MD</th>
+                      <th>Len</th><th>Depth from</th><th>Depth to</th>
                       <th>Cum vol (bbl)</th><th>WIR (klbf)</th><th>Time</th><th>Comment</th>
+                      <th class="no-print">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="runningTableBody"></tbody>
@@ -875,6 +900,42 @@
       { name: 'Slotted liner sub', cat: 'Sub', length: 1.20, unit: 'm', od: '3.500', id: '2.750', box: '3-1/2 VAM BOX', pin: '3-1/2 VAM PIN' }
     ];
 
+    const RUNNING_TUBING_JOINT = {
+      name: '3 1/2" Tubing — Tubing COSMO', cat: 'Tubing', length: 90, unit: 'ft',
+      od: '3.5', id: '2.55', box: '3 1/2" TS6 Box', pin: '3 1/2" TS6 Pin'
+    };
+
+  /** DST running tally — shoe = #1, depth from 0, ends at 3-1/2 tubing (XF-006 style) */
+    const DEFAULT_RUNNING_TALLY_ITEMS = () => [
+      { name: 'Shoe — Shoe SLB', cat: 'Sub', length: 2, unit: 'ft', od: '3.5', id: '2.25', box: '3 1/2" PH6 Box', pin: 'NA' },
+      { name: 'Symphony Measure — Gauge Carrier — DGA-U SLB', cat: 'Sub', length: 11.97, unit: 'ft', od: '5.04', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Cross Over 2-7/8" EUE Box to 3-1/2" PH-6 Pin — Cross Over SLB', cat: 'X-over', length: 1.73, unit: 'ft', od: '4.5', id: '2.25', box: '4.50" S.A. Box', pin: '2-7/8" EUE Pin' },
+      { name: 'HPPK End Sub — End Sub SLB', cat: 'Sub', length: 3.06, unit: 'ft', od: '5', id: '2.25', box: '4.50" S.A. Box', pin: '4.50" S.A. Pin' },
+      { name: 'Polished Bore Receptor — PBR SLB', cat: 'Sub', length: 2.6, unit: 'ft', od: '9.63', id: '2.2', box: '3 1/2" PH6 Box', pin: '4.50" S.A. Pin' },
+      { name: 'Certis Packer 7" 32 # — HPPK-AB SLB', cat: 'Packer', length: 5.8, unit: 'ft', od: '5.91', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Tubing Fill Test Valve — TFTV-FEB SLB', cat: 'Valve', length: 11.97, unit: 'ft', od: '5', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Symphony Measure — Gauge Carrier — DGA-U SLB', cat: 'Sub', length: 11.97, unit: 'ft', od: '5.04', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Sample Carrier — SCAR-BB SLB', cat: 'Sub', length: 18.8, unit: 'ft', od: '5.5', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Single Shot Hydrostatic Reversing Valve — SHRV-FEB SLB', cat: 'Valve', length: 4.44, unit: 'ft', od: '5', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'IRis Dual Valve — IRDV-BA SLB', cat: 'Valve', length: 24.94, unit: 'ft', od: '5', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Symphony Measure — Gauge Carrier — DGA-U SLB', cat: 'Sub', length: 11.97, unit: 'ft', od: '5.04', id: '2.25', box: '3 1/2" TS6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Cross over 3 1/2" PH6 Pin to 3 1/2" TS6 Box — Cross Over SLB', cat: 'X-over', length: 1.7, unit: 'ft', od: '5', id: '2.25', box: '3 1/2" TS6 Box', pin: '3 1/2" PH6 Pin' },
+      { name: 'Cross over 3 1/2" PH6 Box to 3 1/2" TS6 Pin — Cross Over SLB', cat: 'X-over', length: 1.6, unit: 'ft', od: '5', id: '2.25', box: '3 1/2" PH6 Box', pin: '3 1/2" TS6 Pin' },
+      { ...RUNNING_TUBING_JOINT }
+    ];
+
+    function cloneRunningItem(x) {
+      return {
+        name: x.name || '', cat: x.cat || guessCat(x.name), length: Number(x.length) || 0,
+        unit: x.unit || 'ft', od: x.od || '', id: x.id || '', box: x.box || '', pin: x.pin || '',
+        runAt: x.runAt || null, runNote: x.runNote || ''
+      };
+    }
+
+    function initRunningTallyItems(items) {
+      return items.map(cloneRunningItem);
+    }
+
     const state = {
       well: {
         name: '', customer: '', field: '', rig: '', formation: '', dstRun: '', engineer: '', date: '',
@@ -887,10 +948,14 @@
       pendingOcrLines: null,
       refSource: '',
       folderFiles: [],
-      running: { comments: '', startedAt: null, lastUpdate: null }
+      runningTally: {
+        comments: '', startedAt: null, lastUpdate: null, unit: 'ft',
+        items: initRunningTallyItems(DEFAULT_RUNNING_TALLY_ITEMS())
+      }
     };
 
     let editIndex = -1;
+    let editMode = 'planned';
     let saveTimer = null;
     let activeLibrary = [];
 
@@ -1158,15 +1223,12 @@
       return A === B || A.includes(B) || B.includes(A);
     }
 
-    function ensureItemRunFields(item) {
+    function ensureRunningItemFields(item) {
       if (item.runAt === undefined) item.runAt = null;
-      if (item.runBy === undefined) item.runBy = '';
       if (item.runNote === undefined) item.runNote = '';
     }
 
-    function normalizeItemRunFields() {
-      state.items.forEach(ensureItemRunFields);
-    }
+    function runningUnit() { return state.runningTally.unit || 'ft'; }
 
     function formatRunTime(iso) {
       if (!iso) return '—';
@@ -1176,170 +1238,222 @@
       } catch (e) { return '—'; }
     }
 
-    function shallowRunIndex(rows) {
-      let idx = -1;
-      for (let i = rows.length - 1; i >= 0; i--) {
-        if (rows[i].runAt) idx = i;
-        else break;
+    function computedRunningRows() {
+      const unit = runningUnit();
+      const bf = buoyancyFactor(state.well.fluidPpg, state.well.steelPpg);
+      let depth = 0, cumVol = 0, cumWirLb = 0;
+      return state.runningTally.items.map((x, i) => {
+        ensureRunningItemFields(x);
+        const lenFt = toFt(x.length, x.unit || unit);
+        const lenMd = unit === 'm' ? lenFt / FT_PER_M : lenFt;
+        const depthFrom = depth;
+        depth += lenMd;
+        const depthTo = depth;
+        const cap = capacityBblFt(x.id);
+        const vol = itemVolumeBbl(cap, lenFt, null);
+        cumVol += vol;
+        const dryLb = dryWeightLb(lenFt, x.od, x.id, x.weight);
+        const buoyedLb = dryLb * bf;
+        cumWirLb += buoyedLb;
+        return {
+          ...x, idx: i + 1, lenFt, lenMd, cap, vol, cumVol, depthFrom, depthTo,
+          buoyedLb, cumWirLb, mdUnit: unit,
+          thread: [x.box, x.pin].filter(Boolean).join(' x ')
+        };
+      });
+    }
+
+    function contiguousRunCount(rows) {
+      let n = 0;
+      for (let i = 0; i < rows.length; i++) {
+        if (!rows[i].runAt) break;
+        n++;
       }
-      return idx;
+      return n;
     }
 
     function runningProgress(rows) {
-      const n = rows.length;
-      const shallowIdx = shallowRunIndex(rows);
-      const runCount = shallowIdx >= 0 ? n - shallowIdx : 0;
-      let cumLen = 0, cumVol = 0, cumWirKlbf = 0, runTopMd = null, runBotMd = null;
-      if (shallowIdx >= 0) {
-        for (let i = shallowIdx; i < n; i++) {
-          cumLen += rows[i].lenMd;
-          cumVol += rows[i].vol;
-          cumWirKlbf += toKlbf(rows[i].buoyedLb);
-        }
-        runTopMd = rows[shallowIdx].topMd;
-        runBotMd = rows[n - 1].botMd;
+      const runCount = contiguousRunCount(rows);
+      let cumLen = 0, cumVol = 0, cumWirKlbf = 0, depthRun = 0;
+      for (let i = 0; i < runCount; i++) {
+        cumLen += rows[i].lenMd;
+        cumVol += rows[i].vol;
+        cumWirKlbf += toKlbf(rows[i].buoyedLb);
+        depthRun = rows[i].depthTo;
       }
-      const nextIndex = runCount >= n ? -1 : (shallowIdx < 0 ? n - 1 : shallowIdx - 1);
       const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
       return {
         runCount,
         cumLen,
         cumVol,
         cumWirKlbf,
-        runTopMd,
-        runBotMd,
-        nextIndex,
-        totalItems: n,
+        depthRun,
+        nextIndex: runCount < rows.length ? runCount : -1,
+        totalItems: rows.length,
         totalLen,
-        pctLen: totalLen > 0 ? (cumLen / totalLen) * 100 : 0,
-        shallowIdx
+        pctLen: totalLen > 0 ? (cumLen / totalLen) * 100 : 0
       };
     }
 
-    function shoeSideReady(rows, i) {
-      for (let j = i + 1; j < rows.length; j++) {
+    function priorItemsRun(rows, i) {
+      for (let j = 0; j < i; j++) {
         if (!rows[j].runAt) return false;
       }
       return true;
     }
 
-    function markItemRun(i) {
-      normalizeItemRunFields();
-      const rows = computedRows();
-      const item = state.items[i];
+    function markRunningItem(i) {
+      const rows = computedRunningRows();
+      const item = state.runningTally.items[i];
       if (!item) return;
-      if (!shoeSideReady(rows, i)) {
-        return alert(`Run shoe-side items first — mark item #${rows.length} (shoe) and work upward.`);
+      if (!priorItemsRun(rows, i)) {
+        return alert(`Run tools in order from shoe — complete #${i} before #${i + 1}.`);
       }
       if (!item.runAt) {
         item.runAt = new Date().toISOString();
-        if (!state.running.startedAt) state.running.startedAt = item.runAt;
+        if (!state.runningTally.startedAt) state.runningTally.startedAt = item.runAt;
       }
-      state.running.lastUpdate = item.runAt;
+      state.runningTally.lastUpdate = item.runAt;
       render();
     }
 
-    function unmarkItemRun(i) {
-      normalizeItemRunFields();
-      for (let j = 0; j <= i; j++) {
-        if (state.items[j]?.runAt) {
-          state.items[j].runAt = null;
-        }
+    function unmarkRunningItem(i) {
+      for (let j = i; j < state.runningTally.items.length; j++) {
+        if (state.runningTally.items[j]) state.runningTally.items[j].runAt = null;
       }
-      const lastRun = [...state.items].reverse().find(x => x.runAt);
-      state.running.lastUpdate = lastRun?.runAt || null;
-      if (!lastRun) state.running.startedAt = null;
+      const lastRun = [...state.runningTally.items].reverse().find(x => x.runAt);
+      state.runningTally.lastUpdate = lastRun?.runAt || null;
+      if (!lastRun) state.runningTally.startedAt = null;
       render();
     }
 
     function runNextItem() {
-      normalizeItemRunFields();
-      const rows = computedRows();
+      const rows = computedRunningRows();
       const prog = runningProgress(rows);
-      if (prog.nextIndex < 0) return alert('All items are already marked as run.');
-      markItemRun(prog.nextIndex);
+      if (prog.nextIndex < 0) return alert('All tools are already marked as run.');
+      markRunningItem(prog.nextIndex);
     }
 
     function undoLastRun() {
-      normalizeItemRunFields();
-      const rows = computedRows();
-      const idx = shallowRunIndex(rows);
-      if (idx < 0) return alert('No items marked as run yet.');
-      unmarkItemRun(idx);
+      const rows = computedRunningRows();
+      const n = contiguousRunCount(rows);
+      if (!n) return alert('No tools marked as run yet.');
+      unmarkRunningItem(n - 1);
     }
 
     function resetRunningLog() {
-      if (!state.items.some(x => x.runAt) && !state.running.startedAt && !state.running.comments) return;
-      if (!confirm('Clear all running tally marks and comments? Planned tally is kept.')) return;
-      normalizeItemRunFields();
-      state.items.forEach(x => { x.runAt = null; x.runNote = ''; });
-      state.running.startedAt = null;
-      state.running.lastUpdate = null;
-      state.running.comments = '';
+      const rt = state.runningTally;
+      if (!rt.items.some(x => x.runAt) && !rt.startedAt && !rt.comments) return;
+      if (!confirm('Clear all run marks and comments? Tool list is kept.')) return;
+      rt.items.forEach(x => { x.runAt = null; x.runNote = ''; });
+      rt.startedAt = null;
+      rt.lastUpdate = null;
+      rt.comments = '';
       render();
     }
 
-    function renderRunningTally(rows, unit) {
-      normalizeItemRunFields();
+    function resetRunningToolList() {
+      if (state.runningTally.items.some(x => x.runAt) && !confirm('Reset tool list to default? Run marks will be cleared.')) return;
+      state.runningTally.items = initRunningTallyItems(DEFAULT_RUNNING_TALLY_ITEMS());
+      state.runningTally.startedAt = null;
+      state.runningTally.lastUpdate = null;
+      render();
+    }
+
+    function addRunningTubing(qty = 1) {
+      const n = Math.max(1, Number(qty) || 1);
+      for (let i = 0; i < n; i++) {
+        state.runningTally.items.push(cloneRunningItem(RUNNING_TUBING_JOINT));
+      }
+      render();
+    }
+
+    function insertRunningToolFromForm() {
+      const name = $('runItemName').value.trim();
+      if (!name) return alert('Enter a description');
+      const qty = Math.max(1, Number($('runItemQty').value) || 1);
+      const item = {
+        name,
+        cat: guessCat(name),
+        length: Number($('runItemLen').value) || 0,
+        unit: $('runItemLenUnit').value,
+        od: $('runItemOd').value.trim(),
+        id: $('runItemId').value.trim(),
+        box: '', pin: ''
+      };
+      for (let i = 0; i < qty; i++) state.runningTally.items.push(cloneRunningItem(item));
+      $('runItemName').value = '';
+      $('runItemLen').value = '';
+      render();
+    }
+
+    function migrateRunningTally(data) {
+      if (data.runningTally?.items?.length) {
+        state.runningTally = {
+          comments: '', startedAt: null, lastUpdate: null, unit: 'ft',
+          ...data.runningTally,
+          items: initRunningTallyItems(data.runningTally.items)
+        };
+        return;
+      }
+      if (data.running) {
+        state.runningTally.comments = data.running.comments || data.running.driller || '';
+        state.runningTally.startedAt = data.running.startedAt || null;
+        state.runningTally.lastUpdate = data.running.lastUpdate || null;
+      }
+    }
+
+    function renderRunningTally() {
+      const rows = computedRunningRows();
+      const unit = runningUnit();
       const prog = runningProgress(rows);
       const commentsEl = $('runComments');
-      if (commentsEl && commentsEl.value !== (state.running.comments || '')) {
-        commentsEl.value = state.running.comments || '';
+      if (commentsEl && commentsEl.value !== (state.runningTally.comments || '')) {
+        commentsEl.value = state.runningTally.comments || '';
       }
 
       $('runKpiItems').textContent = rows.length ? `${prog.runCount} / ${prog.totalItems}` : '0 / 0';
       $('runKpiItemsSub').textContent = rows.length
-        ? (prog.nextIndex < 0 ? 'String fully run' : `Next: #${prog.nextIndex + 1} (bottom-up)`)
-        : 'Load a BHA tally first';
-      $('runKpiLen').textContent = rows.length ? `${fmt(prog.cumLen, 2)} ${unit}` : '—';
-      $('runKpiLenSub').textContent = rows.length ? `of ${fmt(prog.totalLen, 2)} ${unit} planned` : '—';
-      $('runKpiDepth').textContent = prog.runCount ? `${fmt(prog.runTopMd, 2)} ${unit}` : '—';
-      $('runKpiDepthSub').textContent = prog.runCount
-        ? `Shoe @ ${fmt(prog.runBotMd, 2)} ${unit}`
-        : (rows.length ? 'Mark items from shoe upward' : '—');
-      $('runKpiVol').textContent = prog.runCount ? fmtVol(prog.cumVol) : '0';
-      $('runKpiWir').textContent = prog.runCount ? fmt(prog.cumWirKlbf, 2) : '0';
+        ? (prog.nextIndex < 0 ? 'String fully run' : `Next: #${prog.nextIndex + 1}`)
+        : 'Add tools below';
+      $('runKpiLen').textContent = `${fmt(prog.cumLen, 2)} ${unit}`;
+      $('runKpiLenSub').textContent = rows.length ? `of ${fmt(prog.totalLen, 2)} ${unit} in list` : '—';
+      $('runKpiDepth').textContent = `${fmt(prog.depthRun, 2)} ${unit}`;
+      $('runKpiDepthSub').textContent = 'From shoe @ 0';
+      $('runKpiVol').textContent = fmtVol(prog.cumVol);
+      $('runKpiWir').textContent = fmt(prog.cumWirKlbf, 2);
 
       const tb = $('runningTableBody');
       if (!tb) return;
       if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="12" class="muted">No planned tally — load Excel or build the string first.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="13" class="muted">No tools — use + Add tool or Reset tool list.</td></tr>';
         return;
       }
 
-      const reversed = [...rows].reverse();
-      let cumVolFromShoe = 0, cumWirFromShoe = 0;
-      const cumByIndex = new Map();
-      for (const r of reversed) {
-        const origI = r.idx - 1;
-        if (r.runAt) {
-          cumVolFromShoe += r.vol;
-          cumWirFromShoe += toKlbf(r.buoyedLb);
-        }
-        cumByIndex.set(origI, { cumVol: cumVolFromShoe, cumWir: cumWirFromShoe });
-      }
-
-      tb.innerHTML = reversed.map(r => {
-        const i = r.idx - 1;
+      tb.innerHTML = rows.map((r, i) => {
         const isRun = !!r.runAt;
         const isNext = !isRun && i === prog.nextIndex;
         const rowClass = isRun ? 'run-done' : (isNext ? 'run-next' : 'run-pending');
-        const cum = cumByIndex.get(i) || { cumVol: 0, cumWir: 0 };
+        const runCumVol = (isRun && i < prog.runCount) ? rows.slice(0, i + 1).reduce((a, x) => a + x.vol, 0) : null;
+        const runCumWir = (isRun && i < prog.runCount) ? toKlbf(rows.slice(0, i + 1).reduce((a, x) => a + x.buoyedLb, 0)) : null;
         return `<tr class="${rowClass}" data-run-i="${i}">
-          <td><input type="checkbox" class="run-chk" data-i="${i}" ${isRun ? 'checked' : ''} aria-label="Mark item ${r.idx} as run"></td>
+          <td><input type="checkbox" class="run-chk" data-i="${i}" ${isRun ? 'checked' : ''} aria-label="Mark tool ${r.idx} as run"></td>
           <td>${r.idx}</td>
-          <td class="run-desc">
-            <div class="run-name">${esc(r.name)}</div>
-            ${(r.company || r.toolNo) ? `<div class="run-sub">${[r.company, r.toolNo].filter(Boolean).join(' · ')}</div>` : ''}
-          </td>
+          <td class="run-desc"><div class="run-name">${esc(r.name)}</div></td>
           <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
           <td>${fmt(r.lenMd, 2)}</td>
-          <td>${fmt(r.topMd, 2)}</td>
-          <td>${fmt(r.botMd, 2)}</td>
-          <td><strong>${isRun ? fmtVol(cum.cumVol) : '—'}</strong></td>
-          <td><strong>${isRun ? fmt(cum.cumWir, 2) : '—'}</strong></td>
+          <td>${fmt(r.depthFrom, 2)}</td>
+          <td>${fmt(r.depthTo, 2)}</td>
+          <td><strong>${isRun ? fmtVol(runCumVol) : '—'}</strong></td>
+          <td><strong>${isRun ? fmt(runCumWir, 2) : '—'}</strong></td>
           <td>${isRun ? esc(formatRunTime(r.runAt)) : '—'}</td>
           <td><input class="run-tool-comment" data-i="${i}" type="text" value="${esc(r.runNote || '')}" placeholder="Optional" maxlength="120"></td>
+          <td class="run-actions no-print">
+            <button class="btn sm" data-ract="up" data-i="${i}" type="button">↑</button>
+            <button class="btn sm" data-ract="down" data-i="${i}" type="button">↓</button>
+            <button class="btn sm" data-ract="edit" data-i="${i}" type="button">Edit</button>
+            <button class="btn sm danger" data-ract="del" data-i="${i}" type="button">×</button>
+          </td>
         </tr>`;
       }).join('');
     }
@@ -1641,9 +1755,9 @@
 
       drawDiagram(rows, unit);
       renderLibrary();
-      renderRunningTally(rows, unit);
+      renderRunningTally();
       updateRefSourceLine();
-      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items, running: state.running }, null, 2);
+      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items, runningTally: state.runningTally }, null, 2);
       updateStartBanner();
       scheduleSave();
     }
@@ -2380,11 +2494,8 @@
       migrateCasings(state.well);
       if (!state.well.casings.length && data.useDefaultCasings) state.well.casings = defaultCasings();
       if (Array.isArray(data.items)) state.items = data.items;
-      if (data.running) {
-        state.running = { comments: '', startedAt: null, lastUpdate: null, ...data.running };
-        if (data.running.driller && !data.running.comments) state.running.comments = data.running.driller;
-      }
-      normalizeItemRunFields();
+      if (data.runningTally) migrateRunningTally(data);
+      else if (data.running) migrateRunningTally({ running: data.running });
       if (sourceLabel) state.refSource = sourceLabel;
       writeWellToDom();
       render();
@@ -2535,46 +2646,41 @@
 
     function exportRunningXlsx() {
       readWellFromDom();
-      const rows = computedRows();
-      const u = dispUnit();
+      const rows = computedRunningRows();
+      const u = runningUnit();
       const w = state.well;
+      const rt = state.runningTally;
       const prog = runningProgress(rows);
       const aoa = [
-        ['RUNNING TALLY — DST BHA (bottom-up from shoe)'],
+        ['RUNNING TALLY — DST BHA (depth from shoe @ 0)'],
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''],
         ['DST Run', w.dstRun], ['Date', w.date || ''],
-        ['Comments', state.running.comments || ''],
-        ['Started', state.running.startedAt ? formatRunTime(state.running.startedAt) : ''],
+        ['Comments', rt.comments || ''],
+        ['Started', rt.startedAt ? formatRunTime(rt.startedAt) : ''],
         ['Items run', `${prog.runCount} / ${prog.totalItems}`],
         ['Length run', `${fmt(prog.cumLen, 3)} ${u}`],
-        ['Depth (top MD)', prog.runCount ? `${fmt(prog.runTopMd, 3)} ${u}` : ''],
-        ['Shoe MD', prog.runCount ? `${fmt(prog.runBotMd, 3)} ${u}` : ''],
-        ['Cum vol (bbl)', prog.runCount ? fmtVol(prog.cumVol) : '0'],
-        ['WIR (klbf)', prog.runCount ? fmt(prog.cumWirKlbf, 2) : '0'], [],
-        ['Run','No','Tool Description','Company','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
+        ['Depth run', `${fmt(prog.depthRun, 3)} ${u}`],
+        ['Cum vol (bbl)', fmtVol(prog.cumVol)],
+        ['WIR (klbf)', fmt(prog.cumWirKlbf, 2)], [],
+        ['Run','No','Tool Description','OD (in)','ID (in)',`Length (${u})`,`Depth from (${u})`,`Depth to (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
       ];
-      const reversed = [...rows].reverse();
-      let cumVolFromShoe = 0, cumWirFromShoe = 0;
-      for (const r of reversed) {
-        if (r.runAt) {
-          cumVolFromShoe += r.vol;
-          cumWirFromShoe += toKlbf(r.buoyedLb);
-        }
+      rows.forEach((r, i) => {
+        const runCumVol = (r.runAt && i < prog.runCount) ? rows.slice(0, i + 1).reduce((a, x) => a + x.vol, 0) : '';
+        const runCumWir = (r.runAt && i < prog.runCount) ? toKlbf(rows.slice(0, i + 1).reduce((a, x) => a + x.buoyedLb, 0)) : '';
         aoa.push([
           r.runAt ? 'Y' : '',
-          r.idx, r.name, r.company || '', r.od, r.id,
+          r.idx, r.name, r.od, r.id,
           Number(fmt(r.lenMd, 3)),
-          Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
-          r.runAt ? Number(fmtVol(cumVolFromShoe)) : '',
-          r.runAt ? Number(fmt(cumWirFromShoe, 2)) : '',
+          Number(fmt(r.depthFrom, 3)), Number(fmt(r.depthTo, 3)),
+          runCumVol !== '' ? Number(fmtVol(runCumVol)) : '',
+          runCumWir !== '' ? Number(fmt(runCumWir, 2)) : '',
           r.runAt ? formatRunTime(r.runAt) : '',
           r.runNote || ''
         ]);
-      }
-      aoa.push([], ['Planned total length', fmt(prog.totalLen, 3) + ' ' + u]);
+      });
+      aoa.push([], ['Planned list length', fmt(prog.totalLen, 3) + ' ' + u]);
       aoa.push(['Length run to date', fmt(prog.cumLen, 3) + ' ' + u]);
-      aoa.push(['Cum vol in hole', fmtVol(prog.cumVol) + ' bbl']);
-      aoa.push(['WIR in hole', fmt(prog.cumWirKlbf, 2) + ' klbf']);
+      aoa.push(['Depth run to date', fmt(prog.depthRun, 3) + ' ' + u]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Running Tally');
@@ -2611,7 +2717,7 @@
 
     function exportProject() {
       readWellFromDom();
-      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource, running: state.running }, null, 2), 'dst-bha-project.json', 'application/json');
+      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource, runningTally: state.runningTally }, null, 2), 'dst-bha-project.json', 'application/json');
     }
 
     function dlBlob(text, name, type) {
@@ -2627,7 +2733,7 @@
       saveTimer = setTimeout(() => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            well: state.well, items: state.items, refSource: state.refSource, running: state.running
+            well: state.well, items: state.items, refSource: state.refSource, runningTally: state.runningTally
           }));
           $('saveStatus').textContent = 'Saved locally';
           $('saveStatus').classList.add('live');
@@ -2646,11 +2752,7 @@
         if (Array.isArray(data.items) && data.items.length) {
           state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
-          if (data.running) {
-            state.running = { comments: '', startedAt: null, lastUpdate: null, ...data.running };
-            if (data.running.driller && !data.running.comments) state.running.comments = data.running.driller;
-          }
-          normalizeItemRunFields();
+          migrateRunningTally(data);
           writeWellToDom();
           return true;
         }
@@ -2663,27 +2765,31 @@
       if (b) b.style.display = state.items.length ? 'none' : 'block';
     }
 
-    function openEditDialog(i) {
+    function openEditDialog(i, mode = 'planned') {
+      editMode = mode;
       editIndex = i;
-      const item = state.items[i];
+      const item = mode === 'running' ? state.runningTally.items[i] : state.items[i];
+      if (!item) return;
+      const serialField = mode === 'planned'
+        ? `<div class="field"><label>Serial</label><input id="eSerial" value="${esc(item.serial || '')}"></div>
+           <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="eNotes">${esc(item.notes || '')}</textarea></div>`
+        : '';
       $('editFields').innerHTML = `
         <div class="field" style="grid-column:1/-1"><label>Description</label><input id="eName" value="${esc(item.name)}"></div>
-        <div class="field"><label>Category</label><input id="eCat" value="${esc(item.cat)}"></div>
+        <div class="field"><label>Category</label><input id="eCat" value="${esc(item.cat || '')}"></div>
         <div class="field"><label>Length</label><input id="eLen" type="number" step="0.001" value="${item.length}"></div>
         <div class="field"><label>Unit</label><select id="eUnit"><option value="m" ${item.unit==='m'?'selected':''}>m</option><option value="ft" ${item.unit==='ft'?'selected':''}>ft</option></select></div>
         <div class="field"><label>OD</label><input id="eOd" value="${esc(item.od)}"></div>
         <div class="field"><label>ID</label><input id="eId" value="${esc(item.id)}"></div>
-        <div class="field"><label>Box</label><input id="eBox" value="${esc(item.box)}"></div>
-        <div class="field"><label>Pin</label><input id="ePin" value="${esc(item.pin)}"></div>
-        <div class="field"><label>Serial</label><input id="eSerial" value="${esc(item.serial || '')}"></div>
-        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="eNotes">${esc(item.notes || '')}</textarea></div>`;
+        <div class="field"><label>Box</label><input id="eBox" value="${esc(item.box || '')}"></div>
+        <div class="field"><label>Pin</label><input id="ePin" value="${esc(item.pin || '')}"></div>
+        ${serialField}`;
       $('editDialog').showModal();
     }
 
     function saveEdit() {
       if (editIndex < 0) return;
-      state.items[editIndex] = {
-        ...state.items[editIndex],
+      const patch = {
         name: $('eName').value.trim(),
         cat: $('eCat').value.trim(),
         length: Number($('eLen').value) || 0,
@@ -2691,12 +2797,35 @@
         od: $('eOd').value.trim(),
         id: $('eId').value.trim(),
         box: $('eBox').value.trim(),
-        pin: $('ePin').value.trim(),
-        serial: $('eSerial').value.trim(),
-        notes: $('eNotes').value.trim()
+        pin: $('ePin').value.trim()
       };
+      if (editMode === 'running') {
+        state.runningTally.items[editIndex] = { ...state.runningTally.items[editIndex], ...patch };
+      } else {
+        state.items[editIndex] = {
+          ...state.items[editIndex], ...patch,
+          serial: $('eSerial')?.value.trim() || '',
+          notes: $('eNotes')?.value.trim() || ''
+        };
+      }
       editIndex = -1;
+      editMode = 'planned';
       $('editDialog').close();
+      render();
+    }
+
+    function handleRunningListAction(e) {
+      const btn = e.target.closest('button[data-ract]');
+      if (!btn) return;
+      const i = +btn.dataset.i, act = btn.dataset.ract;
+      const items = state.runningTally.items;
+      if (act === 'del') {
+        if (items[i]?.runAt && !confirm('Remove a tool that is marked as run?')) return;
+        items.splice(i, 1);
+      }
+      if (act === 'up' && i > 0) [items[i - 1], items[i]] = [items[i], items[i - 1]];
+      if (act === 'down' && i < items.length - 1) [items[i + 1], items[i]] = [items[i], items[i + 1]];
+      if (act === 'edit') openEditDialog(i, 'running');
       render();
     }
 
@@ -2756,10 +2885,8 @@
       if (!(await loadSample())) alert('No bundled sample in this folder.\n\nUse Load BHA reference tab to pick any Excel workbook.');
     };
     $('clearAllBtn').onclick = () => {
-      if (!confirm('Clear entire string?')) return;
+      if (!confirm('Clear entire planned string?')) return;
       state.items = [];
-      state.running.startedAt = null;
-      state.running.lastUpdate = null;
       render();
     };
     $('reverseBtn').onclick = () => { state.items.reverse(); render(); };
@@ -2839,12 +2966,8 @@
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
-          if (data.running) {
-            state.running = { comments: '', startedAt: null, lastUpdate: null, ...data.running };
-            if (data.running.driller && !data.running.comments) state.running.comments = data.running.driller;
-          }
+          migrateRunningTally(data);
         }
-        normalizeItemRunFields();
         writeWellToDom();
         render();
       } catch (e) { alert('Invalid JSON'); }
@@ -2859,34 +2982,54 @@
     $('runNextBtn').onclick = runNextItem;
     $('runUndoBtn').onclick = undoLastRun;
     $('runResetBtn').onclick = resetRunningLog;
+    $('runAddTubingBtn').onclick = () => addRunningTubing($('runItemQty')?.value || 1);
+    $('runAddToolBtn').onclick = () => {
+      $('runItemName').value = '';
+      $('runItemLen').value = '';
+      $('runItemOd').value = '';
+      $('runItemId').value = '';
+      $('runItemQty').value = '1';
+      $('runItemName').focus();
+    };
+    $('runLoadDefaultBtn').onclick = resetRunningToolList;
+    $('runInsertBtn').onclick = insertRunningToolFromForm;
+    $('runningTableBody').addEventListener('click', handleRunningListAction);
     $('runningTableBody').addEventListener('change', e => {
       const chk = e.target.closest('.run-chk');
       if (!chk) return;
       const i = +chk.dataset.i;
       if (chk.checked) {
-        const rows = computedRows();
-        if (!shoeSideReady(rows, i)) {
+        const rows = computedRunningRows();
+        if (!priorItemsRun(rows, i)) {
           chk.checked = false;
-          return alert(`Run shoe-side items first — mark item #${rows.length} (shoe) and work upward.`);
+          return alert(`Run tools in order from shoe — complete #${i} before #${i + 1}.`);
         }
-        markItemRun(i);
+        markRunningItem(i);
       } else {
-        unmarkItemRun(i);
+        unmarkRunningItem(i);
       }
     });
     $('runComments').addEventListener('input', () => {
-      state.running.comments = $('runComments').value;
+      state.runningTally.comments = $('runComments').value;
       scheduleSave();
     });
     $('runningTableBody').addEventListener('input', e => {
       const inp = e.target.closest('.run-tool-comment');
       if (!inp) return;
       const i = +inp.dataset.i;
-      if (state.items[i]) {
-        state.items[i].runNote = inp.value;
+      if (state.runningTally.items[i]) {
+        state.runningTally.items[i].runNote = inp.value;
         scheduleSave();
       }
     });
+
+    function fillRunAddForm(t) {
+      $('runItemName').value = t.name || '';
+      $('runItemLen').value = t.length ?? '';
+      $('runItemLenUnit').value = t.unit || 'ft';
+      $('runItemOd').value = t.od || '';
+      $('runItemId').value = t.id || '';
+    }
     function doPrint(orientation) {
       readWellFromDom();
       render();
@@ -2927,11 +3070,7 @@
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
-          if (data.running) {
-            state.running = { comments: '', startedAt: null, lastUpdate: null, ...data.running };
-            if (data.running.driller && !data.running.comments) state.running.comments = data.running.driller;
-          }
-          normalizeItemRunFields();
+          migrateRunningTally(data);
           writeWellToDom();
           render();
         } catch (err) { alert('Invalid project file'); }
