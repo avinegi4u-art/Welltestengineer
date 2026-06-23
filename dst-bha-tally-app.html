@@ -1140,13 +1140,28 @@
       return 'Other';
     }
 
+    function normRunningTubingName(name) {
+      return String(name || '').toLowerCase()
+        .replace(/[""]/g, '"')
+        .replace(/\s*[—–-]\s*/g, ' — ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    /** Stand/joint numbering applies only to 3-1/2 COSMO tubing joints in the running log */
+    function isRunningCosmoTubing(item) {
+      const n = normRunningTubingName(item.name);
+      const target = normRunningTubingName(RUNNING_TUBING_JOINT.name);
+      return n === target;
+    }
+
     function isTubingItem(item) {
       const cat = String(item.cat || guessCat(item.name) || '').toLowerCase();
       return cat === 'tubing' || /tubing|tub\s*joint|blast\s*joint/i.test(String(item.name || ''));
     }
 
     function annotateRunningTubingDisplay(rows) {
-      const out = rows.map(r => ({ ...r, isTubing: isTubingItem(r), displayJoint: '', displayStand: '', standRowspan: 1, renderStandCell: true }));
+      const out = rows.map(r => ({ ...r, isTubing: isRunningCosmoTubing(r), displayJoint: '', displayStand: '', standRowspan: 1, renderStandCell: true }));
       let tubingN = 0;
       for (let i = 0; i < out.length; i++) {
         if (!out[i].isTubing) {
