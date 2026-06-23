@@ -263,6 +263,10 @@
     #runningTable tr.run-next td { background: color-mix(in oklab, var(--color-warning) 14%, var(--color-surface-2)); }
     #runningTable tr.run-pending td { opacity: .92; }
     #runningTable input[type="checkbox"] { width: 1.1rem; height: 1.1rem; cursor: pointer; }
+    #runningTable input.run-tool-comment {
+      width: 100%; min-width: 6rem; padding: .35rem .45rem; font-size: 0.75rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg);
+    }
     .running-comments {
       padding: var(--space-3); border-radius: var(--radius-md);
       background: var(--color-bg); border: 1px solid var(--color-border);
@@ -676,7 +680,7 @@
                     <tr>
                       <th>Run</th><th>#</th><th>Description</th><th>OD</th><th>ID</th>
                       <th>Len</th><th>Top MD</th><th>Bot MD</th>
-                      <th>Cum vol (bbl)</th><th>WIR (klbf)</th><th>Time</th>
+                      <th>Cum vol (bbl)</th><th>WIR (klbf)</th><th>Time</th><th>Comment</th>
                     </tr>
                   </thead>
                   <tbody id="runningTableBody"></tbody>
@@ -1268,7 +1272,7 @@
       if (!state.items.some(x => x.runAt) && !state.running.startedAt && !state.running.comments) return;
       if (!confirm('Clear all running tally marks and comments? Planned tally is kept.')) return;
       normalizeItemRunFields();
-      state.items.forEach(x => { x.runAt = null; });
+      state.items.forEach(x => { x.runAt = null; x.runNote = ''; });
       state.running.startedAt = null;
       state.running.lastUpdate = null;
       state.running.comments = '';
@@ -1299,7 +1303,7 @@
       const tb = $('runningTableBody');
       if (!tb) return;
       if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="11" class="muted">No planned tally — load Excel or build the string first.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="12" class="muted">No planned tally — load Excel or build the string first.</td></tr>';
         return;
       }
 
@@ -1335,6 +1339,7 @@
           <td><strong>${isRun ? fmtVol(cum.cumVol) : '—'}</strong></td>
           <td><strong>${isRun ? fmt(cum.cumWir, 2) : '—'}</strong></td>
           <td>${isRun ? esc(formatRunTime(r.runAt)) : '—'}</td>
+          <td><input class="run-tool-comment" data-i="${i}" type="text" value="${esc(r.runNote || '')}" placeholder="Optional" maxlength="120"></td>
         </tr>`;
       }).join('');
     }
@@ -2546,7 +2551,7 @@
         ['Shoe MD', prog.runCount ? `${fmt(prog.runBotMd, 3)} ${u}` : ''],
         ['Cum vol (bbl)', prog.runCount ? fmtVol(prog.cumVol) : '0'],
         ['WIR (klbf)', prog.runCount ? fmt(prog.cumWirKlbf, 2) : '0'], [],
-        ['Run','No','Tool Description','Company','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time']
+        ['Run','No','Tool Description','Company','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
       ];
       const reversed = [...rows].reverse();
       let cumVolFromShoe = 0, cumWirFromShoe = 0;
@@ -2562,7 +2567,8 @@
           Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
           r.runAt ? Number(fmtVol(cumVolFromShoe)) : '',
           r.runAt ? Number(fmt(cumWirFromShoe, 2)) : '',
-          r.runAt ? formatRunTime(r.runAt) : ''
+          r.runAt ? formatRunTime(r.runAt) : '',
+          r.runNote || ''
         ]);
       }
       aoa.push([], ['Planned total length', fmt(prog.totalLen, 3) + ' ' + u]);
@@ -2871,6 +2877,15 @@
     $('runComments').addEventListener('input', () => {
       state.running.comments = $('runComments').value;
       scheduleSave();
+    });
+    $('runningTableBody').addEventListener('input', e => {
+      const inp = e.target.closest('.run-tool-comment');
+      if (!inp) return;
+      const i = +inp.dataset.i;
+      if (state.items[i]) {
+        state.items[i].runNote = inp.value;
+        scheduleSave();
+      }
     });
     function doPrint(orientation) {
       readWellFromDom();
