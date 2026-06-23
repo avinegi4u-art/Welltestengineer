@@ -183,9 +183,9 @@
     #tallyTable th { font-size: 0.72rem; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
     #tallyTable .chip { padding: .08rem .35rem; font-size: 0.62rem; vertical-align: middle; }
     #tallyTable .btn.sm { padding: .15rem .4rem; font-size: 0.68rem; }
-    #tallyTable .tally-stand { font-weight: 700; vertical-align: middle; }
-    #tallyTable .tally-joint { font-weight: 600; }
     #tallyTable .tally-desc { min-width: 9rem; max-width: 15rem; text-align: center; }
+    #runningTable .run-stand { font-weight: 700; vertical-align: middle; }
+    #runningTable .run-joint { font-weight: 600; }
     #tallyTable .tally-name {
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
       overflow: hidden; line-height: 1.2; font-weight: 500; text-align: center;
@@ -681,7 +681,7 @@
                 <table id="tallyTable">
                   <thead>
                     <tr>
-                      <th>Stand</th><th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+                      <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
                       <th>OD (in)</th><th>ID (in)</th><th>Len</th><th>Top MD</th><th>Bot MD</th>
                       <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR<br>(klbf)</th><th class="no-print">Actions</th>
                     </tr>
@@ -719,7 +719,7 @@
                 <table id="runningTable">
                   <thead>
                     <tr>
-                      <th>Run</th><th>#</th><th>Description</th><th>OD</th><th>ID</th>
+                      <th>Run</th><th>Stand</th><th>#</th><th>Description</th><th>OD</th><th>ID</th>
                       <th>Len</th><th>Depth from</th><th>Depth to</th>
                       <th>Cum vol (bbl)</th><th>WIR (klbf)</th><th>Time</th><th>Comment</th>
                       <th class="no-print">Actions</th>
@@ -1145,7 +1145,7 @@
       return cat === 'tubing' || /tubing|tub\s*joint|blast\s*joint/i.test(String(item.name || ''));
     }
 
-    function annotateTallyDisplay(rows) {
+    function annotateRunningTubingDisplay(rows) {
       const out = rows.map(r => ({ ...r, isTubing: isTubingItem(r), displayJoint: '', displayStand: '', standRowspan: 1, renderStandCell: true }));
       let tubingN = 0;
       for (let i = 0; i < out.length; i++) {
@@ -1733,19 +1733,24 @@
       const tb = $('runningTableBody');
       if (!tb) return;
       if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="13" class="muted">No tools — use + Add tool or Reset tool list.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="14" class="muted">No tools — use + Add tool or Reset tool list.</td></tr>';
         return;
       }
 
-      tb.innerHTML = rows.map((r, i) => {
+      const displayRows = annotateRunningTubingDisplay(rows);
+      tb.innerHTML = displayRows.map((r, i) => {
         const isRun = !!r.runAt;
         const isNext = !isRun && i === prog.nextIndex;
         const rowClass = isRun ? 'run-done' : (isNext ? 'run-next' : 'run-pending');
         const runCumVol = (isRun && i < prog.runCount) ? rows.slice(0, i + 1).reduce((a, x) => a + x.vol, 0) : null;
         const runCumWir = (isRun && i < prog.runCount) ? toKlbf(rows.slice(0, i + 1).reduce((a, x) => a + x.buoyedLb, 0)) : null;
+        const standCell = r.renderStandCell
+          ? `<td class="run-stand"${r.isTubing && r.standRowspan > 1 ? ` rowspan="${r.standRowspan}"` : ''}>${esc(r.displayStand)}</td>`
+          : '';
         return `<tr class="${rowClass}" data-run-i="${i}">
           <td><input type="checkbox" class="run-chk" data-i="${i}" ${isRun ? 'checked' : ''} aria-label="Mark tool ${r.idx} as run"></td>
-          <td>${r.idx}</td>
+          ${standCell}
+          <td class="run-joint">${r.isTubing ? esc(r.displayJoint) : ''}</td>
           <td class="run-desc"><div class="run-name">${esc(r.name)}</div></td>
           <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
           <td>${fmt(r.lenMd, 2)}</td>
@@ -1953,25 +1958,20 @@
         </div>`).join('') : '<p class="muted">No items — add from builder, library, or import.</p>';
 
       $('tallyTable').querySelector('thead').innerHTML = `<tr>
-        <th>Stand</th><th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
+        <th>#</th><th>Description</th><th>Category</th><th>Box</th><th>Pin</th>
         <th>OD (in)</th><th>ID (in)</th><th>Len (${unit})</th><th>Top MD (${unit})</th><th>Bot MD (${unit})</th>
         <th>Cap</th><th>Cum vol (bbl)</th><th>Cum WIR (klbf)</th><th class="no-print">Actions</th>
       </tr>`;
       const tb = $('tallyTable').querySelector('tbody');
       const casingForTally = migrateCasings(state.well);
-      const displayRows = annotateTallyDisplay(rows);
-      tb.innerHTML = displayRows.map(r => {
+      tb.innerHTML = rows.map(r => {
         const hi = tallyRowHighlight(r, casingForTally);
         const trAttr = [
           hi.className ? `class="${hi.className}"` : '',
           hi.title ? `title="${esc(hi.title)}"` : ''
         ].filter(Boolean).join(' ');
-        const standCell = r.renderStandCell
-          ? `<td class="tally-stand"${r.isTubing && r.standRowspan > 1 ? ` rowspan="${r.standRowspan}"` : ''}>${esc(r.displayStand)}</td>`
-          : '';
         return `<tr${trAttr ? ' ' + trAttr : ''}>
-        ${standCell}
-        <td class="tally-joint">${r.isTubing ? esc(r.displayJoint) : ''}</td>
+        <td>${r.idx}</td>
         <td class="tally-desc"><div class="tally-name">${esc(r.name)}</div>${(r.company || r.toolNo || r.serial) ? `<div class="tally-sub">${[r.company, r.toolNo, r.serial ? 'S/N ' + r.serial : ''].filter(Boolean).join(' · ')}</div>` : ''}</td>
         <td><span class="chip ${chipClass(r.cat)}">${esc(r.cat)}</span></td>
         <td>${esc(r.box)}</td><td>${esc(r.pin)}</td>
@@ -2947,11 +2947,11 @@
     window.switchTab = switchTab;
 
     function exportCsv() {
-      const rows = annotateTallyDisplay(computedRows());
+      const rows = computedRows();
       const u = dispUnit();
-      const header = ['Stand','Joint_No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
+      const header = ['No','Description','Company','Category','Box','Pin','OD_in','ID_in',`Length_${u}`,`Top_MD_${u}`,`Bottom_MD_${u}`,'Capacity_bbl_ft','Cum_Vol_bbl','Buoyed_lb','Cum_WIR_klbf','Serial','Notes'];
       const lines = [header.join(',')].concat(rows.map(r => [
-        r.displayStand || '', r.isTubing ? r.displayJoint : '', qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
+        r.idx, qq(r.name), qq(r.company || ''), qq(r.cat), qq(r.box), qq(r.pin), r.od, r.id,
         fmt(r.lenMd, 3), fmt(r.topMd, 3), fmt(r.botMd, 3),
         fmt(r.cap, 4), fmtVol(r.cumVol), fmt(r.buoyedLb, 1), fmt(toKlbf(r.cumWirLb), 3), qq(r.serial), qq(r.notes)
       ].join(',')));
@@ -2960,7 +2960,7 @@
 
     function exportRunningXlsx() {
       readWellFromDom();
-      const rows = computedRunningRows();
+      const rows = annotateRunningTubingDisplay(computedRunningRows());
       const u = runningUnit();
       const w = state.well;
       const rt = state.runningTally;
@@ -2975,14 +2975,14 @@
         ['Length run', `${fmt(prog.cumLen, 3)} ${u}`],
         ['Cum vol (bbl)', fmtVol(prog.cumVol)],
         ['WIR (klbf)', fmt(prog.cumWirKlbf, 2)], [],
-        ['Run','No','Tool Description','OD (in)','ID (in)',`Length (${u})`,`Depth from (${u})`,`Depth to (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
+        ['Run','Stand','Joint #','Tool Description','OD (in)','ID (in)',`Length (${u})`,`Depth from (${u})`,`Depth to (${u})`,'Cum vol (bbl)','WIR (klbf)','Run time','Comment']
       ];
       rows.forEach((r, i) => {
         const runCumVol = (r.runAt && i < prog.runCount) ? rows.slice(0, i + 1).reduce((a, x) => a + x.vol, 0) : '';
         const runCumWir = (r.runAt && i < prog.runCount) ? toKlbf(rows.slice(0, i + 1).reduce((a, x) => a + x.buoyedLb, 0)) : '';
         aoa.push([
           r.runAt ? 'Y' : '',
-          r.idx, r.name, r.od, r.id,
+          r.displayStand || '', r.isTubing ? r.displayJoint : '', r.name, r.od, r.id,
           Number(fmt(r.lenMd, 3)),
           Number(fmt(r.depthFrom, 3)), Number(fmt(r.depthTo, 3)),
           runCumVol !== '' ? Number(fmtVol(runCumVol)) : '',
@@ -3000,7 +3000,7 @@
     }
 
     function exportXlsx() {
-      const rows = annotateTallyDisplay(computedRows());
+      const rows = computedRows();
       const u = dispUnit();
       const w = state.well;
       const aoa = [
@@ -3008,10 +3008,10 @@
         ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''], ['Field', w.field],
         ['Formation', w.formation || ''], ['DST Run', w.dstRun], ['Fluid (ppg)', w.fluidPpg],
         ['Engineer', w.engineer], ['Date', w.date], ['Objective', w.objective], [],
-        ['Stand','Joint #','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
+        ['No','Tool Description','Company','Category','Box','Pin','OD (in)','ID (in)',`Length (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Cap (bbl/ft)','Cum Vol (bbl)','Buoyed (lb)','Cum WIR (klbf)','Serial','Notes']
       ];
       rows.forEach(r => aoa.push([
-        r.displayStand || '', r.isTubing ? r.displayJoint : '', r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
+        r.idx, r.name, r.company || '', r.cat, r.box, r.pin, r.od, r.id,
         Number(fmt(r.lenMd, 3)), Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
         Number(fmt(r.cap, 4)), Number(fmtVol(r.cumVol)),
         Number(fmt(r.buoyedLb, 1)), Number(fmt(toKlbf(r.cumWirLb), 3)), r.serial || '', r.notes || ''
