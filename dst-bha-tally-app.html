@@ -702,7 +702,7 @@
                 <button class="btn primary" id="parseFileBtn" type="button">Parse file</button>
               </div>
               <p class="row-note" style="margin-top:var(--space-3)">Excel: reads Halliburton-style BHA sheets (Description col C, Box/Pin, OD/ID, Length m, Top/Bottom MD). Auto-picks tally worksheet and fills well header from CUSTOMER / WELL NAME / RIG rows.</p>
-              <p class="row-note">PDF / image: text-based PDFs are read directly. Scanned PDFs and photos (PNG, JPG, etc.) use OCR — keep the tally table straight and readable for best results.</p>
+              <p class="row-note">PDF / image: text-based PDFs are read directly. Scanned PDFs and photos use OCR — including SLB/Halliburton string diagram tables. Well schematic PDFs (casing only) are not BHA tallies.</p>
               <p class="muted" id="parseStatus" style="margin-top:var(--space-2)">Select a file — import runs automatically.</p>
             </article>
             <article class="card span-6">
@@ -782,6 +782,7 @@
       },
       items: [],
       pendingWorkbook: null,
+      pendingOcrLines: null,
       refSource: '',
       folderFiles: []
     };
@@ -1694,6 +1695,207 @@
         .filter(Boolean);
     }
 
+    function ocrNumLine(s) {
+      const t = String(s).replace(/,/g, '').trim();
+      const n = parseFloat(t.replace(/[^\d.\-]/g, ''));
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function ocrNumericLines(lines, start, end) {
+      const out = [];
+      for (let i = start; i < end && i < lines.length; i++) {
+        const t = lines[i].trim();
+        if (!t) continue;
+        if (/^(od|id|top|bottom|psi|kib|ft|in|si)$/i.test(t)) continue;
+        if (/^[\(\)]/.test(t) && t.length < 8) continue;
+        if (/^(working|pressure|rating|diameter|threads|length|depth|draft|slb)/i.test(t)) break;
+        const n = ocrNumLine(t);
+        if (n != null) out.push(n);
+      }
+      return out;
+    }
+
+    function splitOcrThreads(line) {
+      const t = line.trim();
+      const boxPin = t.match(/^(.+?\bBox)\s+(.+?\bPin.*)$/i);
+      if (boxPin) return { box: boxPin[1].trim(), pin: boxPin[2].trim() };
+      const pinBox = t.match(/^(.+?\bPin)\s+(.+)$/i);
+      if (pinBox) return { box: pinBox[1].trim(), pin: pinBox[2].trim() };
+      return { box: t, pin: '' };
+    }
+
+    function parseOcrDescriptions(chunk, descI, tensileI) {
+      const names = [];
+      let parts = [];
+      for (let i = descI + 1; i < tensileI; i++) {
+        const t = chunk[i].trim();
+        if (!t) continue;
+        if (/^#?\d{1,2}$/.test(t)) continue;
+        if (/^(tool|i)$/i.test(t)) continue;
+        if (/^RD:/i.test(t)) {
+          if (names.length) names[names.length - 1].notes = t;
+          else parts.push(t);
+          continue;
+        }
+        if (/\b(SLB|COSMO)\b/i.test(t) && t.length < 80) {
+          const name = parts.join(' ').replace(/\s+/g, ' ').trim();
+          names.push({ name: name ? `${name} — ${t}` : t, notes: '' });
+          parts = [];
+          continue;
+        }
+        parts.push(t);
+      }
+      if (parts.length) names.push({ name: parts.join(' ').replace(/\s+/g, ' ').trim(), notes: '' });
+      return names;
+    }
+
+    function isOcrColumnTable(lines) {
+      const t = lines.join('\n').toLowerCase();
+      return /description/.test(t) && /tensile/.test(t) && /diameter/.test(t)
+        && (/depth\s*\(ft\)/.test(t) || /depth.*md/.test(t));
+    }
+
+    function isWellSchematicReport(lines) {
+      const t = lines.join(' ').toLowerCase();
+      return (/well design report|well schematic|appendix.*schematic/.test(t)
+        || (/casing shoe/.test(t) && /liner shoe/.test(t)))
+        && !/string diagram|tensile rating/.test(t);
+    }
+
+    function parseOcrColumnChunk(chunk) {
+      const idx = re => chunk.findIndex(l => re.test(l));
+      const descI = idx(/^description$/i);
+      const tensileI = idx(/tensile/i);
+      const diameterI = idx(/diameter/i);
+      if (descI < 0 || tensileI < 0 || diameterI < 0) return [];
+
+      const odI = chunk.findIndex((l, i) => i > diameterI && /^od$/i.test(l));
+      const idI = chunk.findIndex((l, i) => i > odI && /^id$/i.test(l));
+      const threadsI = idx(/threads/i);
+      const lengthI = chunk.findIndex((l, i) => i > threadsI && /^length$/i.test(l));
+      const depthI = idx(/depth.*md/i);
+
+      const descRecords = parseOcrDescriptions(chunk, descI, tensileI);
+      const n = descRecords.length;
+      if (!n) return [];
+
+      const ods = ocrNumericLines(chunk, odI >= 0 ? odI + 1 : diameterI + 1, idI >= 0 ? idI : threadsI);
+      const ids = ocrNumericLines(chunk, idI >= 0 ? idI + 1 : threadsI, threadsI >= 0 ? threadsI : chunk.length);
+      const lengths = lengthI >= 0 ? ocrNumericLines(chunk, lengthI + 1, depthI >= 0 ? depthI : chunk.length) : [];
+
+      const boxes = [];
+      const pins = [];
+      if (threadsI >= 0) {
+        const afterThreads = chunk.slice(threadsI + 1);
+        const relTop = afterThreads.findIndex(l => /^top$/i.test(l));
+        const relBottom = afterThreads.findIndex(l => /^bottom$/i.test(l));
+        const relLength = afterThreads.findIndex(l => /^length$/i.test(l));
+        const relDepth = afterThreads.findIndex(l => /depth.*md/i.test(l));
+        const endThreads = [relLength, relDepth, afterThreads.length].filter(x => x >= 0).sort((a, b) => a - b)[0] ?? afterThreads.length;
+
+        if (relTop >= 0 && relTop < 4 && relBottom > relTop && relBottom < 8) {
+          boxes.push(...afterThreads.slice(relTop + 1, relBottom).map(l => l.trim()).filter(l => l.length > 3));
+          const pinEnd = [relLength, relDepth, afterThreads.length].filter(x => x > relBottom).sort((a, b) => a - b)[0] ?? afterThreads.length;
+          pins.push(...afterThreads.slice(relBottom + 1, pinEnd).map(l => l.trim()).filter(l => l.length > 3 && !/^(length|depth)/i.test(l)));
+        } else {
+          for (let i = 1; i < endThreads; i++) {
+            const l = afterThreads[i];
+            if (!l || /^(top|bottom|\(|\))/i.test(l)) continue;
+            if (/^length|^depth/i.test(l)) break;
+            if (l.length < 8) continue;
+            const sp = splitOcrThreads(l);
+            if (sp.box) boxes.push(sp.box);
+            if (sp.pin) pins.push(sp.pin);
+          }
+        }
+      }
+
+      const tops = [];
+      const bots = [];
+      if (depthI >= 0) {
+        const depthArea = chunk.slice(depthI);
+        const pairHeader = depthArea.findIndex(l => /top.*bottom/i.test(l));
+        if (pairHeader >= 0 && pairHeader < 4) {
+          for (const l of depthArea.slice(pairHeader + 1)) {
+            const m = l.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
+            if (m) {
+              tops.push(parseFloat(m[1]));
+              bots.push(parseFloat(m[2]));
+            } else if (/^(bottom|top|draft|slb|arties)/i.test(l)) break;
+          }
+        } else {
+          const relTop = depthArea.findIndex(l => /^top$/i.test(l));
+          const relBottom = depthArea.findIndex(l => /^bottom$/i.test(l));
+          if (relTop >= 0 && relBottom > relTop) {
+            tops.push(...ocrNumericLines(depthArea, relTop + 1, relBottom));
+            bots.push(...ocrNumericLines(depthArea, relBottom + 1, depthArea.length));
+          }
+        }
+      }
+
+      const items = [];
+      for (let i = 0; i < n; i++) {
+        const rec = descRecords[i];
+        let lengthFt = lengths[i];
+        const topMd = tops[i];
+        const botMd = bots[i];
+        if ((lengthFt == null || !Number.isFinite(lengthFt)) && topMd != null && botMd != null) {
+          lengthFt = Math.abs(botMd - topMd);
+        }
+        items.push({
+          name: rec.name,
+          cat: guessCat(rec.name),
+          length: Number.isFinite(lengthFt) ? lengthFt : 0,
+          unit: 'ft',
+          od: ods[i] != null ? String(ods[i]) : '',
+          id: ids[i] != null ? String(ids[i]) : '',
+          box: boxes[i] || '',
+          pin: pins[i] || '',
+          topMd: topMd ?? null,
+          botMd: botMd ?? null,
+          notes: rec.notes || ''
+        });
+      }
+      return items.filter(x => x.name && (x.length > 0 || x.od || x.id || x.topMd != null));
+    }
+
+    function extractOcrColumnTable(lines) {
+      const normalized = lines.map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      if (!isOcrColumnTable(normalized)) return [];
+      const descStarts = [];
+      for (let i = 0; i < normalized.length; i++) {
+        if (/^description$/i.test(normalized[i])) descStarts.push(i);
+      }
+      if (!descStarts.length) return [];
+      const allItems = [];
+      for (let b = 0; b < descStarts.length; b++) {
+        allItems.push(...parseOcrColumnChunk(normalized.slice(descStarts[b], descStarts[b + 1])));
+      }
+      return allItems;
+    }
+
+    function applyOcrWellMeta(lines) {
+      const text = lines.join(' ');
+      const dst = text.match(/DST\s*#?\s*(\d+)/i);
+      if (dst) state.well.dstRun = dst[1];
+      state.well.displayUnit = 'ft';
+      state.well.depthMode = 'imported';
+    }
+
+    function parseOcrTallyFromLines(lines) {
+      let items = extractOcrColumnTable(lines);
+      if (items.length) {
+        applyOcrWellMeta(lines);
+        return items;
+      }
+      items = extractTextLines(lines);
+      if (!items.length && lines.length) {
+        items = extractTextLines([lines.join(' '), ...lines]);
+      }
+      if (items.length) applyOcrWellMeta(lines);
+      return items;
+    }
+
     function extractTextLines(lines) {
       const out = [];
       for (const line of lines) {
@@ -1839,7 +2041,7 @@
       for (let i = 1; i <= doc.numPages; i++) {
         onProgress?.(`OCR page ${i}/${doc.numPages}…`);
         const pg = await doc.getPage(i);
-        const viewport = pg.getViewport({ scale: 2 });
+        const viewport = pg.getViewport({ scale: 2.5 });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
@@ -1855,11 +2057,8 @@
 
     async function parseImageFile(file, onProgress) {
       const lines = await ocrImageFile(file, onProgress);
-      let items = extractTextLines(lines);
-      if (!items.length && lines.length) {
-        items = extractTextLines([lines.join(' '), ...lines]);
-      }
-      return items;
+      state.pendingOcrLines = lines;
+      return parseOcrTallyFromLines(lines);
     }
 
     async function parsePdfFile(file, onProgress) {
@@ -1873,15 +2072,15 @@
         text += tc.items.map(x => x.str).join(' ') + '\n';
       }
       let lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
-      let items = extractTextLines(lines);
+      let items = parseOcrTallyFromLines(lines);
       const sparse = text.replace(/\s/g, '').length < 80 || items.length < 2;
       if (sparse) {
         onProgress?.('Little selectable text in PDF — running OCR on pages…');
         lines = await ocrPdfPages(doc, onProgress);
-        items = extractTextLines(lines);
-        if (!items.length && lines.length) {
-          items = extractTextLines([lines.join(' '), ...lines]);
-        }
+        state.pendingOcrLines = lines;
+        items = parseOcrTallyFromLines(lines);
+      } else {
+        state.pendingOcrLines = lines;
       }
       return items;
     }
@@ -1982,8 +2181,11 @@
           return alert('Unsupported file type — use Excel, PDF, or an image (PNG, JPG, etc.).');
         }
         if (!items.length) {
+          const hint = state.pendingOcrLines && isWellSchematicReport(state.pendingOcrLines)
+            ? 'This PDF looks like a well schematic / design report (casing & formations), not a DST string tally. Use an Excel BHA sheet or a string diagram PDF like XF-006.'
+            : 'No tally rows detected — check sheet layout or add manually.';
           setStatus('No tally rows detected.', false);
-          return alert('No tally rows detected — check sheet layout or add manually.');
+          return alert(hint);
         }
         if (replaceConfirm && state.items.length && !confirm(`Replace ${state.items.length} existing items with ${items.length} imported rows?`)) {
           setStatus('Import cancelled.', false);
