@@ -8,6 +8,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 |------|---------|
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
 | `dst-pressure-transient-analysis-pro-v2.11.html` | **DST PTA Pro v2.11** (open this one) — local-first senior engineer DST/PTA: variable-rate superposition, Horner & derivative analysis, boundary detection, composite screening, physics Bayesian uncertainty, interpretation gating, office sign-off, engineering audit trail |
+| `dst-pta-modular/` | **DST PTA Modular (Python)** — Streamlit + Plotly field PTA: Bourdet derivative, Agarwal superposition, Horner, type curves, multi-cycle DST workflow. See `dst-pta-modular/README.md` |
 | `dst-pressure-transient-analysis-pro-v2.10.html` | DST PTA Pro v2.10 — reservoir-aware Bayesian posteriors, refined multilayer inversion, sparse boundary confidence, office/reserves sign-off workflow, auditable curve dominance |
 | `dst-pressure-transient-analysis-pro-v2.9.html` | DST PTA Pro v2.9 — Bayesian credible intervals, fitted multilayer inversion, usage matrix, curve dominance |
 | `dst-pressure-transient-analysis-pro-v2.8.html` | DST PTA Pro v2.8 — probabilistic P10/P50/P90, multilayer screening, boundary confidence, reserves report language |
