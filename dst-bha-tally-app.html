@@ -373,14 +373,8 @@
     }
     .inventory-table th { font-size: 0.72rem; position: sticky; top: 0; background: var(--color-surface-2); z-index: 1; }
     .inventory-table .inv-desc { text-align: left; min-width: 10rem; max-width: 18rem; }
-    .diagram-wrap {
-      overflow: hidden; padding: var(--space-2);
-      max-height: calc(100dvh - 11rem); min-height: 420px;
-      display: flex; align-items: flex-start; justify-content: center;
-    }
-    .diagram-wrap svg { width: 100%; height: auto; max-height: calc(100dvh - 12rem); min-width: 0; display: block; }
-    #tab-diagram .card { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - 9rem); }
-    #tab-diagram .diagram-wrap { flex: 1 1 auto; min-height: 0; }
+    .diagram-wrap { overflow: auto; padding: var(--space-2); max-height: 85vh; }
+    .diagram-wrap svg { min-width: 720px; display: block; }
     .save-dot {
       font-size: var(--text-xs); color: var(--color-text-muted); padding: .35rem .6rem;
       border-radius: var(--radius-full); background: var(--color-surface-offset);
@@ -2166,31 +2160,16 @@
       return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
     }
 
-    function diagramAvailableHeight() {
-      const panel = document.getElementById('tab-diagram');
-      const vh = window.innerHeight || 800;
-      if (panel && panel.offsetParent !== null) {
-        const top = panel.getBoundingClientRect().top;
-        return Math.max(400, Math.min(vh - top - 28, 760));
-      }
-      return Math.max(400, vh - 200);
-    }
-
     function diagramStringLayout(rows) {
       const totalLen = rows.reduce((a, r) => a + r.lenMd, 0) || 1;
       const n = rows.length;
-      const plotH = diagramAvailableHeight() - 48;
-      const itemGap = n > 45 ? 1 : n > 22 ? 2 : 3;
-      const gapsTotal = Math.max(0, n - 1) * itemGap;
-      const drawable = Math.max(320, plotH - gapsTotal);
-      const scaleY = drawable / totalLen;
+      const targetPlotH = Math.min(3600, Math.max(520, n * 16));
       return {
         totalLen,
-        scaleY,
-        minItemH: 2,
-        itemGap,
-        labelSize: n > 50 ? 8 : n > 28 ? 9 : 10,
-        plotH
+        scaleY: targetPlotH / totalLen,
+        minItemH: n > 60 ? 6 : n > 35 ? 7 : 8,
+        itemGap: n > 60 ? 2 : 4,
+        labelSize: n > 60 ? 10 : n > 35 ? 11 : 12
       };
     }
 
@@ -2374,7 +2353,7 @@
         totalH = padTop + plotH + 32;
       }
 
-      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="width:100%;height:auto;max-height:${diagramAvailableHeight()}px">${parts.join('')}</svg>`;
+      el.innerHTML = `<svg viewBox="0 0 ${svgW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="height:${totalH}px;width:100%">${parts.join('')}</svg>`;
     }
 
     function normHeaderCell(v) {
@@ -3375,18 +3354,8 @@
     // Tabs — labels use CSS radio (work without JS); JS adds scroll-into-view
     document.querySelectorAll('.tab[data-tab]').forEach(tab => {
       tab.addEventListener('click', () => {
-        setTimeout(() => {
-          switchTab(tab.dataset.tab);
-          if (tab.dataset.tab === 'diagram') render();
-        }, 0);
+        setTimeout(() => switchTab(tab.dataset.tab), 0);
       });
-    });
-    let diagramResizeTimer;
-    window.addEventListener('resize', () => {
-      clearTimeout(diagramResizeTimer);
-      diagramResizeTimer = setTimeout(() => {
-        if (document.getElementById('rtab-diagram')?.checked) render();
-      }, 150);
     });
     if ($('bannerLoadBtn')) $('bannerLoadBtn').onclick = () => { switchTab('reference'); };
     if ($('bannerImportBtn')) $('bannerImportBtn').onclick = () => switchTab('import');
