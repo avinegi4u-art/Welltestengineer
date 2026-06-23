@@ -89,6 +89,7 @@
     #rtab-well:checked ~ nav .tab[for="rtab-well"],
     #rtab-builder:checked ~ nav .tab[for="rtab-builder"],
     #rtab-tally:checked ~ nav .tab[for="rtab-tally"],
+    #rtab-running:checked ~ nav .tab[for="rtab-running"],
     #rtab-hydraulics:checked ~ nav .tab[for="rtab-hydraulics"],
     #rtab-weight:checked ~ nav .tab[for="rtab-weight"],
     #rtab-diagram:checked ~ nav .tab[for="rtab-diagram"],
@@ -100,6 +101,7 @@
     #rtab-well:checked ~ .content #tab-well,
     #rtab-builder:checked ~ .content #tab-builder,
     #rtab-tally:checked ~ .content #tab-tally,
+    #rtab-running:checked ~ .content #tab-running,
     #rtab-hydraulics:checked ~ .content #tab-hydraulics,
     #rtab-weight:checked ~ .content #tab-weight,
     #rtab-diagram:checked ~ .content #tab-diagram,
@@ -217,6 +219,61 @@
     }
     .tally-warn-list { margin: 0; padding: .45rem .75rem .6rem 1.65rem; }
     .tally-warn-list li { margin: .3rem 0; line-height: 1.45; }
+    .app:has(#rtab-running:checked) .kpi-wrap,
+    .app:has(#rtab-running:checked) #startBanner { display: none !important; }
+    .app:has(#rtab-running:checked) .topbar .sub { display: none; }
+    #tab-running .card { display: flex; flex-direction: column; min-height: 0; padding: var(--space-3) var(--space-4); }
+    #tab-running h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
+    .running-layout {
+      display: flex; flex-direction: column; gap: var(--space-3);
+      flex: 1 1 auto; min-height: 0;
+      height: calc(100vh - 200px); min-height: 520px;
+    }
+    .running-toolbar {
+      display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end;
+      padding: var(--space-3); border-radius: var(--radius-md);
+      background: var(--color-bg); border: 1px solid var(--color-border);
+    }
+    .running-toolbar .field { min-width: 120px; margin: 0; }
+    .running-toolbar .field label { font-size: var(--text-xs); }
+    .running-toolbar .field input { padding: .55rem .7rem; }
+    .running-kpis {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space-2);
+    }
+    .running-kpi {
+      padding: var(--space-3); border-radius: var(--radius-md);
+      background: var(--color-bg); border: 1px solid var(--color-border);
+    }
+    .running-kpi .label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .running-kpi .value { font-size: 1.25rem; font-weight: 700; margin-top: .25rem; }
+    .running-kpi .sub { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: .15rem; }
+    .running-scroll {
+      flex: 1 1 auto; min-height: 0; overflow: auto;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    }
+    #runningTable th, #runningTable td {
+      text-align: center; vertical-align: middle; padding: .5rem .4rem; font-size: 0.8rem;
+    }
+    #runningTable th { font-size: 0.72rem; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+    #runningTable .run-desc { text-align: left; min-width: 10rem; max-width: 16rem; }
+    #runningTable .run-name { font-weight: 600; line-height: 1.25; }
+    #runningTable .run-sub { font-size: 0.68rem; color: var(--color-text-muted); margin-top: .15rem; }
+    #runningTable tr.run-done td { background: color-mix(in oklab, var(--color-success) 12%, var(--color-surface-2)); }
+    #runningTable tr.run-next td { background: color-mix(in oklab, var(--color-warning) 14%, var(--color-surface-2)); }
+    #runningTable tr.run-pending td { opacity: .92; }
+    #runningTable input[type="checkbox"] { width: 1.1rem; height: 1.1rem; cursor: pointer; }
+    #runningTable input.run-note-in {
+      width: 100%; min-width: 5rem; padding: .35rem .45rem; font-size: 0.75rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg);
+    }
+    .run-progress-bar {
+      height: 8px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden;
+    }
+    .run-progress-bar > span {
+      display: block; height: 100%; background: var(--color-success);
+      transition: width .25s ease;
+    }
     .app:has(#rtab-builder:checked) .kpi-wrap,
     .app:has(#rtab-builder:checked) #startBanner { display: none !important; }
     .app:has(#rtab-builder:checked) .topbar .sub { display: none; }
@@ -436,6 +493,7 @@
       <input type="radio" name="bha-tab" id="rtab-well" class="tab-radio" checked>
       <input type="radio" name="bha-tab" id="rtab-builder" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-tally" class="tab-radio">
+      <input type="radio" name="bha-tab" id="rtab-running" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-hydraulics" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-weight" class="tab-radio">
       <input type="radio" name="bha-tab" id="rtab-diagram" class="tab-radio">
@@ -446,6 +504,7 @@
         <label class="tab" for="rtab-well" data-tab="well">Well &amp; job</label>
         <label class="tab" for="rtab-builder" data-tab="builder">String builder</label>
         <label class="tab" for="rtab-tally" data-tab="tally">Tally table</label>
+        <label class="tab" for="rtab-running" data-tab="running">Running tally</label>
         <label class="tab" for="rtab-hydraulics" data-tab="hydraulics">Volumes &amp; hydraulics</label>
         <label class="tab" for="rtab-weight" data-tab="weight">Weight / WIR</label>
         <label class="tab" for="rtab-diagram" data-tab="diagram">Diagram</label>
@@ -589,6 +648,41 @@
           </article>
         </section>
 
+        <!-- Running tally -->
+        <section class="tab-panel" id="tab-running">
+          <article class="card">
+            <h2>Running tally</h2>
+            <p class="muted">Track components as they are run in the hole — cumulative length, shoe depth, and run log for drillers and completion engineers.</p>
+            <div class="running-layout">
+              <div class="running-toolbar no-print">
+                <div class="field"><label for="runDriller">Driller / operator</label><input id="runDriller" type="text" placeholder="Initials" maxlength="24"></div>
+                <button class="btn primary" id="runNextBtn" type="button">Run next item</button>
+                <button class="btn" id="runUndoBtn" type="button">Undo last</button>
+                <button class="btn" id="runResetBtn" type="button">Reset running log</button>
+                <button class="btn" id="exportRunningBtn" type="button">Export running tally</button>
+              </div>
+              <div class="running-kpis" id="runningKpis">
+                <div class="running-kpi"><div class="label">Items run</div><div class="value" id="runKpiItems">0 / 0</div><div class="sub" id="runKpiItemsSub">Load a BHA tally first</div></div>
+                <div class="running-kpi"><div class="label">Length run</div><div class="value" id="runKpiLen">0</div><div class="sub" id="runKpiLenSub">—</div></div>
+                <div class="running-kpi"><div class="label">Shoe / current MD</div><div class="value" id="runKpiShoe">—</div><div class="sub" id="runKpiShoeSub">—</div></div>
+                <div class="running-kpi"><div class="label">Progress</div><div class="value" id="runKpiPct">0%</div><div class="run-progress-bar" style="margin-top:.45rem"><span id="runProgressBar" style="width:0%"></span></div></div>
+              </div>
+              <div class="running-scroll">
+                <table id="runningTable">
+                  <thead>
+                    <tr>
+                      <th>Run</th><th>#</th><th>Description</th><th>OD</th><th>ID</th>
+                      <th>Len</th><th>Cum len</th><th>Top MD</th><th>Bot MD</th>
+                      <th>Time</th><th>By</th><th>Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody id="runningTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </section>
+
         <!-- Hydraulics -->
         <section class="tab-panel" id="tab-hydraulics">
           <div class="grid">
@@ -718,6 +812,7 @@
               <div class="actions">
                 <button class="btn primary" id="exportXlsxBtn" type="button">Download Excel (.xlsx)</button>
                 <button class="btn" id="exportCsvBtn" type="button">Download CSV</button>
+                <button class="btn" id="exportRunningXlsxBtn" type="button">Download running tally (.xlsx)</button>
                 <button class="btn" id="exportProjectBtn" type="button">Download project (.json)</button>
               </div>
             </article>
@@ -784,7 +879,8 @@
       pendingWorkbook: null,
       pendingOcrLines: null,
       refSource: '',
-      folderFiles: []
+      folderFiles: [],
+      running: { driller: '', startedAt: null, lastUpdate: null }
     };
 
     let editIndex = -1;
@@ -1053,6 +1149,146 @@
       const A = normThread(a), B = normThread(b);
       if (!A || !B) return true;
       return A === B || A.includes(B) || B.includes(A);
+    }
+
+    function ensureItemRunFields(item) {
+      if (item.runAt === undefined) item.runAt = null;
+      if (item.runBy === undefined) item.runBy = '';
+      if (item.runNote === undefined) item.runNote = '';
+    }
+
+    function normalizeItemRunFields() {
+      state.items.forEach(ensureItemRunFields);
+    }
+
+    function formatRunTime(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch (e) { return '—'; }
+    }
+
+    function runningProgress(rows) {
+      let runCount = 0, cumLen = 0, shoeMd = Number(state.well.hangoff) || 0;
+      for (let i = 0; i < rows.length; i++) {
+        if (!rows[i].runAt) break;
+        runCount++;
+        cumLen += rows[i].lenMd;
+        shoeMd = rows[i].botMd;
+      }
+      const totalLen = rows.reduce((a, b) => a + b.lenMd, 0);
+      return {
+        runCount,
+        cumLen,
+        shoeMd,
+        nextIndex: runCount,
+        totalItems: rows.length,
+        totalLen,
+        pctLen: totalLen > 0 ? (cumLen / totalLen) * 100 : 0
+      };
+    }
+
+    function markItemRun(i) {
+      normalizeItemRunFields();
+      const item = state.items[i];
+      if (!item) return;
+      const by = ($('runDriller')?.value || state.running.driller || '').trim();
+      if (!item.runAt) {
+        item.runAt = new Date().toISOString();
+        item.runBy = by;
+        if (!state.running.startedAt) state.running.startedAt = item.runAt;
+      }
+      state.running.driller = by;
+      state.running.lastUpdate = item.runAt;
+      render();
+    }
+
+    function unmarkItemRun(i) {
+      normalizeItemRunFields();
+      const item = state.items[i];
+      if (!item) return;
+      item.runAt = null;
+      item.runBy = '';
+      const lastRun = [...state.items].reverse().find(x => x.runAt);
+      state.running.lastUpdate = lastRun?.runAt || null;
+      if (!lastRun) state.running.startedAt = null;
+      render();
+    }
+
+    function runNextItem() {
+      normalizeItemRunFields();
+      const rows = computedRows();
+      const prog = runningProgress(rows);
+      if (prog.nextIndex >= rows.length) return alert('All items are already marked as run.');
+      markItemRun(prog.nextIndex);
+    }
+
+    function undoLastRun() {
+      normalizeItemRunFields();
+      const rows = computedRows();
+      const prog = runningProgress(rows);
+      if (!prog.runCount) return alert('No items marked as run yet.');
+      unmarkItemRun(prog.runCount - 1);
+    }
+
+    function resetRunningLog() {
+      if (!state.items.some(x => x.runAt) && !state.running.startedAt) return;
+      if (!confirm('Clear all running tally marks and remarks? Planned tally is kept.')) return;
+      normalizeItemRunFields();
+      state.items.forEach(x => { x.runAt = null; x.runBy = ''; x.runNote = ''; });
+      state.running.startedAt = null;
+      state.running.lastUpdate = null;
+      render();
+    }
+
+    function renderRunningTally(rows, unit) {
+      normalizeItemRunFields();
+      const prog = runningProgress(rows);
+      const drillerEl = $('runDriller');
+      if (drillerEl && !drillerEl.value && state.running.driller) drillerEl.value = state.running.driller;
+
+      $('runKpiItems').textContent = rows.length ? `${prog.runCount} / ${prog.totalItems}` : '0 / 0';
+      $('runKpiItemsSub').textContent = rows.length
+        ? (prog.runCount >= prog.totalItems ? 'String fully run' : `Next: #${prog.nextIndex + 1}`)
+        : 'Load a BHA tally first';
+      $('runKpiLen').textContent = rows.length ? `${fmt(prog.cumLen, 2)} ${unit}` : '—';
+      $('runKpiLenSub').textContent = rows.length ? `of ${fmt(prog.totalLen, 2)} ${unit} planned` : '—';
+      $('runKpiShoe').textContent = rows.length && prog.runCount ? `${fmt(prog.shoeMd, 2)} ${unit}` : '—';
+      $('runKpiShoeSub').textContent = prog.runCount ? 'Bottom of last run item' : (rows.length ? 'Mark items as run' : '—');
+      $('runKpiPct').textContent = `${fmt(prog.pctLen, 0)}%`;
+      $('runProgressBar').style.width = `${Math.min(100, prog.pctLen)}%`;
+
+      const tb = $('runningTableBody');
+      if (!tb) return;
+      if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="12" class="muted">No planned tally — load Excel or build the string first.</td></tr>';
+        return;
+      }
+
+      let cumRun = 0;
+      tb.innerHTML = rows.map((r, i) => {
+        const isRun = !!r.runAt;
+        if (isRun) cumRun += r.lenMd;
+        const isNext = !isRun && i === prog.nextIndex;
+        const rowClass = isRun ? 'run-done' : (isNext ? 'run-next' : 'run-pending');
+        return `<tr class="${rowClass}" data-run-i="${i}">
+          <td><input type="checkbox" class="run-chk" data-i="${i}" ${isRun ? 'checked' : ''} aria-label="Mark item ${r.idx} as run"></td>
+          <td>${r.idx}</td>
+          <td class="run-desc">
+            <div class="run-name">${esc(r.name)}</div>
+            ${(r.company || r.toolNo) ? `<div class="run-sub">${[r.company, r.toolNo].filter(Boolean).join(' · ')}</div>` : ''}
+          </td>
+          <td>${esc(r.od)}</td><td>${esc(r.id)}</td>
+          <td>${fmt(r.lenMd, 2)}</td>
+          <td><strong>${isRun ? fmt(cumRun, 2) : '—'}</strong></td>
+          <td>${fmt(r.topMd, 2)}</td>
+          <td>${fmt(r.botMd, 2)}</td>
+          <td>${isRun ? esc(formatRunTime(r.runAt)) : '—'}</td>
+          <td>${isRun ? esc(r.runBy || '—') : '—'}</td>
+          <td><input class="run-note-in" data-i="${i}" type="text" value="${esc(r.runNote || '')}" placeholder="Remark" maxlength="120"></td>
+        </tr>`;
+      }).join('');
     }
 
     function computedRows() {
@@ -1352,8 +1588,9 @@
 
       drawDiagram(rows, unit);
       renderLibrary();
+      renderRunningTally(rows, unit);
       updateRefSourceLine();
-      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items }, null, 2);
+      $('jsonArea').value = JSON.stringify({ well: state.well, items: state.items, running: state.running }, null, 2);
       updateStartBanner();
       scheduleSave();
     }
@@ -2090,6 +2327,8 @@
       migrateCasings(state.well);
       if (!state.well.casings.length && data.useDefaultCasings) state.well.casings = defaultCasings();
       if (Array.isArray(data.items)) state.items = data.items;
+      if (data.running) state.running = { ...state.running, ...data.running };
+      normalizeItemRunFields();
       if (sourceLabel) state.refSource = sourceLabel;
       writeWellToDom();
       render();
@@ -2238,6 +2477,43 @@
       dlBlob(lines.join('\n'), 'dst-bha-tally.csv', 'text/csv');
     }
 
+    function exportRunningXlsx() {
+      readWellFromDom();
+      const rows = computedRows();
+      const u = dispUnit();
+      const w = state.well;
+      const prog = runningProgress(rows);
+      const aoa = [
+        ['RUNNING TALLY — DST BHA'],
+        ['Client', w.customer || ''], ['Well', w.name], ['Rig', w.rig || ''],
+        ['DST Run', w.dstRun], ['Date', w.date || ''], ['Driller', state.running.driller || ''],
+        ['Started', state.running.startedAt ? formatRunTime(state.running.startedAt) : ''],
+        ['Items run', `${prog.runCount} / ${prog.totalItems}`],
+        ['Length run', `${fmt(prog.cumLen, 3)} ${u}`],
+        ['Shoe MD', prog.runCount ? `${fmt(prog.shoeMd, 3)} ${u}` : ''], [],
+        ['Run','No','Tool Description','Company','OD (in)','ID (in)',`Length (${u})`,`Cum run (${u})`,`Top MD (${u})`,`Bottom MD (${u})`,'Run time','Run by','Remark']
+      ];
+      let cumRun = 0;
+      rows.forEach(r => {
+        if (r.runAt) cumRun += r.lenMd;
+        aoa.push([
+          r.runAt ? 'Y' : '',
+          r.idx, r.name, r.company || '', r.od, r.id,
+          Number(fmt(r.lenMd, 3)),
+          r.runAt ? Number(fmt(cumRun, 3)) : '',
+          Number(fmt(r.topMd, 3)), Number(fmt(r.botMd, 3)),
+          r.runAt ? formatRunTime(r.runAt) : '', r.runBy || '', r.runNote || ''
+        ]);
+      });
+      aoa.push([], ['Planned total length', fmt(prog.totalLen, 3) + ' ' + u]);
+      aoa.push(['Length run to date', fmt(prog.cumLen, 3) + ' ' + u]);
+      aoa.push(['Progress', fmt(prog.pctLen, 1) + '%']);
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Running Tally');
+      XLSX.writeFile(wb, `${(w.dstRun || 'dst').replace(/\s+/g,'-')}-running-tally.xlsx`);
+    }
+
     function exportXlsx() {
       const rows = computedRows();
       const u = dispUnit();
@@ -2268,7 +2544,7 @@
 
     function exportProject() {
       readWellFromDom();
-      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource }, null, 2), 'dst-bha-project.json', 'application/json');
+      dlBlob(JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource, running: state.running }, null, 2), 'dst-bha-project.json', 'application/json');
     }
 
     function dlBlob(text, name, type) {
@@ -2283,7 +2559,9 @@
       $('saveStatus').textContent = 'Saving…';
       saveTimer = setTimeout(() => {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ well: state.well, items: state.items, refSource: state.refSource }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            well: state.well, items: state.items, refSource: state.refSource, running: state.running
+          }));
           $('saveStatus').textContent = 'Saved locally';
           $('saveStatus').classList.add('live');
         } catch (e) {
@@ -2301,6 +2579,8 @@
         if (Array.isArray(data.items) && data.items.length) {
           state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
+          if (data.running) state.running = { ...state.running, ...data.running };
+          normalizeItemRunFields();
           writeWellToDom();
           return true;
         }
@@ -2405,7 +2685,13 @@
     $('loadSampleBtn').onclick = async () => {
       if (!(await loadSample())) alert('No bundled sample in this folder.\n\nUse Load BHA reference tab to pick any Excel workbook.');
     };
-    $('clearAllBtn').onclick = () => { if (confirm('Clear entire string?')) { state.items = []; render(); } };
+    $('clearAllBtn').onclick = () => {
+      if (!confirm('Clear entire string?')) return;
+      state.items = [];
+      state.running.startedAt = null;
+      state.running.lastUpdate = null;
+      render();
+    };
     $('reverseBtn').onclick = () => { state.items.reverse(); render(); };
     $('stringList').onclick = handleListAction;
     $('tallyTable').onclick = handleListAction;
@@ -2483,7 +2769,9 @@
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
+          if (data.running) state.running = { ...state.running, ...data.running };
         }
+        normalizeItemRunFields();
         writeWellToDom();
         render();
       } catch (e) { alert('Invalid JSON'); }
@@ -2493,6 +2781,31 @@
     $('exportCsvBtn').onclick = exportCsv;
     $('exportXlsxBtn').onclick = exportXlsx;
     $('exportProjectBtn').onclick = exportProject;
+    $('exportRunningBtn').onclick = exportRunningXlsx;
+    $('exportRunningXlsxBtn').onclick = exportRunningXlsx;
+    $('runNextBtn').onclick = runNextItem;
+    $('runUndoBtn').onclick = undoLastRun;
+    $('runResetBtn').onclick = resetRunningLog;
+    $('runningTableBody').addEventListener('change', e => {
+      const chk = e.target.closest('.run-chk');
+      if (!chk) return;
+      const i = +chk.dataset.i;
+      if (chk.checked) markItemRun(i);
+      else unmarkItemRun(i);
+    });
+    $('runningTableBody').addEventListener('input', e => {
+      const inp = e.target.closest('.run-note-in');
+      if (!inp) return;
+      const i = +inp.dataset.i;
+      if (state.items[i]) {
+        state.items[i].runNote = inp.value;
+        scheduleSave();
+      }
+    });
+    $('runDriller').addEventListener('input', () => {
+      state.running.driller = $('runDriller').value.trim();
+      scheduleSave();
+    });
     function doPrint(orientation) {
       readWellFromDom();
       render();
@@ -2533,6 +2846,8 @@
           if (data.well) state.well = { ...state.well, ...data.well };
           if (Array.isArray(data.items)) state.items = data.items;
           if (data.refSource) state.refSource = data.refSource;
+          if (data.running) state.running = { ...state.running, ...data.running };
+          normalizeItemRunFields();
           writeWellToDom();
           render();
         } catch (err) { alert('Invalid project file'); }
