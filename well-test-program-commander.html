@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Well Test Program Commander — Integrated Operations</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M32 8v48M8 32h48' stroke='%233dd7b6' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%2363a7ff'/%3E%3C/svg%3E" />
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #07111f; --surface: #0d1b2d; --surface-2: #122238; --surface-3: #172b45;
+      --border: #29445f; --text: #eef5ff; --muted: #a9bad0;
+      --accent: #3dd7b6; --accent-2: #63a7ff; --warn: #ffba66; --bad: #ff7b8a; --good: #7ee787;
+      --radius: 14px; --shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    [data-theme="light"] {
+      --bg: #f7f6f2; --surface: #fff; --surface-2: #f9f8f5; --surface-3: #edeae5;
+      --border: #d4d1ca; --text: #28251d; --muted: #6f6d67;
+      --accent: #01696f; --accent-2: #3d5a80; --warn: #964219; --bad: #a12c3c; --good: #437a22;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: .6rem 1rem; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: linear-gradient(135deg, var(--accent), #238fb5); color: #03131b; border: 0; font-weight: 700; }
+    .layout { display: grid; grid-template-columns: 300px 1fr; min-height: 100vh; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .sidebar { position: static !important; height: auto !important; } }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      background: var(--surface); border-right: 1px solid var(--border); padding: 1rem;
+    }
+    .brand { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; }
+    .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-3); display: grid; place-items: center; border: 1px solid var(--border); }
+    h1 { font-size: 1.05rem; margin: 0; line-height: 1.2; }
+    .sub { font-size: .78rem; color: var(--muted); margin: .2rem 0 0; }
+    .nav-group { margin: .75rem 0; }
+    .nav-group-title { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: .5rem 0 .35rem; }
+    .nav-btn {
+      display: block; width: 100%; text-align: left; border-radius: 8px; padding: .45rem .6rem;
+      margin-bottom: 2px; background: transparent; border: 0; font-size: .82rem; color: var(--muted);
+    }
+    .nav-btn:hover, .nav-btn.active { background: var(--surface-3); color: var(--text); }
+    .nav-btn.active { border-left: 3px solid var(--accent); }
+    .main { padding: 1.25rem; max-width: 1200px; }
+    .top-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+    .panel h2 { margin: 0 0 .35rem; font-size: 1.35rem; }
+    .panel h3 { margin: 1rem 0 .35rem; font-size: 1rem; color: var(--accent); }
+    .panel h4 { margin: .75rem 0 .25rem; font-size: .92rem; }
+    .muted { color: var(--muted); font-size: .88rem; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; margin-top: .75rem; }
+    .field { display: flex; flex-direction: column; gap: .25rem; }
+    .field label { font-size: .78rem; font-weight: 600; color: var(--muted); }
+    .field input, .field select, .field textarea {
+      padding: .65rem .75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2);
+    }
+    .field textarea { min-height: 80px; resize: vertical; }
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; margin: .75rem 0; }
+    .kpi { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: .85rem; }
+    .kpi .lbl { font-size: .68rem; text-transform: uppercase; color: var(--muted); }
+    .kpi .val { font-size: 1.4rem; font-weight: 700; margin-top: .2rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: .5rem; }
+    th, td { padding: .55rem .6rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 700; }
+    .badge.pending { background: rgba(255,186,102,.2); color: var(--warn); }
+    .badge.pass { background: rgba(126,231,135,.15); color: var(--good); }
+    .badge.block { background: rgba(255,123,138,.15); color: var(--bad); }
+    .callout { border-left: 3px solid var(--accent); padding: .75rem 1rem; background: var(--surface-2); border-radius: 0 8px 8px 0; margin: .75rem 0; font-size: .88rem; }
+    .callout.warn { border-color: var(--warn); }
+    .callout.bad { border-color: var(--bad); }
+    .tool-links { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
+    .tool-links a {
+      text-decoration: none; color: var(--text); border: 1px solid var(--border);
+      padding: .45rem .75rem; border-radius: 999px; font-size: .82rem; background: var(--surface-2);
+    }
+    .tool-links a:hover { border-color: var(--accent-2); }
+    .step-list { list-style: none; padding: 0; margin: 0; }
+    .step-item {
+      display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; align-items: start;
+      padding: .75rem; border: 1px solid var(--border); border-radius: 10px; margin-bottom: .5rem; background: var(--surface-2);
+    }
+    .step-item.done { border-color: var(--good); opacity: .85; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: .78rem; font-weight: 700; }
+    .step-title { font-weight: 600; font-size: .9rem; }
+    .step-detail { font-size: .82rem; color: var(--muted); margin-top: .25rem; line-height: 1.45; }
+    .section-view { display: none; }
+    .section-view.active { display: block; }
+    .progress-bar { height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden; margin: .5rem 0; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .3s; }
+    .hidden { display: none !important; }
+    @media print { .sidebar, .top-actions { display: none; } .layout { grid-template-columns: 1fr; } .section-view { display: block !important; page-break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">⛽</div>
+        <div>
+          <h1>WTP Commander</h1>
+          <p class="sub">Multi-DST integrated operations</p>
+        </div>
+      </div>
+      <div id="navRoot"></div>
+    </aside>
+    <main class="main">
+      <div class="top-actions">
+        <button id="themeBtn">Light mode</button>
+        <button id="saveBtn" class="primary">Save program</button>
+        <button id="exportBtn">Export JSON</button>
+        <button id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden" />
+        <button id="printBtn">Print / PDF</button>
+      </div>
+      <div id="contentRoot"></div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'wtp-commander-v1';
+    const HYD = 0.052;
+    const FT_PER_M = 3.280839895;
+
+    const PROGRAM = {
+      meta: {
+        title: 'Multi-Zone DST Well Test Program',
+        formations: ['LK-3', 'KH-2', 'MISHRIF'],
+        dstRuns: ['DST 1 — LK-3', 'DST 2 — KH-2', 'DST 3 — MISHRIF'],
+      },
+      sections: [
+        { id: 's1', num: '1', title: 'INTRODUCTION', children: [
+          { id: 's1-1', num: '1.1', title: 'Well History' },
+          { id: 's1-2', num: '1.2', title: 'Purpose and Outline of the Program' },
+          { id: 's1-3', num: '1.3', title: 'Well Testing Objectives' },
+          { id: 's1-4', num: '1.4', title: 'Reference Documents and Procedures' },
+          { id: 's1-5', num: '1.5', title: 'Personnel and Responsibilities' },
+          { id: 's1-6', num: '1.6', title: 'Safety Expectations' },
+          { id: 's1-7', num: '1.7', title: 'Operating Practices' },
+          { id: 's1-8', num: '1.8', title: 'Changes to the Well Test Program' },
+          { id: 's1-9', num: '1.9', title: 'Shift Handover Process' },
+        ]},
+        { id: 's2', num: '2', title: 'WELL INFORMATION', children: [
+          { id: 's2-1', num: '2.1', title: 'General Data' },
+          { id: 's2-2', num: '2.2', title: 'Well Schematics' },
+          { id: 's2-3', num: '2.3', title: 'Expected Reservoir Pressure & Temperature' },
+          { id: 's2-4', num: '2.4', title: 'Preliminary Data Gathering Program and TD Criteria' },
+          { id: 's2-5', num: '2.5', title: 'Dimensions and Volumes' },
+          { id: 's2-6', num: '2.6', title: 'Proposed Perforation Intervals' },
+          { id: 's2-7', num: '2.7', title: 'PVT & Surface Sampling Requirements' },
+          { id: 's2-8', num: '2.8', title: 'Real Time Requirements' },
+          { id: 's2-9', num: '2.9', title: 'Brine Density Calculations' },
+        ]},
+        { id: 's3', num: '3', title: 'EQUIPMENT PREPARATION', children: [
+          { id: 's3-1', num: '3.1', title: 'Drilling' },
+          { id: 's3-2', num: '3.2', title: 'Well Test Package Preparation' },
+          { id: 's3-3', num: '3.3', title: 'Wireline Preparation' },
+          { id: 's3-4', num: '3.4', title: 'Test String Preparation' },
+          { id: 's3-5', num: '3.5', title: 'Acid Recipes' },
+          { id: 's3-6', num: '3.6', title: 'Service Company Contacts' },
+        ]},
+        { id: 's4', num: '4', title: 'DST PROCEDURE (DST 1: LK-3)', children: [
+          { id: 's4-1', num: '4.1', title: 'Scraper Trip' },
+          { id: 's4-2', num: '4.2', title: 'Dummy Run for EZ-Valve Space out' },
+          { id: 's4-3', num: '4.3', title: 'Flex Trip' },
+          { id: 's4-4', num: '4.4', title: 'Cased Hole Logging' },
+          { id: 's4-5', num: '4.5', title: 'Wireline Perforation' },
+          { id: 's4-6', num: '4.6', title: 'DST Operations (DST 1)' },
+        ]},
+        { id: 's5', num: '5', title: 'WELL KILL AND POOH (DST 1)' },
+        { id: 's6', num: '6', title: 'CONTINGENCY DURING DST OPERATIONS' },
+        { id: 's7', num: '7', title: 'ISOLATION / P&A OF DST 1' },
+        { id: 's8', num: '8', title: 'WIRELINE PERFORATION (DST 2: KH-2)' },
+        { id: 's9', num: '9', title: 'DST OPERATIONS (DST 2: KH-2)' },
+        { id: 's10', num: '10', title: 'WELL KILLING AND POOH (DST 2)' },
+        { id: 's11', num: '11', title: 'CONTINGENCY (DST 2)' },
+        { id: 's12', num: '12', title: 'ISOLATION / P&A OF DST 2 & 7" LINER' },
+        { id: 's13', num: '13', title: 'WIRELINE PERFORATION (DST 3: MISHRIF)' },
+        { id: 's14', num: '14', title: 'DST OPERATIONS (DST 3: MISHRIF)' },
+        { id: 's15', num: '15', title: 'WELL KILLING AND POOH (DST 3)' },
+        { id: 's16', num: '16', title: 'CONTINGENCY (DST 3)' },
+        { id: 's17', num: '17', title: 'ISOLATION OF MISHRIF AND WELL P&A' },
+        { id: 's18', num: '18', title: 'ROLES AND RESPONSIBILITIES' },
+        { id: 's19', num: '19', title: 'WELL TEST REPORTING' },
+        { id: 's20', num: '20', title: 'DST TOOL CONTINGENCIES' },
+        { id: 's21', num: '21', title: 'APPENDIX' },
+      ],
+    };
+
+    const DST1_STEPS = [
+      { id: 'd1-prior', title: 'Considerations prior RIH DST string', detail: 'Verify BHA tally, gauge settings, EZ-valve space-out, HPPK/CERTIS ratings, metallurgy (H₂S), and SIMOPS with CT/wireline. Confirm kill weight fluid in hole and barrier diagram signed.', gate: 'G3' },
+      { id: 'd1-gauge', title: 'DST downhole gauge setting', detail: 'Memory gauges: sample rate 1–10 s during flow/buildup; pre-job time sync; shock rating for perforating/TCP; battery life > planned test + 24 hr margin.', gate: 'G3' },
+      { id: 'd1-bha', title: 'Make up DST BHA', detail: 'Torque/standoff per DS; drift all IDs; record serial numbers; IRDV, SHRV, EZ-valve orientation; weak point calculation documented.', tools: ['dst-bha-tally-app.html'] },
+      { id: 'd1-rih', title: 'RIH on 3½" #15.8 BTS-6 tubing per approved tally', detail: 'Fill pipe every 10 stands; monitor drag; no rotation unless approved; tally vs marker joint for packer depth.', tools: ['dst-bha-tally-app.html'] },
+      { id: 'd1-corr', title: 'Wireline correlation & DST space-out', detail: 'GR/CCL vs open-hole/cased-hole log; adjust space-out for EZ-valve landing; second engineer verify depth.', gate: 'G3' },
+      { id: 'd1-landing', title: 'Make up Landing String Assembly', detail: 'Landing nipple profile verified; latch-in test if required; hang-off weight calculated.', },
+      { id: 'd1-packer', title: 'Set SLB CERTIS Packer', detail: 'Set depth per correlation; packer setting weight/pressure; test seal below/above per program; max differential documented.', gate: 'G3' },
+      { id: 'd1-rigup', title: 'Rig up Flowhead, Scaffolding, CT (TBC) and pressure test', detail: 'Flowhead + IRDV alignment; test to 1.2× MAWOP; ESD functional; CT rig-up if contingency planned.', gate: 'G1' },
+      { id: 'd1-displace', title: 'Displace DST string with fresh water / diesel', detail: 'Track volumes; confirm clean fluid at tester valve; avoid underbalance before intentional flow.', },
+      { id: 'd1-inject', title: 'Injectivity test through DST string', detail: 'Low rate injection; record ISIP, falloff; verify communication with perf interval; max pressure < fracture gradient.', gate: 'G4' },
+      { id: 'd1-acid', title: 'Acid Stimulation', detail: 'Stage volumes/rates per acid recipe; real-time WHP; inhibitor for Tres; overflush volume; soak time before flowback.', tools: ['acid-calculator-v5.html'], gate: 'G8' },
+      { id: 'd1-cleanup', title: 'Cleanup, Flow Test and Sampling', detail: 'Initial cleanup until sand/water cut stable; then allocation-quality flow.', gate: 'G5' },
+      { id: 'd1-ibu24', title: 'Initial buildup 24 hr (stabilized WHP per COSMO-RE)', detail: 'Close tester valve; monitor WHP stabilization; min 24 hr or until derivative flat; RT data to office.', gate: 'G6' },
+      { id: 'd1-choke', title: 'Flow test — 16/64", 24/64", 32/64" choke steps', detail: 'Stabilize each bean ≥ program duration; record separator P/T, rates, GOR; IPR points for deliverability.', gate: 'G5' },
+      { id: 'd1-surf', title: 'Surface fluid sampling', detail: 'Recombined separator sample after stabilization; gas spot + extended GC; pressurized oil sample; water ion chromatography.', gate: 'G5' },
+      { id: 'd1-bhs', title: 'Bottomhole fluid sampling', detail: 'Wireline or DST sample bottle at Pwf; record drawdown, shut-in time, bottle P/T; single-phase maintenance.', },
+      { id: 'd1-bbu', title: 'Bottomhole buildup 36–48 hr', detail: 'Extended buildup for PTA; import gauges to PTA Pro; superposition if multi-rate preceding flow.', tools: ['dst-pressure-transient-analysis-pro-v2.11.html'], gate: 'G6' },
+    ];
+
+    const KILL_STEPS = [
+      { id: 'k1', title: 'Determine kill parameters', detail: 'Kill MW from vertical kill sheet; dynamic kill if flowing; overbalance 200–500 psi minimum.', tools: ['vertical-kill-sheet-app.html'] },
+      { id: 'k2', title: 'Prepare kill fluid', detail: 'Mix to target density; viscosifier/LCM if losses expected; volume = string + annulus + 1.5 bbl safety.' },
+      { id: 'k3', title: 'Loss Control Material (LCM)', detail: 'Have LCM pill staged if partial losses on circulation; max pill size per casing ID.' },
+      { id: 'k4', title: 'Cycle IRDV to circulating position', detail: 'Follow SLB procedure; confirm pressure signature; no trapped pressure above tool.' },
+      { id: 'k5', title: 'Confirm circulating position & reverse out', detail: 'Establish circulation; monitor returns; cut hydrocarbons before heavy kill if required.' },
+      { id: 'k6', title: 'Cycle IRDV to well test position — lock open', detail: 'Lock-open for POOH; verify flow path clear.' },
+      { id: 'k7', title: 'Close valves & flush lines', detail: 'Depressurize flowhead; bleed to closed drain; H₂S monitoring.' },
+      { id: 'k8', title: 'Rig down scaffolding & lay out flowhead', detail: 'Verify LOTO; barrier register updated.' },
+      { id: 'k9', title: 'Make up well control crossover', detail: 'BOP line-up for tubing circulation; pressure test.' },
+      { id: 'k10', title: 'Pressure test', detail: 'Test to program pressure; hold 10 min; chart record.' },
+      { id: 'k11', title: 'Top fill string', detail: 'Fill tubing before opening rams; prevent swabbing.' },
+      { id: 'k12', title: 'Open lower pipe rams', detail: 'Controlled; monitor for flow.' },
+      { id: 'k13', title: 'Unseat packer', detail: 'Overpull/rotate per CERTIS spec; max pull within weak point.' },
+      { id: 'k14', title: 'Circulate well', detail: 'Kill to surface; verify static MW in/out.' },
+      { id: 'k15', title: 'Lay down EZ-valve assy, POOH DST string', detail: 'Gauge download; BHA inspection; tally as-run.' },
+    ];
+
+    const CONTINGENCIES = [
+      { id: 'c1', title: 'CT N₂ lift operation', detail: 'Unloading calculator; batch vs continuous N₂; WHP/CP limits; transition to natural flow; GC confirms formation gas.', ref: '21.8–21.10' },
+      { id: 'c2', title: 'PLT operation', detail: 'Spinner + pressure/temp logs; QC velocity; align with choke steps for allocation.' },
+      { id: 'c3', title: 'Fishing — retrieve DST BHA (HPPK) with SLB retrieval tool', detail: 'Jars, backoff, chemical cutter sequence; max fish length; well control during fishing.' },
+      { id: 'c4', title: 'Wireline tubing puncture / cutter — stuck BHA/packer', detail: 'Separate procedure; depth correlation; explosive/chemical cutter selection; kill before cut if required.' },
+    ];
+
+    const ROLES = [
+      { role: 'Sr Well Test Engineer', resp: 'Program owner, gate sign-off, PTA interpretation, SIMOPS, changes to WTP' },
+      { role: 'Company Man / RE', resp: 'COSMO-RE WHP stabilization approval, well integrity, liaison with office' },
+      { role: 'DST Supervisor (SLB/EXPRO)', resp: 'BHA makeup, tool operation, IRDV cycles, gauge QC' },
+      { role: 'Well Test Supervisor', resp: 'Surface package, separator, metering, sampling, flaring' },
+      { role: 'Wireline Supervisor', resp: 'Perforation, correlation, BH sampling, cutter/puncher' },
+      { role: 'Stimulation Engineer', resp: 'Acid recipe, stage execution, returns analysis' },
+      { role: 'CT Supervisor', detail: 'CT/N₂ contingency, cleanout, lift operations' },
+      { role: 'Rig Toolpusher / Driller', resp: 'RIH/POOH, space-out, well control, BOP' },
+      { role: 'HSE Lead', resp: 'PTW, gas testing, muster, H₂S contingency' },
+    ];
+
+    let state = loadState();
+    let activeSection = 's1-1';
+
+    function defaultState() {
+      return {
+        well: {
+          name: '', field: '', rig: '', uwi: '', spudDate: '', tdMd: '', tdTvd: '',
+          datum: 'RKB', waterDepth: '', latLong: '',
+          customer: '', engineer: '', programRev: 'Rev 0',
+        },
+        reservoir: {
+          lk3: { pi: '', temp: '', fluid: 'oil/gas', note: '' },
+          kh2: { pi: '', temp: '', fluid: '', note: '' },
+          mishrif: { pi: '', temp: '', fluid: '', note: '' },
+        },
+        brine: { naclWtPct: 10, tempF: 77, targetPpg: 10.0 },
+        perf: [
+          { dst: 'DST 1', formation: 'LK-3', topMd: '', botMd: '', shotsFt: '', underbalance: '' },
+          { dst: 'DST 2', formation: 'KH-2', topMd: '', botMd: '', shotsFt: '', underbalance: '' },
+          { dst: 'DST 3', formation: 'MISHRIF', topMd: '', botMd: '', shotsFt: '', underbalance: '' },
+        ],
+        steps: {},
+        gates: {},
+        valveBoard: [
+          { tag: 'Master Valves', status: 'closed', note: '' },
+          { tag: 'Wing Valve', status: 'closed', note: '' },
+          { tag: 'Choke Manifold', status: 'closed', note: '' },
+          { tag: 'IRDV', status: 'test', note: '' },
+          { tag: 'ESD', status: 'armed', note: '' },
+        ],
+        shiftLog: [],
+        references: [
+          'Company Well Test Procedure',
+          'API RP 59 / RP 60 — well control & testing',
+          'SLB CERTIS Packer manual',
+          'IRDV / EZ-valve operating manual',
+          'Acid stimulation MSDS & inhibitor spec',
+        ],
+        notes: {},
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return { ...defaultState(), ...JSON.parse(raw) };
+      } catch (_) { /* ignore */ }
+      return defaultState();
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function initSteps() {
+      [...DST1_STEPS, ...KILL_STEPS].forEach(s => {
+        if (!state.steps[s.id]) state.steps[s.id] = { done: false, signedBy: '', signedAt: '', comment: '' };
+      });
+    }
+
+    function brineDensityPpg(naclWtPct, tempF) {
+      const T = (tempF - 32) / 1.8;
+      const wt = naclWtPct / 100;
+      const rhoKgm3 = 997 + 700 * wt + 0.2 * wt * (T - 25);
+      return rhoKgm3 / 119.826;
+    }
+
+    function hydroPsi(ppg, tvdFt) {
+      return ppg * HYD * tvdFt;
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function renderNav() {
+      const root = document.getElementById('navRoot');
+      root.innerHTML = PROGRAM.sections.map(sec => {
+        if (sec.children) {
+          const childBtns = sec.children.map(c =>
+            `<button class="nav-btn${activeSection === c.id ? ' active' : ''}" data-nav="${c.id}">${esc(c.num)} ${esc(c.title)}</button>`
+          ).join('');
+          return `<div class="nav-group"><div class="nav-group-title">${esc(sec.num)} ${esc(sec.title)}</div>${childBtns}</div>`;
+        }
+        return `<div class="nav-group"><button class="nav-btn${activeSection === sec.id ? ' active' : ''}" data-nav="${sec.id}">${esc(sec.num)} ${esc(sec.title)}</button></div>`;
+      }).join('');
+      root.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.addEventListener('click', () => { activeSection = btn.dataset.nav; renderAll(); });
+      });
+    }
+
+    function stepProgress(ids) {
+      const total = ids.length;
+      const done = ids.filter(id => state.steps[id]?.done).length;
+      return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+    }
+
+    function renderStepList(steps, prefix) {
+      return `<ul class="step-list">${steps.map((s, i) => {
+        const st = state.steps[s.id] || { done: false, signedBy: '', comment: '' };
+        const tools = (s.tools || []).map(t => `<a href="${esc(t)}" target="_blank" rel="noopener">${esc(t.replace('.html',''))}</a>`).join(' ');
+        return `<li class="step-item${st.done ? ' done' : ''}" data-step="${esc(s.id)}">
+          <div class="step-num">${i + 1}</div>
+          <div>
+            <div class="step-title">${esc(s.title)} ${s.gate ? `<span class="badge pending">${esc(s.gate)}</span>` : ''}</div>
+            <div class="step-detail">${esc(s.detail)}</div>
+            ${tools ? `<div class="tool-links">${tools}</div>` : ''}
+            <div class="grid" style="margin-top:.5rem">
+              <div class="field"><label>Signed by</label><input data-step-field="signedBy" data-step-id="${esc(s.id)}" value="${esc(st.signedBy)}" /></div>
+              <div class="field"><label>Comment</label><input data-step-field="comment" data-step-id="${esc(s.id)}" value="${esc(st.comment)}" /></div>
+            </div>
+          </div>
+          <div><input type="checkbox" data-step-check="${esc(s.id)}" ${st.done ? 'checked' : ''} title="Mark complete" /></div>
+        </li>`;
+      }).join('')}</ul>`;
+    }
+
+    function sectionContent(id) {
+      const w = state.well;
+      const toolBar = `<div class="tool-links">
+        <a href="dst-bha-tally-app.html" target="_blank">DST BHA Tally</a>
+        <a href="dst-pressure-transient-analysis-pro-v2.11.html" target="_blank">DST PTA Pro v2.11</a>
+        <a href="vertical-kill-sheet-app.html" target="_blank">Vertical Kill Sheet</a>
+        <a href="acid-calculator-v5.html" target="_blank">Acid Calculator</a>
+      </div>`;
+
+      const map = {
+        's1-1': () => `<div class="panel"><h2>1.1 Well History</h2>
+          <p class="muted">Document prior drilling, completion, workover, production, and abandonment events affecting test design.</p>
+          <div class="field"><label>Well history narrative</label>
+            <textarea data-bind="notes.s1-1">${esc(state.notes['s1-1'] || '')}</textarea></div>
+          <div class="callout">Include: last fluid in hole, prior perf intervals, stuck pipe/fishing, losses, H₂S exposure, and any barrier failures.</div></div>`,
+
+        's1-2': () => `<div class="panel"><h2>1.2 Purpose and Outline</h2>
+          <p class="muted">Three-zone appraisal/development test campaign: <strong>LK-3 → KH-2 → MISHRIF</strong>. Each zone: perforate → DST → sample → PTA → kill → isolate before next zone.</p>
+          <table><tr><th>Phase</th><th>Formation</th><th>Key deliverables</th></tr>
+            <tr><td>DST 1</td><td>LK-3</td><td>Pi, kh, skin, PVT, deliverability</td></tr>
+            <tr><td>DST 2</td><td>KH-2</td><td>Same + compare to LK-3</td></tr>
+            <tr><td>DST 3</td><td>MISHRIF</td><td>Carbonate response to acid; PTA</td></tr>
+          </table></div>`,
+
+        's1-3': () => `<div class="panel"><h2>1.3 Well Testing Objectives</h2>
+          <ul class="muted"><li>Confirm reservoir pressure and deliverability per zone</li>
+          <li>Obtain representative PVT (surface recombined + BH if possible)</li>
+          <li>Evaluate stimulation response (acid on LK-3 / MISHRIF as programmed)</li>
+          <li>Identify boundaries / depletion / compartmentalization via PTA</li>
+          <li>Provide COSMO-RE stabilized WHP for allocation</li></ul></div>`,
+
+        's1-5': () => `<div class="panel"><h2>1.5 Personnel and Responsibilities</h2>
+          <table><tr><th>Role</th><th>Responsibilities</th></tr>
+            ${ROLES.map(r => `<tr><td>${esc(r.role)}</td><td>${esc(r.resp || r.detail || '')}</td></tr>`).join('')}
+          </table><p class="muted" style="margin-top:.75rem">See Section 18 for full matrix.</p></div>`,
+
+        's1-9': () => `<div class="panel"><h2>1.9 Shift Handover Process</h2>
+          <div class="callout">Mandatory verbal + written handover between DST supervisor, Sr WTE, and Company Man each tour change.</div>
+          <table><tr><th>Item</th><th>Status</th><th>Notes</th></tr>
+            <tr><td>Current operation step</td><td colspan="2">See active DST step tracker (Sec 4.6)</td></tr>
+            <tr><td>WHP / CP / rates</td><td colspan="2">Record at handover</td></tr>
+            <tr><td>Valve line-up</td><td colspan="2">Cross-check valve status board (Appendix 21.15)</td></tr>
+            <tr><td>Open PTW / SIMOPS</td><td colspan="2">Confirm valid</td></tr>
+            <tr><td>Outstanding hazards</td><td colspan="2">H₂S, hydrates, erosion, stuck pipe</td></tr>
+          </table>
+          <button class="primary" id="addShiftBtn" style="margin-top:.75rem">Add shift entry</button>
+          <div id="shiftLog">${renderShiftLog()}</div></div>`,
+
+        's2-1': () => `<div class="panel"><h2>2.1 General Data</h2>
+          <div class="grid">
+            ${field('Well name', 'well.name', w.name)}
+            ${field('Field', 'well.field', w.field)}
+            ${field('Rig', 'well.rig', w.rig)}
+            ${field('UWI', 'well.uwi', w.uwi)}
+            ${field('Customer', 'well.customer', w.customer)}
+            ${field('Sr WTE', 'well.engineer', w.engineer)}
+            ${field('Program revision', 'well.programRev', w.programRev)}
+            ${field('TD MD', 'well.tdMd', w.tdMd)}
+            ${field('TD TVD', 'well.tdTvd', w.tdTvd)}
+            ${field('Datum', 'well.datum', w.datum)}
+          </div></div>`,
+
+        's2-3': () => `<div class="panel"><h2>2.3 Expected Reservoir P & T</h2>
+          <table><tr><th>Formation</th><th>Pi (psi)</th><th>Tres (°F)</th><th>Fluid</th><th>Notes</th></tr>
+            ${['lk3','kh2','mishrif'].map(k => {
+              const r = state.reservoir[k];
+              const label = k === 'lk3' ? 'LK-3' : k === 'kh2' ? 'KH-2' : 'MISHRIF';
+              return `<tr><td>${label}</td>
+                <td><input data-res="${k}.pi" value="${esc(r.pi)}" style="width:100px" /></td>
+                <td><input data-res="${k}.temp" value="${esc(r.temp)}" style="width:100px" /></td>
+                <td><input data-res="${k}.fluid" value="${esc(r.fluid)}" style="width:120px" /></td>
+                <td><input data-res="${k}.note" value="${esc(r.note)}" /></td></tr>`;
+            }).join('')}
+          </table>
+          <div class="callout warn">Use Pi and Tres for underbalance design, acid inhibitor selection, hydrate margin, and PTA priors.</div></div>`,
+
+        's2-6': () => `<div class="panel"><h2>2.6 Proposed Perforation Intervals</h2>
+          <table><tr><th>DST</th><th>Formation</th><th>Top MD</th><th>Bottom MD</th><th>SPF</th><th>Underbalance (psi)</th></tr>
+            ${state.perf.map((p, i) => `<tr>
+              <td>${esc(p.dst)}</td><td>${esc(p.formation)}</td>
+              <td><input data-perf="${i}.topMd" value="${esc(p.topMd)}" /></td>
+              <td><input data-perf="${i}.botMd" value="${esc(p.botMd)}" /></td>
+              <td><input data-perf="${i}.shotsFt" value="${esc(p.shotsFt)}" /></td>
+              <td><input data-perf="${i}.underbalance" value="${esc(p.underbalance)}" /></td>
+            </tr>`).join('')}
+          </table>
+          <p class="muted">Underbalance = Pi − hydrostatic at perf TVD. Confirm fracture gradient before high underbalance.</p></div>`,
+
+        's2-7': () => `<div class="panel"><h2>2.7 PVT & Surface Sampling Requirements</h2>
+          <table><tr><th>Sample</th><th>When</th><th>Standard / method</th></tr>
+            <tr><td>Recombined surface</td><td>After stabilized flow (post 24 hr IBU flow period)</td><td>Pressurized sample; recombination per separator GOR</td></tr>
+            <tr><td>Gas</td><td>Stabilized test</td><td>Extended GC (C1–C7+, CO₂, H₂S)</td></tr>
+            <tr><td>Oil</td><td>Stabilized test</td><td>Non-shrinking bottle</td></tr>
+            <tr><td>Water</td><td>Stabilized WGR</td><td>Salinity, ions, H₂S</td></tr>
+            <tr><td>Bottomhole</td><td>During/after flow</td><td>Wireline or DST chamber; record drawdown</td></tr>
+          </table></div>`,
+
+        's2-9': () => {
+          const ppg = brineDensityPpg(state.brine.naclWtPct, state.brine.tempF);
+          const tvd = parseFloat(state.well.tdTvd) || 0;
+          const tvdFt = tvd > 500 ? tvd / FT_PER_M : tvd * FT_PER_M;
+          const hyd = hydroPsi(ppg, Math.abs(tvdFt));
+          return `<div class="panel"><h2>2.9 Brine Density Calculations</h2>
+            <div class="grid">
+              <div class="field"><label>NaCl weight %</label><input type="number" step="0.1" id="brineNacl" value="${state.brine.naclWtPct}" /></div>
+              <div class="field"><label>Temperature (°F)</label><input type="number" id="brineTemp" value="${state.brine.tempF}" /></div>
+              <div class="field"><label>Target MW (ppg)</label><input type="number" step="0.1" id="brineTarget" value="${state.brine.targetPpg}" /></div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi"><div class="lbl">Calculated MW</div><div class="val" id="brinePpg">${ppg.toFixed(2)} ppg</div></div>
+              <div class="kpi"><div class="lbl">Hydrostatic @ TD</div><div class="val" id="brineHyd">${hyd.toFixed(0)} psi</div></div>
+              <div class="kpi"><div class="lbl">vs Target</div><div class="val" id="brineDelta">${(ppg - state.brine.targetPpg).toFixed(2)} ppg</div></div>
+            </div>
+            <div class="callout">ρ (ppg) ≈ (997 + 700×wt + 0.2×wt×(T°C−25)) / 119.826. Adjust NaCl/CaCl₂ blend to match kill sheet target.</div>
+            ${toolBar}</div>`;
+        },
+
+        's3-4': () => `<div class="panel"><h2>3.4 Test String Preparation</h2>
+          <p class="muted">3½" #15.8 BTS-6 tubing; DST BHA per appendix 21.5.2 (DST-1), 21.5.3 (DST-2), 21.5.4 (DST-3).</p>
+          ${toolBar}
+          <div class="callout">QC: drift, torque, serial numbers, EZ-valve space-out dummy run (4.2), gauge download baseline.</div></div>`,
+
+        's3-5': () => `<div class="panel"><h2>3.5 Acid Recipes</h2>
+          <p class="muted">TBC — link stimulation design to formation mineralogy (carbonate vs sandstone). LK-3 / MISHRIF may differ.</p>
+          ${toolBar}
+          <table><tr><th>Stage</th><th>Fluid</th><th>Volume</th><th>Rate</th><th>Max pressure</th></tr>
+            <tr><td>Pre-flush</td><td><input placeholder="Brine / aromatic" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
+            <tr><td>Main acid</td><td><input placeholder="HCl % / inhibitor" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
+            <tr><td>Overflush</td><td><input placeholder="Brine/N₂" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
+          </table></div>`,
+
+        's4-5': () => `<div class="panel"><h2>4.5 Wireline Perforation (DST 1 — LK-3)</h2>
+          <h3>Pre-job</h3><ul class="muted"><li>Correlation GR/CCL to casing shoe and target markers</li>
+          <li>Gun clearance in 7" casing; phasing and SPF per program</li>
+          <li>Underbalance vs Pi from 2.3; fluid in hole clean</li>
+          <li>Pressure test lubricator; SIMOPS if DST on bottom</li></ul>
+          <h3>Execution gates</h3><table><tr><th>Gate</th><th>Criteria</th></tr>
+            <tr><td>G2</td><td>Tagged depth ± tolerance; firing head armed per procedure</td></tr>
+            <tr><td>Post-perf</td><td>WHP increase or returns observed; flowback plan activated</td></tr>
+          </table></div>`,
+
+        's4-6': () => {
+          const prog = stepProgress(DST1_STEPS.map(s => s.id));
+          return `<div class="panel"><h2>4.6 DST Operations — DST 1 (LK-3 Formation)</h2>
+            <p class="muted">Lead operation sequence. Mark complete only with signed step and gate criteria met.</p>
+            <div class="progress-bar"><div class="progress-fill" style="width:${prog.pct}%"></div></div>
+            <p class="muted">${prog.done} / ${prog.total} steps complete (${prog.pct}%)</p>
+            ${toolBar}
+            ${renderStepList(DST1_STEPS)}</div>`;
+        },
+
+        's5': () => {
+          const prog = stepProgress(KILL_STEPS.map(s => s.id));
+          return `<div class="panel"><h2>5. Well Kill and POOH Procedure (DST 1)</h2>
+            <div class="progress-bar"><div class="progress-fill" style="width:${prog.pct}%"></div></div>
+            <p class="muted">${prog.done} / ${prog.total} steps complete</p>
+            ${toolBar}
+            ${renderStepList(KILL_STEPS)}</div>`;
+        },
+
+        's6': () => `<div class="panel"><h2>6. Contingency During DST Operations</h2>
+          ${CONTINGENCIES.map(c => `<div class="callout"><strong>${esc(c.title)}</strong><br/>${esc(c.detail)} ${c.ref ? `<em>(${esc(c.ref)})</em>` : ''}</div>`).join('')}
+        </div>`,
+
+        's8': () => `<div class="panel"><h2>8. Wireline Perforation — DST 2 (KH-2)</h2>
+          <p class="muted">Refer sequence in <strong>4.5 Wireline Perforation</strong>. Update intervals in Section 2.6 for KH-2.</p>
+          <div class="callout warn">Ensure DST 1 isolation verified (Section 7) before perforating KH-2.</div></div>`,
+
+        's9': () => `<div class="panel"><h2>9. DST Operations — DST 2 (KH-2)</h2>
+          <p class="muted">Refer sequence in <strong>4.6 DST Operations</strong>. Reuse step tracker — select DST 2 run in BHA tally (DST-2 string per appendix 21.5.3).</p>
+          ${toolBar}</div>`,
+
+        's10': () => `<div class="panel"><h2>10. Well Killing and POOH (DST 2)</h2>
+          <p class="muted">Refer Section 5 sequence. Re-evaluate kill MW if reservoir pressure depletion or different fluid gradient.</p>
+          ${renderStepList(KILL_STEPS)}</div>`,
+
+        's13': () => `<div class="panel"><h2>13. Wireline Perforation — DST 3 (MISHRIF)</h2>
+          <p class="muted">Refer <strong>4.5</strong>. Carbonate: consider underbalance for cleanup; acid program in 3.5.</p></div>`,
+
+        's14': () => `<div class="panel"><h2>14. DST Operations — DST 3 (MISHRIF)</h2>
+          <p class="muted">Refer <strong>4.6</strong>. Emphasize acid stimulation response and longer buildup for dual-porosity PTA screening.</p>
+          ${toolBar}</div>`,
+
+        's18': () => `<div class="panel"><h2>18. Roles and Responsibilities</h2>
+          <table><tr><th>Role</th><th>Responsibilities</th><th>Backup</th></tr>
+            ${ROLES.map(r => `<tr><td>${esc(r.role)}</td><td>${esc(r.resp || r.detail || '')}</td><td><input placeholder="Name" /></td></tr>`).join('')}
+          </table></div>`,
+
+        's19': () => `<div class="panel"><h2>19. Well Test Reporting</h2>
+          <table><tr><th>Report</th><th>Timing</th><th>Owner</th></tr>
+            <tr><td>Daily operation report</td><td>0600 / 1800</td><td>Sr WTE</td></tr>
+            <tr><td>Hourly during flow/buildup</td><td>Critical periods</td><td>Well test supervisor</td></tr>
+            <tr><td>End-of-DST summary</td><td>Within 48 hr POOH</td><td>Sr WTE</td></tr>
+            <tr><td>PTA interpretation</td><td>Post gauge download</td><td>Sr WTE + RE</td></tr>
+            <tr><td>Sample chain of custody</td><td>At sample time</td><td>Well test supervisor</td></tr>
+          </table>
+          <div class="callout">Export PTA Pro sign-off PDF and BHA tally as-run for final package.</div></div>`,
+
+        's20': () => `<div class="panel"><h2>20. DST Tool Contingencies</h2>
+          <h3>20.1 IRDV</h3><ul class="muted"><li>Failed cycle: pressure diagnostic; reverse circulate; mechanical override if available</li>
+          <li>Trapped pressure: bleed through approved path only</li></ul>
+          <h3>20.2 Packer (CERTIS / HPPK)</h3><ul class="muted"><li>Unset: overpull sequence; if stuck → fishing (6.3)</li>
+          <li>Element leak: monitor differential; reduce test duration</li></ul>
+          <h3>20.3 SHRV design checks</h3><p class="muted">Operating differential, H₂S service, lock-out for POOH.</p>
+          <h3>20.4 EZ-valve contingency</h3><p class="muted">Space-out dummy run (4.2); latch mis-run → wireline intervention.</p>
+          <h3>20.5 Pressure test contingency</h3><p class="muted">Re-test after repair; max 3 attempts before engineering review.</p></div>`,
+
+        's21': () => `<div class="panel"><h2>21. Appendix — Valve Status Board (21.15)</h2>
+          <table><tr><th>Valve / system</th><th>Status</th><th>Notes</th></tr>
+            ${state.valveBoard.map((v, i) => `<tr>
+              <td>${esc(v.tag)}</td>
+              <td><select data-valve="${i}.status">
+                ${['closed','open','throttled','test','armed','locked'].map(s =>
+                  `<option value="${s}"${v.status === s ? ' selected' : ''}>${s}</option>`).join('')}
+              </select></td>
+              <td><input data-valve="${i}.note" value="${esc(v.note)}" /></td>
+            </tr>`).join('')}
+          </table>
+          <p class="muted">Update at every shift handover and after any line-up change.</p>
+          <h3>Linked appendices (reference drawings in WTP document)</h3>
+          <ul class="muted"><li>21.1 Casing diagram</li><li>21.2 Overall tie-in PFD</li><li>21.3–21.4 Well test equipment specs & P&ID</li>
+          <li>21.5 DST string diagrams (Flex, DST-1/2/3)</li><li>21.7 DST simulations</li><li>21.8–21.10 CT stack-up & simulations</li></ul></div>`,
+      };
+
+      if (map[id]) return map[id]();
+      const sec = findSection(id);
+      return `<div class="panel"><h2>${esc(sec?.num || '')} ${esc(sec?.title || id)}</h2>
+        <p class="muted">Content follows approved WTP document. Use linked engineering tools for calculations.</p>
+        ${toolBar}
+        <div class="field"><label>Section notes</label><textarea data-bind="notes.${id}">${esc(state.notes[id] || '')}</textarea></div></div>`;
+    }
+
+    function field(label, path, value) {
+      return `<div class="field"><label>${esc(label)}</label><input data-bind="${esc(path)}" value="${esc(value)}" /></div>`;
+    }
+
+    function findSection(id) {
+      for (const sec of PROGRAM.sections) {
+        if (sec.id === id) return sec;
+        if (sec.children) {
+          const c = sec.children.find(x => x.id === id);
+          if (c) return c;
+        }
+      }
+      return null;
+    }
+
+    function renderShiftLog() {
+      if (!state.shiftLog.length) return '<p class="muted">No shift entries yet.</p>';
+      return `<table><tr><th>Time</th><th>Outgoing</th><th>Incoming</th><th>Summary</th></tr>
+        ${state.shiftLog.map(e => `<tr><td>${esc(e.time)}</td><td>${esc(e.out)}</td><td>${esc(e.in)}</td><td>${esc(e.summary)}</td></tr>`).join('')}
+      </table>`;
+    }
+
+    function renderContent() {
+      document.getElementById('contentRoot').innerHTML = `<div class="section-view active">${sectionContent(activeSection)}</div>`;
+      bindEvents();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll('[data-bind]').forEach(el => {
+        el.addEventListener('input', () => {
+          setPath(state, el.dataset.bind, el.value);
+          saveState();
+        });
+      });
+      document.querySelectorAll('[data-res]').forEach(el => {
+        el.addEventListener('input', () => {
+          const [k, f] = el.dataset.res.split('.');
+          state.reservoir[k][f] = el.value;
+          saveState();
+        });
+      });
+      document.querySelectorAll('[data-perf]').forEach(el => {
+        el.addEventListener('input', () => {
+          const [i, f] = el.dataset.perf.split('.');
+          state.perf[+i][f] = el.value;
+          saveState();
+        });
+      });
+      document.querySelectorAll('[data-valve]').forEach(el => {
+        el.addEventListener('input', () => {
+          const [i, f] = el.dataset.valve.split('.');
+          state.valveBoard[+i][f] = el.value;
+          saveState();
+        });
+        el.addEventListener('change', () => {
+          const [i, f] = el.dataset.valve.split('.');
+          state.valveBoard[+i][f] = el.value;
+          saveState();
+        });
+      });
+      document.querySelectorAll('[data-step-check]').forEach(el => {
+        el.addEventListener('change', () => {
+          const id = el.dataset.stepCheck;
+          state.steps[id].done = el.checked;
+          if (el.checked && !state.steps[id].signedAt) {
+            state.steps[id].signedAt = new Date().toISOString();
+          }
+          saveState();
+          renderContent();
+        });
+      });
+      document.querySelectorAll('[data-step-field]').forEach(el => {
+        el.addEventListener('input', () => {
+          const id = el.dataset.stepId;
+          state.steps[id][el.dataset.stepField] = el.value;
+          saveState();
+        });
+      });
+      const nacl = document.getElementById('brineNacl');
+      const temp = document.getElementById('brineTemp');
+      const target = document.getElementById('brineTarget');
+      if (nacl) {
+        const upd = () => {
+          state.brine.naclWtPct = +nacl.value;
+          state.brine.tempF = +temp.value;
+          state.brine.targetPpg = +target.value;
+          saveState();
+          renderContent();
+        };
+        nacl.addEventListener('input', upd);
+        temp.addEventListener('input', upd);
+        target.addEventListener('input', upd);
+      }
+      const addShift = document.getElementById('addShiftBtn');
+      if (addShift) {
+        addShift.addEventListener('click', () => {
+          const summary = prompt('Handover summary (operation, WHP, hazards):');
+          if (summary === null) return;
+          state.shiftLog.unshift({
+            time: new Date().toLocaleString(),
+            out: prompt('Outgoing (name/role):') || '',
+            in: prompt('Incoming (name/role):') || '',
+            summary,
+          });
+          saveState();
+          renderContent();
+        });
+      }
+    }
+
+    function setPath(obj, path, value) {
+      const parts = path.split('.');
+      let cur = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!cur[parts[i]]) cur[parts[i]] = {};
+        cur = cur[parts[i]];
+      }
+      cur[parts[parts.length - 1]] = value;
+    }
+
+    function renderAll() {
+      renderNav();
+      renderContent();
+    }
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      html.dataset.theme = next;
+      document.getElementById('themeBtn').textContent = next === 'dark' ? 'Light mode' : 'Dark mode';
+    });
+    document.getElementById('saveBtn').addEventListener('click', () => { saveState(); alert('Program saved locally.'); });
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `wtp-${state.well.name || 'program'}.json`;
+      a.click();
+    });
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          state = { ...defaultState(), ...JSON.parse(r.result) };
+          initSteps();
+          saveState();
+          renderAll();
+        } catch (err) { alert('Invalid JSON'); }
+      };
+      r.readAsText(f);
+    });
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+    initSteps();
+    renderAll();
+  </script>
+</body>
+</html>

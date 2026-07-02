@@ -6,6 +6,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 
 | File | Purpose |
 |------|---------|
+| `well-test-program-commander.html` | **Integrated WTP Commander** — multi-DST program shell (LK-3 / KH-2 / MISHRIF): Sections 1–21 navigation, well data, brine calc, perf intervals, DST 1 step tracker with gates, kill/POOH checklist, contingencies, valve status board, shift handover, links to all engineering tools |
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
 | `dst-pressure-transient-analysis-pro-v2.11.html` | **DST PTA Pro v2.11** (open this one) — local-first senior engineer DST/PTA: variable-rate superposition, Horner & derivative analysis, boundary detection, composite screening, physics Bayesian uncertainty, interpretation gating, office sign-off, engineering audit trail |
 | `dst-pressure-transient-analysis-pro-v2.10.html` | DST PTA Pro v2.10 — reservoir-aware Bayesian posteriors, refined multilayer inversion, sparse boundary confidence, office/reserves sign-off workflow, auditable curve dominance |
