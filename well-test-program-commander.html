@@ -117,8 +117,9 @@
     </main>
   </div>
 
+  <script src="dst-1-bha-reference.js"></script>
   <script>
-    const STORAGE_KEY = 'wtp-commander-v1';
+    const STORAGE_KEY = 'wtp-commander-v2';
     const HYD = 0.052;
     const FT_PER_M = 3.280839895;
 
@@ -198,7 +199,7 @@
       { id: 'd1-rigup', title: 'Rig up Flowhead, Scaffolding, CT (TBC) and pressure test', detail: 'Flowhead + IRDV alignment; test to 1.2× MAWOP; ESD functional; CT rig-up if contingency planned.', gate: 'G1' },
       { id: 'd1-displace', title: 'Displace DST string with fresh water / diesel', detail: 'Track volumes; confirm clean fluid at tester valve; avoid underbalance before intentional flow.', },
       { id: 'd1-inject', title: 'Injectivity test through DST string', detail: 'Low rate injection; record ISIP, falloff; verify communication with perf interval; max pressure < fracture gradient.', gate: 'G4' },
-      { id: 'd1-acid', title: 'Acid Stimulation', detail: 'Stage volumes/rates per acid recipe; real-time WHP; inhibitor for Tres; overflush volume; soak time before flowback.', tools: ['acid-calculator-v5.html'], gate: 'G8' },
+      { id: 'd1-acid', title: 'Acid Stimulation', detail: '28% HCl main acid → 15% HCl soak (per Sec 3.5). Track stage volumes/rates; real-time WHP below fracture gradient; corrosion inhibitor for Tres; overflush; soak before flowback.', tools: ['acid-calculator-v5.html'], gate: 'G8' },
       { id: 'd1-cleanup', title: 'Cleanup, Flow Test and Sampling', detail: 'Initial cleanup until sand/water cut stable; then allocation-quality flow.', gate: 'G5' },
       { id: 'd1-ibu24', title: 'Initial buildup 24 hr (stabilized WHP per COSMO-RE)', detail: 'Close tester valve; monitor WHP stabilization; min 24 hr or until derivative flat; RT data to office.', gate: 'G6' },
       { id: 'd1-choke', title: 'Flow test — 16/64", 24/64", 32/64" choke steps', detail: 'Stabilize each bean ≥ program duration; record separator P/T, rates, GOR; IPR points for deliverability.', gate: 'G5' },
@@ -260,6 +261,15 @@
           mishrif: { pi: '', temp: '', fluid: '', note: '' },
         },
         brine: { naclWtPct: 10, tempF: 77, targetPpg: 10.0 },
+        acid: {
+          preFlushFluid: 'Brine',
+          preFlushBbl: '', preFlushRateBpm: '', preFlushMaxPsi: '',
+          mainHclPct: 28, mainVolumeBbl: '', mainRateBpm: '', mainMaxPsi: '',
+          soakHclPct: 15, soakVolumeBbl: '', soakDurationHr: '',
+          overflushFluid: 'Brine', overflushBbl: '', overflushRateBpm: '',
+          inhibitor: 'Per Tres — confirm with stimulation vendor',
+          notes: 'LK-3 DST 1 program: 28% main acid, 15% acid soak',
+        },
         perf: [
           { dst: 'DST 1', formation: 'LK-3', topMd: '', botMd: '', shotsFt: '', underbalance: '' },
           { dst: 'DST 2', formation: 'KH-2', topMd: '', botMd: '', shotsFt: '', underbalance: '' },
@@ -289,7 +299,17 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return { ...defaultState(), ...JSON.parse(raw) };
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const base = defaultState();
+          return {
+            ...base,
+            ...parsed,
+            well: { ...base.well, ...parsed.well },
+            acid: { ...base.acid, ...parsed.acid },
+            reservoir: { ...base.reservoir, ...parsed.reservoir },
+          };
+        }
       } catch (_) { /* ignore */ }
       return defaultState();
     }
@@ -339,6 +359,54 @@
       const total = ids.length;
       const done = ids.filter(id => state.steps[id]?.done).length;
       return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+    }
+
+    function getDst1Ref() {
+      return window.DST1_REFERENCE || null;
+    }
+
+    function renderDst1StringPanel() {
+      const ref = getDst1Ref();
+      if (!ref) {
+        return '<div class="callout warn">DST-1 reference not loaded. Ensure <code>dst-1-bha-reference.js</code> is in the same folder.</div>';
+      }
+      const w = ref.well || {};
+      const keyTools = ref.items.filter(it => /packer|IRDV|EZ Valve|SHRV|Gauge|Sample|TFTV/i.test(it.name));
+      const rows = ref.items.map((it, i) => `<tr>
+        <td>${i + 1}</td>
+        <td>${esc(it.name)}</td>
+        <td>${esc(it.od)}" / ${esc(it.id)}"</td>
+        <td>${esc(it.topMd)} – ${esc(it.botMd)}</td>
+        <td>${esc(it.length)} ${esc(it.unit)}</td>
+        <td class="muted">${esc(it.notes || '')}</td>
+      </tr>`).join('');
+      const rd = (ref.rdSummary || []).map(r =>
+        `<tr><td>${esc(r.tool)}</td><td>${esc(r.code)}</td><td>${esc(r.psiRange)} psi</td></tr>`
+      ).join('');
+      return `<div class="kpi-row">
+          <div class="kpi"><div class="lbl">Packer set MD</div><div class="val">${esc(w.packerSetMd)} ft</div></div>
+          <div class="kpi"><div class="lbl">String bottom</div><div class="val">${esc(w.stringBottomMd)} ft</div></div>
+          <div class="kpi"><div class="lbl">Tubing</div><div class="val" style="font-size:1rem">${esc(w.tubingNom)}</div></div>
+          <div class="kpi"><div class="lbl">Items</div><div class="val">${ref.items.length}</div></div>
+        </div>
+        <div class="callout">${esc(w.notes || '')}</div>
+        <p class="muted">Source PDF: <a href="XF-006_DST_string_diagram_Rev.1.1.pdf" target="_blank">XF-006 Rev 1.1</a> — draft SLB diagram. DST-2/3 strings to follow same template.</p>
+        <div class="tool-links">
+          <a href="dst-bha-tally-app.html?dst=1" target="_blank">Open in BHA Tally (DST-1)</a>
+        </div>
+        <h3>Key downhole tools</h3>
+        <table><tr><th>#</th><th>Tool</th><th>OD / ID</th><th>Depth MD (ft)</th><th>Len</th><th>Notes</th></tr>
+          ${keyTools.map(it => {
+            const idx = ref.items.indexOf(it) + 1;
+            return `<tr><td>${idx}</td><td>${esc(it.name)}</td><td>${esc(it.od)}" / ${esc(it.id)}"</td>
+              <td>${esc(it.topMd)} – ${esc(it.botMd)}</td><td>${esc(it.length)} ft</td><td class="muted">${esc(it.notes || '')}</td></tr>`;
+          }).join('')}
+        </table>
+        <h3>Rupture disc (RD) settings</h3>
+        <table><tr><th>Tool</th><th>Code</th><th>Range</th></tr>${rd}</table>
+        <details style="margin-top:1rem"><summary class="muted" style="cursor:pointer">Full 28-item string tally</summary>
+          <table><tr><th>#</th><th>Description</th><th>OD / ID</th><th>Depth MD (ft)</th><th>Len</th><th>Notes</th></tr>${rows}</table>
+        </details>`;
     }
 
     function renderStepList(steps, prefix) {
@@ -478,19 +546,44 @@
             ${toolBar}</div>`;
         },
 
-        's3-4': () => `<div class="panel"><h2>3.4 Test String Preparation</h2>
-          <p class="muted">3½" #15.8 BTS-6 tubing; DST BHA per appendix 21.5.2 (DST-1), 21.5.3 (DST-2), 21.5.4 (DST-3).</p>
+        's3-4': () => `<div class="panel"><h2>3.4 Test String Preparation — DST 1 (LK-3)</h2>
+          <p class="muted">SLB string per <strong>XF-006 Rev 1.1</strong>: 3½" COSMO tubing, EZ-Valve, IRDV, SHRV, Symphony gauges, Sample Carrier, TFTV, <strong>Certis 7" 32# packer @ 9,459.71 ft MD</strong>, PBR, shoe @ 9,529.36 ft MD.</p>
           ${toolBar}
-          <div class="callout">QC: drift, torque, serial numbers, EZ-valve space-out dummy run (4.2), gauge download baseline.</div></div>`,
+          ${renderDst1StringPanel()}
+          <div class="callout">QC: drift, torque, serial numbers, EZ-valve space-out dummy run (4.2), gauge download baseline, RD codes verified vs hydrostatic.</div></div>`,
 
-        's3-5': () => `<div class="panel"><h2>3.5 Acid Recipes</h2>
-          <p class="muted">TBC — link stimulation design to formation mineralogy (carbonate vs sandstone). LK-3 / MISHRIF may differ.</p>
+        's3-5': () => {
+          const a = state.acid;
+          return `<div class="panel"><h2>3.5 Acid Recipes — DST 1 (LK-3)</h2>
+          <p class="muted">Approved program: <strong>${esc(a.mainHclPct)}% HCl main acid</strong> followed by <strong>${esc(a.soakHclPct)}% HCl soak</strong>. Adjust volumes from acid calculator once perf interval and Pi are confirmed.</p>
           ${toolBar}
-          <table><tr><th>Stage</th><th>Fluid</th><th>Volume</th><th>Rate</th><th>Max pressure</th></tr>
-            <tr><td>Pre-flush</td><td><input placeholder="Brine / aromatic" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
-            <tr><td>Main acid</td><td><input placeholder="HCl % / inhibitor" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
-            <tr><td>Overflush</td><td><input placeholder="Brine/N₂" /></td><td><input placeholder="bbl" /></td><td><input placeholder="bpm" /></td><td><input placeholder="psi" /></td></tr>
-          </table></div>`,
+          <table><tr><th>Stage</th><th>Fluid / HCl %</th><th>Volume (bbl)</th><th>Rate (bpm)</th><th>Max P (psi)</th><th>Duration</th></tr>
+            <tr><td>Pre-flush</td>
+              <td><input data-acid="preFlushFluid" value="${esc(a.preFlushFluid)}" /></td>
+              <td><input data-acid="preFlushBbl" value="${esc(a.preFlushBbl)}" placeholder="bbl" /></td>
+              <td><input data-acid="preFlushRateBpm" value="${esc(a.preFlushRateBpm)}" placeholder="bpm" /></td>
+              <td><input data-acid="preFlushMaxPsi" value="${esc(a.preFlushMaxPsi)}" placeholder="psi" /></td><td>—</td></tr>
+            <tr><td><strong>Main acid</strong></td>
+              <td><input data-acid="mainHclPct" value="${esc(a.mainHclPct)}" /> % HCl + inhibitor</td>
+              <td><input data-acid="mainVolumeBbl" value="${esc(a.mainVolumeBbl)}" /></td>
+              <td><input data-acid="mainRateBpm" value="${esc(a.mainRateBpm)}" /></td>
+              <td><input data-acid="mainMaxPsi" value="${esc(a.mainMaxPsi)}" /></td><td>—</td></tr>
+            <tr><td><strong>Acid soak</strong></td>
+              <td><input data-acid="soakHclPct" value="${esc(a.soakHclPct)}" /> % HCl</td>
+              <td><input data-acid="soakVolumeBbl" value="${esc(a.soakVolumeBbl)}" /></td>
+              <td>—</td><td>—</td>
+              <td><input data-acid="soakDurationHr" value="${esc(a.soakDurationHr)}" placeholder="hours" /></td></tr>
+            <tr><td>Overflush</td>
+              <td><input data-acid="overflushFluid" value="${esc(a.overflushFluid)}" /></td>
+              <td><input data-acid="overflushBbl" value="${esc(a.overflushBbl)}" /></td>
+              <td><input data-acid="overflushRateBpm" value="${esc(a.overflushRateBpm)}" /></td><td>—</td><td>—</td></tr>
+          </table>
+          <div class="field" style="margin-top:.75rem"><label>Corrosion inhibitor</label>
+            <input data-acid="inhibitor" value="${esc(a.inhibitor)}" /></div>
+          <div class="field"><label>Job notes</label>
+            <textarea data-acid="notes">${esc(a.notes)}</textarea></div>
+          <div class="callout warn">Hold G8 before pumping: fracture gradient check, returns route, H₂S PPE, and real-time WHP chart on recorder.</div></div>`;
+        },
 
         's4-5': () => `<div class="panel"><h2>4.5 Wireline Perforation (DST 1 — LK-3)</h2>
           <h3>Pre-job</h3><ul class="muted"><li>Correlation GR/CCL to casing shoe and target markers</li>
@@ -504,8 +597,10 @@
 
         's4-6': () => {
           const prog = stepProgress(DST1_STEPS.map(s => s.id));
+          const ref = getDst1Ref();
+          const packer = ref?.well?.packerSetMd ?? '9,459.71';
           return `<div class="panel"><h2>4.6 DST Operations — DST 1 (LK-3 Formation)</h2>
-            <p class="muted">Lead operation sequence. Mark complete only with signed step and gate criteria met.</p>
+            <p class="muted">Lead operation sequence. Certis packer set @ <strong>${esc(packer)} ft MD</strong>. Acid: ${esc(state.acid.mainHclPct)}% main + ${esc(state.acid.soakHclPct)}% soak.</p>
             <div class="progress-bar"><div class="progress-fill" style="width:${prog.pct}%"></div></div>
             <p class="muted">${prog.done} / ${prog.total} steps complete (${prog.pct}%)</p>
             ${toolBar}
@@ -568,7 +663,10 @@
           <h3>20.4 EZ-valve contingency</h3><p class="muted">Space-out dummy run (4.2); latch mis-run → wireline intervention.</p>
           <h3>20.5 Pressure test contingency</h3><p class="muted">Re-test after repair; max 3 attempts before engineering review.</p></div>`,
 
-        's21': () => `<div class="panel"><h2>21. Appendix — Valve Status Board (21.15)</h2>
+        's21': () => `<div class="panel"><h2>21. Appendix</h2>
+          <h3>21.5.2 DST-1 String Diagram (LK-3)</h3>
+          ${renderDst1StringPanel()}
+          <h3 style="margin-top:1.5rem">21.15 Well Testing Valve Status Board</h3>
           <table><tr><th>Valve / system</th><th>Status</th><th>Notes</th></tr>
             ${state.valveBoard.map((v, i) => `<tr>
               <td>${esc(v.tag)}</td>
@@ -638,6 +736,14 @@
         el.addEventListener('input', () => {
           const [i, f] = el.dataset.perf.split('.');
           state.perf[+i][f] = el.value;
+          saveState();
+        });
+      });
+      document.querySelectorAll('[data-acid]').forEach(el => {
+        el.addEventListener('input', () => {
+          const key = el.dataset.acid;
+          const numKeys = ['mainHclPct', 'soakHclPct', 'mainVolumeBbl', 'mainRateBpm', 'mainMaxPsi', 'soakVolumeBbl', 'soakDurationHr', 'preFlushBbl', 'preFlushRateBpm', 'preFlushMaxPsi', 'overflushBbl', 'overflushRateBpm'];
+          state.acid[key] = numKeys.includes(key) && el.type === 'number' ? +el.value : el.value;
           saveState();
         });
       });

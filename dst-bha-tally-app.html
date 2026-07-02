@@ -675,7 +675,8 @@
               <p class="muted">Pick a folder on your PC — all Excel files are listed. Click a file to load it as the active tally.</p>
               <div class="actions">
                 <button class="btn primary" id="pickFolderBtn" type="button">Browse folder</button>
-                <button class="btn" id="loadBundledBtn" type="button">Load bundled sample</button>
+                <button class="btn" id="loadBundledBtn" type="button">Load bundled sample (DST-2)</button>
+                <button class="btn" id="loadDst1Btn" type="button">Load DST-1 reference (LK-3)</button>
                 <input type="file" id="folderUp" webkitdirectory directory multiple hidden>
               </div>
               <p class="muted" id="folderFileStatus" style="margin-top:var(--space-2)">No folder selected.</p>
@@ -744,6 +745,7 @@
     </div>
   </dialog>
 
+  <script src="dst-1-bha-reference.js"></script>
   <script src="dst-2-bha-reference.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
@@ -1796,6 +1798,22 @@
       return false;
     }
 
+    async function loadDst1Reference() {
+      if (window.DST1_REFERENCE) {
+        applyProject({ ...window.DST1_REFERENCE, useDefaultCasings: !window.DST1_REFERENCE?.well?.casings?.length }, 'DST-1 reference (XF-006 / LK-3)');
+        return true;
+      }
+      try {
+        const res = await fetch('dst-1-bha-reference.json');
+        if (res.ok) {
+          const data = await res.json();
+          applyProject({ ...data, useDefaultCasings: !data?.well?.casings?.length }, 'DST-1 reference (JSON)');
+          return true;
+        }
+      } catch (e) { /* file:// or offline */ }
+      return false;
+    }
+
     function updateRefSourceLine() {
       const el = $('refSourceLine');
       if (!el) return;
@@ -2137,6 +2155,10 @@
       if (!(await loadSample())) alert('No bundled sample found. Keep dst-2-bha-reference.js in the same folder as this HTML file.');
       else switchTab('tally');
     };
+    $('loadDst1Btn').onclick = async () => {
+      if (!(await loadDst1Reference())) alert('No DST-1 reference found. Keep dst-1-bha-reference.js in the same folder as this HTML file.');
+      else switchTab('tally');
+    };
 
     $('parseFileBtn').onclick = () => runFileImport($('fileUp').files[0], true);
     $('fileUp').onchange = () => {
@@ -2252,6 +2274,11 @@
     function boot() {
       try {
         renderLibrary();
+        const dstParam = new URLSearchParams(location.search).get('dst');
+        if (dstParam === '1' && !loadFromStorage()) {
+          loadDst1Reference().then(ok => { if (ok) switchTab('tally'); render(); });
+          return;
+        }
         if (loadFromStorage()) render();
         else { render(); updateStartBanner(); }
       } catch (err) {
