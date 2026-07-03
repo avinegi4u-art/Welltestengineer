@@ -1,0 +1,86 @@
+{
+  "case_name": "Deviated Well - Alpha-1",
+  "case_type": "well_tubing_flowline",
+  "fluid": {
+    "model_type": "black_oil",
+    "oil_api": 32.0,
+    "gas_gravity": 0.72,
+    "water_salinity_ppm": 45000,
+    "gor_scf_stb": 950,
+    "water_cut": 0.15,
+    "bubble_point_psi": 2800,
+    "reservoir_temp_f": 195
+  },
+  "well": {
+    "packer_depth_ft": 7500,
+    "perforation_depth_ft": 9200,
+    "choke_size_64_in": 28,
+    "segments": [
+      {
+        "md_top_ft": 0,
+        "md_bottom_ft": 2000,
+        "tvd_top_ft": 0,
+        "tvd_bottom_ft": 2000,
+        "inner_diameter_in": 4.67,
+        "roughness_ft": 0.00015,
+        "inclination_deg": 90
+      },
+      {
+        "md_top_ft": 2000,
+        "md_bottom_ft": 5000,
+        "tvd_top_ft": 2000,
+        "tvd_bottom_ft": 4500,
+        "inner_diameter_in": 3.958,
+        "roughness_ft": 0.00015,
+        "inclination_deg": 55
+      },
+      {
+        "md_top_ft": 5000,
+        "md_bottom_ft": 9200,
+        "tvd_top_ft": 4500,
+        "tvd_bottom_ft": 7200,
+        "inner_diameter_in": 3.958,
+        "roughness_ft": 0.00015,
+        "inclination_deg": 75
+      }
+    ]
+  },
+  "flowline": {
+    "segments": [
+      {
+        "length_ft": 15000,
+        "inner_diameter_in": 6.065,
+        "roughness_ft": 0.00018,
+        "inclination_deg": 0,
+        "elevation_change_ft": -50,
+        "ambient_temp_f": 65,
+        "u_btu_hr_ft2_f": 1.8
+      },
+      {
+        "length_ft": 8000,
+        "inner_diameter_in": 8.625,
+        "roughness_ft": 0.00018,
+        "inclination_deg": 2,
+        "elevation_change_ft": 100,
+        "ambient_temp_f": 60,
+        "u_btu_hr_ft2_f": 1.5
+      }
+    ]
+  },
+  "nodal": {
+    "reservoir_pressure_psi": 3600,
+    "productivity_index": 1.8,
+    "ipr_model": "vogel"
+  },
+  "heat_transfer": {
+    "ambient_temp_f": 68,
+    "overall_u_btu_hr_ft2_f": 3.5,
+    "burial_depth_ft": 4,
+    "insulation_thickness_in": 1.0
+  },
+  "boundary_conditions": {
+    "liquid_rate_stb_d": 2200,
+    "wellhead_pressure_psi": 480,
+    "bottomhole_pressure_psi": null
+  }
+}
