@@ -57,6 +57,25 @@ def health():
     return {"status": "ok", "app": "FlowSim Pro", "version": "1.0.0"}
 
 
+@router.get("/manual")
+def download_manual():
+    """Download the FlowSim Pro user manual PDF."""
+    from pathlib import Path
+
+    from fastapi.responses import Response
+
+    manual_path = Path(__file__).parent.parent.parent / "docs" / "FlowSim_Pro_User_Manual.pdf"
+    if not manual_path.exists():
+        from app.manual import generate_user_manual_pdf
+
+        generate_user_manual_pdf(manual_path)
+    return Response(
+        content=manual_path.read_bytes(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="FlowSim_Pro_User_Manual.pdf"'},
+    )
+
+
 @router.post("/cases", response_model=CaseResponse)
 def create_case(payload: CaseCreate, db: Session = Depends(get_db)):
     inputs = payload.model_dump()

@@ -48,6 +48,8 @@ npm run dev
 
 Open http://localhost:3000
 
+**User manual (PDF):** `flowsim-pro/docs/FlowSim_Pro_User_Manual.pdf` or http://localhost:8000/api/manual
+
 ### Run Tests
 
 ```bash
