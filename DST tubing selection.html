@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DST Tubing Selector — Production v1.0</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --primary: #01696f;
+    --primary-dark: #014f54;
+    --accent: #964219;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --border: #dde3ea;
+    --text: #1a2332;
+    --muted: #6b7a8d;
+    --ok: #1a7a4a;
+    --ok-bg: #e6f4ed;
+    --warn: #b06000;
+    --warn-bg: #fff3e0;
+    --fail: #b00020;
+    --fail-bg: #fdecea;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* HEADER */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: .3px; }
+  header span { font-size: .78rem; opacity: .8; }
+
+  /* LAYOUT */
+  .app { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: calc(100vh - 54px); }
+  .sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 18px 16px;
+    overflow-y: auto;
+  }
+  .main { padding: 18px 20px; overflow-y: auto; }
+
+  /* SECTIONS */
+  .section-title {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+    margin-top: 18px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* FORM */
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: .76rem; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
+  .field input, .field select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: .85rem;
+    background: #fafbfc;
+    color: var(--text);
+    transition: border-color .2s;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--primary); background: #fff; }
+  .hint { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--primary); color: #fff; width: 100%; padding: 10px; font-size: .9rem; margin-top: 6px; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--bg); color: var(--primary); border: 1px solid var(--primary); }
+  .btn-secondary:hover { background: var(--primary); color: #fff; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #7a3412; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; justify-content: space-between; }
+  .toolbar-right { display: flex; gap: 8px; }
+
+  /* METRICS GRID */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .metric-card .k { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .metric-card .v { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+  .metric-card .u { font-size: .68rem; color: var(--muted); }
+
+  /* CHARTS */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .chart-card h4 { font-size: .75rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* TABLE */
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  th { background: var(--primary); color: #fff; padding: 8px 10px; text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f0f6f6; }
+  tr.recommended td { background: #e6f4ed; font-weight: 600; }
+
+  /* STATUS BADGES */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .7rem; font-weight: 700; }
+  .badge-ok { background: var(--ok-bg); color: var(--ok); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); }
+  .badge-fail { background: var(--fail-bg); color: var(--fail); }
+
+  /* LOOKUP CARD */
+  .lookup-result {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: .8rem;
+  }
+  .lookup-result .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .lookup-result .row span:first-child { color: var(--muted); }
+  .lookup-result .row span:last-child { font-weight: 600; }
+
+  /* MECHANICAL CHECK */
+  .mech-bar-wrap { margin-top: 4px; }
+  .mech-bar-label { display: flex; justify-content: space-between; font-size: .72rem; margin-bottom: 2px; }
+  .mech-bar { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .mech-bar-fill { height: 100%; border-radius: 4px; transition: width .5s; }
+
+  /* SEARCH */
+  .search-input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .85rem; margin-bottom: 8px; }
+  .search-input:focus { outline: none; border-color: var(--primary); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty .icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .empty p { font-size: .9rem; }
+
+  /* PRINT */
+  @media print {
+    .sidebar, .toolbar-right, .btn { display: none !important; }
+    .app { grid-template-columns: 1fr; }
+    .charts-grid { grid-template-columns: 1fr 1fr; }
+    header span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DST Tubing Selector &nbsp;|&nbsp; Production v1.0</h1>
+  <span id="headerMeta">No results yet</span>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- API 5CT LOOKUP -->
+    <div class="section-title">API 5CT Tubing Lookup</div>
+    <input class="search-input" id="searchBox" placeholder="Search size, weight, grade..." oninput="filterLookup()"/>
+    <div class="field">
+      abel>Nominal Size</label>
+      <select id="selSize" onchange="onSizeChange()">
+        <option>2-3/8</option><option>2-7/8</option><option selected>3-1/2</option><option>4-1/2</option>
+      </select>
+    </div>
+    <div class="field">
+      abel>Weight (lb/ft)</label>
+      <select id="selWeight" onchange="onWeightChange()"></select>
+    </div>
+    <div class="field">
+      abel>Grade</label>
+      <select id="selGrade" onchange="onGradeChange()">
+        <option value="J55">J55</option>
+        <option value="N80" selected>N80</option>
+        <option value="L80">L80</option>
+        <option value="P110">P110</option>
+        <option value="Q125">Q125</option>
+      </select>
+    </div>
+    <div class="lookup-result" id="lookupResult">
+      <div class="row"><span>OD</span><span id="lr_od">-</span></div>
+      <div class="row"><span>ID</span><span id="lr_id">-</span></div>
+      <div class="row"><span>Wall</span><span id="lr_wall">-</span></div>
+      <div class="row"><span>Drift</span><span id="lr_drift">-</span></div>
+      <div class="row"><span>Rated Burst</span><span id="lr_burst">-</span></div>
+      <div class="row"><span>Rated Collapse</span><span id="lr_collapse">-</span></div>
+    </div>
+
+    <!-- WELL INPUTS -->
+    <div class="section-title">Well & Flow Inputs</div>
+    <div class="field">
+      abel>Fluid Type</label>
+      <select id="fluidType" onchange="onFluidTypeChange()">
+        <option value="liquid">Liquid (oil/water)</option>
+        <option value="gas">Gas</option>
+        <option value="multiphase">Multiphase</option>
+      </select>
+    </div>
+    <div class="field">
+      abel>Liquid Rate (bbl/d)</label>
+      <input type="number" id="rate" value="2500"/>
+    </div>
+    <div id="gasFields" style="display:none">
+      <div class="field">
+        abel>Gas Rate (MMscfd)</label>
+        <input type="number" id="gasRate" value="5"/>
+      </div>
+      <div class="field">
+        abel>Gas Gravity (air=1)</label>
+        <input type="number" id="gasGravity" value="0.65" step="0.01"/>
+      </div>
+    </div>
+    <div id="mpFields" style="display:none">
+      <div class="field">
+        abel>GOR (scf/bbl)</label>
+        <input type="number" id="gor" value="500"/>
+      </div>
+      <div class="field">
+        abel>Multiphase Correlation</label>
+        <select id="correlation">
+          <option value="beggs">Beggs &amp; Brill</option>
+          <option value="hagedorn">Hagedorn-Brown</option>
+          <option value="mukherjee">Mukherjee-Brill</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      abel>Tubing Length (ft)</label>
+      <input type="number" id="length" value="9000"/>
+    </div>
+    <div class="field">
+      abel>Fluid Density (kg/m³)</label>
+      <input type="number" id="density" value="850"/>
+    </div>
+    <div class="field">
+      abel>Viscosity (cP)</label>
+      <input type="number" id="viscosity" value="1.2" step="0.1"/>
+    </div>
+    <div class="field">
+      abel>Available Pressure Budget (psi)</label>
+      <input type="number" id="budget" value="600"/>
+    </div>
+    <div class="field">
+      abel>Max Test SICP / Shut-in Pressure (psi)</label>
+      <input type="number" id="maxSICP" value="3000"/>
+    </div>
+    <div class="field">
+      abel>Friction Criterion (% of budget)</label>
+      <select id="criterion">
+        <option value="10">≤ 10% (conservative)</option>
+        <option value="15" selected>≤ 15% (normal)</option>
+        <option value="20">≤ 20% (aggressive)</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="calculate()">
