@@ -9,7 +9,7 @@ interface AssumptionsPanelProps {
 export default function AssumptionsPanel({ output }: AssumptionsPanelProps) {
   const assumptions = output?.assumptions ?? {
     fluid_model: "Black-oil with Standing Bo and Beggs-Robinson viscosity",
-    multiphase_flow: "Simplified drift-flux holdup with Darcy-Weisbach friction",
+    multiphase_flow: "Beggs-Brill (1973) holdup and two-phase friction",
     heat_transfer: "Steady-state lumped UA exponential approach to ambient",
     ipr_models: "Linear PI, Vogel",
     network_solver: "Iterative pressure balance",
