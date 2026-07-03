@@ -1,9 +1,10 @@
 "use client";
 
-import { Moon, Sun, Droplets } from "lucide-react";
+import { Moon, Sun, Droplets, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/lib/theme";
+import { api } from "@/lib/api";
 import clsx from "clsx";
 
 const NAV = [
@@ -15,6 +16,20 @@ const NAV = [
 export default function Header() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+
+  const handleDownloadManual = async () => {
+    try {
+      const blob = await api.downloadManual();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "FlowSim_Pro_User_Manual.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open("/api/manual", "_blank");
+    }
+  };
 
   return (
     <header className="h-14 border-b border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark flex items-center px-4 gap-6">
@@ -38,7 +53,15 @@ export default function Header() {
           </Link>
         ))}
       </nav>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-1">
+        <button
+          onClick={handleDownloadManual}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+          title="Download user manual (PDF)"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span className="hidden sm:inline">Manual</span>
+        </button>
         <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Toggle theme">
           {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>

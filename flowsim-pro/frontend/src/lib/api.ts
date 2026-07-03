@@ -58,6 +58,12 @@ export const api = {
     if (!res.ok) throw new Error(`Export failed: ${res.status}`);
     return res.blob();
   },
+
+  downloadManual: async () => {
+    const res = await fetch(`${API_BASE}/manual`);
+    if (!res.ok) throw new Error(`Manual download failed: ${res.status}`);
+    return res.blob();
+  },
 };
 
 export const defaultInputs: CaseInputs = {
