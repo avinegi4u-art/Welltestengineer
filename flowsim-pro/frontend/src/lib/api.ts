@@ -1,4 +1,4 @@
-import type { CaseInputs, SimulationCase, SimulationOutput } from "./types";
+import type { CaseInputs, SimulationCase, SimulationOutput, SensitivityResult } from "./types";
 
 const API_BASE = "/api";
 
@@ -44,7 +44,7 @@ export const api = {
     }),
 
   sensitivity: (caseId: number, parameter: string, values: number[]) =>
-    request<Record<string, unknown>[]>("/sensitivity", {
+    request<SensitivityResult>("/sensitivity", {
       method: "POST",
       body: JSON.stringify({ case_id: caseId, parameter, values }),
     }),

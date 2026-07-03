@@ -110,7 +110,16 @@ export default function ProfileCharts({ output }: ProfileChartsProps) {
 
       {nodalData.length > 0 && (
         <div className="panel p-4">
-          <h3 className="font-semibold mb-2 text-sm">Nodal Analysis — IPR / VLP</h3>
+          <h3 className="font-semibold mb-2 text-sm">Nodal Analysis — IPR / VLP (Beggs-Brill VLP)</h3>
+          {output.nodal_analysis?.message && (
+            <p className={`text-xs mb-2 px-2 py-1 rounded ${
+              output.nodal_analysis.status === "operating_point_found"
+                ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300"
+                : "bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300"
+            }`}>
+              {output.nodal_analysis.message}
+            </p>
+          )}
           <div className="h-72">
             <Chart
               data={nodalData}

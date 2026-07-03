@@ -271,11 +271,15 @@ def sensitivity_analysis(request: SensitivityRequest, db: Session = Depends(get_
     )
     nodal_cfg = inputs.get("nodal", {})
     analyzer = NodalAnalyzer(
-        fluid, well_geo,
+        fluid,
+        well_geo,
         reservoir_pressure_psi=nodal_cfg.get("reservoir_pressure_psi", 3500),
         productivity_index_stb_d_psi=nodal_cfg.get("productivity_index", 2.0),
+        ipr_model=nodal_cfg.get("ipr_model", "pi"),
+        flow_correlation="beggs_brill",
     )
-    return analyzer.sensitivity(request.parameter, request.values)
+    result = analyzer.sensitivity(request.parameter, request.values, include_vlp_curves=True)
+    return analyzer.sensitivity_to_dict(result)
 
 
 @router.post("/export")

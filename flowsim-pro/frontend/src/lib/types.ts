@@ -119,4 +119,27 @@ export interface NodalAnalysis {
   operating_bhp_psi: number;
   operating_whp_psi: number;
   convergence_error_psi: number;
+  status?: string;
+  message?: string;
+  aof_stb_d?: number;
+}
+
+export interface SensitivityCurve {
+  parameter: string;
+  value: number;
+  label: string;
+  rates_stb_d: number[];
+  vlp_pressures_psi: number[];
+  operating_rate_stb_d: number;
+  operating_bhp_psi: number;
+  status: string;
+  message: string;
+}
+
+export interface SensitivityResult {
+  parameter: string;
+  ipr_rates_stb_d: number[];
+  ipr_pressures_psi: number[];
+  curves: SensitivityCurve[];
+  diagnostics: string[];
 }

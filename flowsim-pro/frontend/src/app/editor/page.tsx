@@ -9,6 +9,7 @@ import InputForm from "@/components/InputForm";
 import ProfileCharts from "@/components/ProfileCharts";
 import ResultsPanel from "@/components/ResultsPanel";
 import AssumptionsPanel from "@/components/AssumptionsPanel";
+import SensitivityPanel from "@/components/SensitivityPanel";
 import { Save, Play, Download } from "lucide-react";
 
 function EditorContent() {
@@ -150,6 +151,9 @@ function EditorContent() {
         </div>
         <div className="col-span-5 overflow-y-auto">
           <ProfileCharts output={output} />
+          <div className="mt-3">
+            <SensitivityPanel caseId={selectedId} />
+          </div>
           <div className="mt-3">
             <AssumptionsPanel output={output} />
           </div>

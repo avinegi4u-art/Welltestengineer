@@ -17,7 +17,7 @@ from engine.well import TubingSegment, WellGeometry, WellModel
 
 ASSUMPTIONS = {
     "fluid_model": "Black-oil with Standing Bo and Beggs-Robinson viscosity",
-    "multiphase_flow": "Simplified drift-flux holdup with Darcy-Weisbach friction",
+    "multiphase_flow": "Beggs-Brill (1973) holdup and two-phase friction",
     "heat_transfer": "Steady-state lumped UA exponential approach to ambient",
     "ipr_models": ["Linear PI", "Vogel"],
     "network_solver": "Iterative pressure balance (Gauss-Seidel relaxation)",
@@ -141,7 +141,7 @@ class SimulationSolver:
 
             # Well + tubing traverse
             well_geo = self._build_well_geometry(fluid)
-            well_model = WellModel(fluid, well_geo, heat)
+            well_model = WellModel(fluid, well_geo, heat, flow_correlation="beggs_brill")
 
             if bhp:
                 profile = well_model.traverse_bottom_up(bhp_psi=bhp, liquid_rate=rate)
@@ -215,8 +215,14 @@ class SimulationSolver:
                     "operating_bhp_psi": round(nodal.operating_bhp_psi, 2),
                     "operating_whp_psi": round(nodal.operating_whp_psi, 2),
                     "convergence_error_psi": round(nodal.convergence_error, 4),
+                    "status": nodal.status,
+                    "message": nodal.message,
+                    "aof_stb_d": round(nodal.aof_stb_d, 2),
                 }
                 summary["nodal_operating_rate_stb_d"] = nodal.operating_rate_stb_d
+                summary["nodal_status"] = nodal.status
+                if nodal.status != "operating_point_found":
+                    self.warnings.append(nodal.message)
 
             # Network solver
             if self.input.case_type == "network" and self.input.network:
