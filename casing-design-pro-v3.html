@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v4 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v5 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <style>
     :root {
@@ -84,8 +84,8 @@
 <div class="app">
   <header class="hero">
     <div class="brand">
-      <h1>Casing Design Pro v4</h1>
-      <p>Depth-wise loads · TOC external pressure · FG scenarios · API TR 5C3 triaxial · connections · thermal · buckling</p>
+      <h1>Casing Design Pro v5</h1>
+      <p>Survey · multi-fluid · wear · APB · running drag/shock · depth-wise API TR 5C3 triaxial</p>
     </div>
     <div class="badges">
       <span class="badge">API 5CT / TR 5C3</span>
@@ -101,6 +101,7 @@
     <button class="tab" data-tab="loads">4 · Load Cases</button>
     <button class="tab" data-tab="analysis">5 · Analysis</button>
     <button class="tab" data-tab="reports">6 · Reports & Audit</button>
+    <button class="tab" data-tab="survey">7 · Survey & Fluids</button>
   </nav>
 
   <section class="panel active" id="panel-project">
@@ -129,6 +130,17 @@
           <label class="field">Temp Derating
             <select id="tempDerating"><option value="on" selected>Enabled</option><option value="off">Disabled</option></select>
           </label>
+        </div>
+        <h3 style="margin-top:1rem;font-size:0.82rem">Advanced Loads</h3>
+        <div class="grid-3">
+          <label class="field">Default Wear (%)<input id="defaultWearPct" type="number" step="1" value="0" min="0" max="50" /></label>
+          <label class="field">APB Enabled
+            <select id="apbEnabled"><option value="on">Yes</option><option value="off">No</option></select>
+          </label>
+          <label class="field">Default APB (psi)<input id="apbDefaultPsi" type="number" value="1500" /></label>
+          <label class="field">Running Overpull (klbf)<input id="runningOverpullKlbf" type="number" value="50" /></label>
+          <label class="field">Drag Coeff (μ)<input id="dragCoeff" type="number" step="0.05" value="0.25" /></label>
+          <label class="field">Shock Factor<input id="shockFactor" type="number" step="0.05" value="1.15" /></label>
         </div>
       </div>
       <div class="card">
@@ -178,7 +190,7 @@
           <button class="small" id="btnAddCasing">+ Add Pipe</button>
           <button class="small" id="btnRecalcRatings">↻ Recalculate All Ratings</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>ID</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
       </div>
       <div class="card">
         <h3>Casing Strings</h3>
@@ -186,7 +198,7 @@
           <button class="small" id="btnAddString">+ Add String</button>
           <button class="small" id="btnTypicalStrings">Typical 5-String Set</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Type</th><th>Top</th><th>Shoe</th><th>TOC</th><th>Pipe</th><th>Fl Int</th><th>Fl Ext</th><th>Hang (klbf)</th><th>PreTen</th><th>Span</th><th>DLS</th><th></th></tr></thead><tbody id="stringsBody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Type</th><th>Top</th><th>Shoe</th><th>TOC</th><th>Pipe</th><th>Fl Int</th><th>Fl Ext</th><th>Hang</th><th>PreTen</th><th>Span</th><th>APB?</th><th>APB ψ</th><th></th></tr></thead><tbody id="stringsBody"></tbody></table></div>
         <canvas class="chart" id="schematicChart" width="600" height="280" style="margin-top:0.75rem"></canvas>
       </div>
     </div>
@@ -237,6 +249,36 @@
       </div>
     </div>
   </section>
+
+  <section class="panel" id="panel-survey">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Deviation Survey (MD · Inc · Azi)</h3>
+        <p class="muted">DLS from survey overrides manual string DLS for buckling. TVD computed via minimum curvature.</p>
+        <div class="toolbar">
+          <button class="small" id="btnAddSurvey">+ Survey Point</button>
+          <button class="small" id="btnSurveyDeviated">Load Deviated Demo</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>MD (ft)</th><th>Inc (°)</th><th>Azi (°)</th><th>TVD calc</th><th>DLS</th><th></th></tr></thead><tbody id="surveyBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Well Path</h3>
+        <canvas class="chart" id="surveyChart" width="600" height="260"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h3>Multi-Fluid Internal Columns</h3>
+      <p class="muted">Segmented fluid columns per string for internal hydrostatic pressure (replaces single fluid Int when defined).</p>
+      <div class="toolbar">
+        <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;color:var(--text)">String
+          <select id="fluidSegString" style="width:auto;min-width:180px"></select>
+        </label>
+        <button class="small" id="btnAddFluidSeg">+ Fluid Segment</button>
+        <button class="small" id="btnFluidSegDemo">Demo 2-Fluid Column</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Top TVD (ft)</th><th>Bottom TVD (ft)</th><th>Fluid (ppg)</th><th></th></tr></thead><tbody id="fluidSegBody"></tbody></table></div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -253,7 +295,8 @@ const SCENARIOS = {
   pressureTest: { label: "Pressure Test" },
   kick: { label: "Kick / Well Control" },
   evacuation: { label: "Evacuation / Lost Returns" },
-  stimulation: { label: "Stimulation / Frac" }
+  stimulation: { label: "Stimulation / Frac" },
+  running: { label: "Running In / Overpull" }
 };
 
 const CONNECTIONS = {
@@ -267,6 +310,100 @@ const CONNECTIONS = {
 };
 
 const STEEL_ALPHA = 6.5e-6;
+const DEG = Math.PI / 180;
+
+function wornPipeGeometry(pipe, wearPct) {
+  const id0 = pipeIdFromWeight(pipe.od, pipe.wt);
+  const t = wallThickness(pipe.od, id0);
+  const wearIn = ((wearPct ?? 0) / 100) * t;
+  return { od: pipe.od, id: Math.max(id0 - 2 * wearIn, pipe.od * 0.72) };
+}
+
+function buildSurveyDerived() {
+  const pts = [...(state.survey || [])].sort((a, b) => a.md - b.md);
+  if (pts.length < 2) return [];
+  const derived = [{ ...pts[0], tvd: 0, dls: 0 }];
+  for (let i = 1; i < pts.length; i++) {
+    const p0 = pts[i - 1], p1 = pts[i];
+    const dMD = Math.max(p1.md - p0.md, 1);
+    const inc0 = p0.inc * DEG, inc1 = p1.inc * DEG;
+    const azi0 = p0.azi * DEG, azi1 = p1.azi * DEG;
+    const dTvd = dMD * (Math.cos(inc0) + Math.cos(inc1)) / 2;
+    const dogleg = Math.acos(Math.min(1, Math.max(-1,
+      Math.cos(inc1 - inc0) - Math.sin(inc0) * Math.sin(inc1) * (1 - Math.cos(azi1 - azi0))
+    )));
+    const dls = (dogleg / DEG) * (100 / dMD);
+    derived.push({ ...p1, tvd: derived[i - 1].tvd + dTvd, dls });
+  }
+  return derived;
+}
+
+function interpolateSurveyAtMd(md) {
+  const d = buildSurveyDerived();
+  if (!d.length) return { inc: 0, azi: 0, tvd: md, dls: 0 };
+  if (md <= d[0].md) return { inc: d[0].inc, azi: d[0].azi, tvd: d[0].tvd, dls: d[0].dls };
+  if (md >= d[d.length - 1].md) return { inc: d[d.length - 1].inc, azi: d[d.length - 1].azi, tvd: d[d.length - 1].tvd, dls: d[d.length - 1].dls };
+  for (let i = 1; i < d.length; i++) {
+    if (md <= d[i].md) {
+      const f = (md - d[i - 1].md) / (d[i].md - d[i - 1].md);
+      return {
+        inc: d[i - 1].inc + f * (d[i].inc - d[i - 1].inc),
+        azi: d[i - 1].azi + f * (d[i].azi - d[i - 1].azi),
+        tvd: d[i - 1].tvd + f * (d[i].tvd - d[i - 1].tvd),
+        dls: d[i - 1].dls + f * (d[i].dls - d[i - 1].dls)
+      };
+    }
+  }
+  return { inc: 0, azi: 0, tvd: md, dls: 0 };
+}
+
+function mdAtTvd(tvd) {
+  const d = buildSurveyDerived();
+  if (!d.length) return tvd;
+  if (tvd <= d[0].tvd) return d[0].md;
+  if (tvd >= d[d.length - 1].tvd) return d[d.length - 1].md;
+  for (let i = 1; i < d.length; i++) {
+    if (tvd <= d[i].tvd) {
+      const f = (tvd - d[i - 1].tvd) / (d[i].tvd - d[i - 1].tvd);
+      return d[i - 1].md + f * (d[i].md - d[i - 1].md);
+    }
+  }
+  return tvd;
+}
+
+function surveyAtTvd(tvd) {
+  return interpolateSurveyAtMd(mdAtTvd(tvd));
+}
+
+function fluidSegmentsFor(stringId) {
+  return (state.fluidSegments && state.fluidSegments[stringId]) || [];
+}
+
+function columnPressurePsi(tvd, string) {
+  const segs = fluidSegmentsFor(string.id);
+  if (!segs.length) return hydrostaticPsi(string.fluidInt ?? interpolateProfile(state.profiles, tvd, "mwInt"), tvd);
+  let p = 0;
+  const sorted = [...segs].sort((a, b) => a.top - b.top);
+  for (const seg of sorted) {
+    if (tvd <= seg.top) break;
+    const from = seg.top;
+    const to = Math.min(seg.bottom, tvd);
+    const len = Math.max(to - from, 0);
+    if (len > 0) p += hydrostaticPsi(seg.ppg, len);
+  }
+  return p;
+}
+
+function runningDragKlbf(tvd, string, inp) {
+  const pipe = state.catalog.find(p => p.id === string.pipeId);
+  if (!pipe) return 0;
+  const id = pipeIdFromWeight(pipe.od, pipe.wt);
+  const below = Math.max(string.shoe - tvd, 0);
+  const weight = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt);
+  const inc = surveyAtTvd(tvd).inc;
+  const mu = inp.dragCoeff ?? 0.25;
+  return weight * mu * Math.sin(inc * DEG);
+}
 
 const TYPE_COLORS = {
   surface: "#48cae4", intermediate: "#00b4d8", production: "#0077b6",
@@ -369,26 +506,33 @@ function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
   const pp = interpolateProfile(state.profiles, tvd, "pp");
   const mwE = string.fluidExt ?? interpolateProfile(state.profiles, tvd, "mwExt");
   const pPP = hydrostaticPsi(pp, tvd);
-  const toc = string.toc ?? string.top;
   const zone = externalZone(tvd, string);
 
+  let pExt;
   if (scenarioKey === "evacuation") {
-    return zone === "cemented" ? pPP * 0.9 : offshoreExternalPsi(tvd, mwE, inp) * 0.15;
+    pExt = zone === "cemented" ? pPP * 0.9 : offshoreExternalPsi(tvd, mwE, inp) * 0.15;
+  } else if (zone === "open") {
+    pExt = offshoreExternalPsi(tvd, mwE, inp);
+  } else if (scenarioKey === "production") {
+    pExt = pPP * 0.65;
+  } else if (scenarioKey === "stimulation") {
+    pExt = pPP * 0.75;
+  } else {
+    pExt = pPP;
   }
-  if (zone === "open") {
-    return offshoreExternalPsi(tvd, mwE, inp);
+
+  if (inp.apbEnabled && string.apbSealed && zone === "cemented") {
+    const apb = string.apbPsi ?? inp.apbDefaultPsi ?? 0;
+    pExt = Math.max(pExt, apb);
   }
-  if (scenarioKey === "production") return pPP * 0.65;
-  if (scenarioKey === "stimulation") return pPP * 0.75;
-  return pPP;
+  return pExt;
 }
 
 function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
   const fg = interpolateProfile(state.profiles, tvd, "fg");
   const pp = interpolateProfile(state.profiles, tvd, "pp");
-  const mwI = string.fluidInt ?? interpolateProfile(state.profiles, tvd, "mwInt");
   const pFG = hydrostaticPsi(fg, tvd);
-  const pMW = hydrostaticPsi(mwI, tvd);
+  const pMW = columnPressurePsi(tvd, string);
   const pPP = hydrostaticPsi(pp, tvd);
 
   switch (scenarioKey) {
@@ -404,6 +548,8 @@ function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
       return Math.max(pMW, pPP * 0.95);
     case "cementing":
       return pMW * 1.12;
+    case "running":
+      return pMW;
     default:
       return pMW;
   }
@@ -422,7 +568,7 @@ function buoyedWeightKlbf(od, id, lengthFt, fluidPpg) {
   return Math.max((steelLbf - buoy) / 1000, 0);
 }
 
-function axialForceAtDepth(tvd, string, inp) {
+function axialForceAtDepth(tvd, string, inp, scenarioKey) {
   const pipe = state.catalog.find(p => p.id === string.pipeId);
   if (!pipe) return 0;
   const id = pipeIdFromWeight(pipe.od, pipe.wt);
@@ -443,6 +589,13 @@ function axialForceAtDepth(tvd, string, inp) {
   const dT = temp - refT;
   const constrained = tvd <= (string.toc ?? string.top) ? 1.0 : 0.35;
   axial += thermalAxialKlbf(pipe.od, id, dT) * constrained;
+
+  if (scenarioKey === "running") {
+    const overpull = inp.runningOverpullKlbf ?? 50;
+    const drag = runningDragKlbf(tvd, string, inp);
+    const shock = inp.shockFactor ?? 1.15;
+    axial = (axial + overpull + drag) * shock;
+  }
 
   return axial;
 }
@@ -536,18 +689,19 @@ function depthPointsForString(string, stepFt) {
   return [...new Set(pts)].sort((a, b) => a - b);
 }
 
-function calcPipeRatings(pipe, tempF, derateOn) {
+function calcPipeRatings(pipe, tempF, derateOn, wearPct) {
   const grade = GRADES[pipe.grade] || GRADES.L80;
-  const id = pipe.idCalc || pipeIdFromWeight(pipe.od, pipe.wt);
+  const geom = wornPipeGeometry(pipe, wearPct ?? pipe.wearPct ?? 0);
   const derate = derateOn ? tempDeratingFactor(pipe.grade, tempF) : 1;
   const y = grade.yield * derate;
-  const tension = bodyYieldTensionKlbf(pipe.od, id, y);
+  const tension = bodyYieldTensionKlbf(geom.od, geom.id, y);
   return {
-    od: pipe.od, id, wt: pipe.wt, grade: pipe.grade, yieldPsi: y, conn: pipe.conn,
-    burst: barlowBurst(pipe.od, id, y),
-    collapse: apiCollapsePressure(pipe.od, id, y),
+    od: geom.od, id: geom.id, wt: pipe.wt, grade: pipe.grade, yieldPsi: y, conn: pipe.conn,
+    wearPct: wearPct ?? pipe.wearPct ?? 0,
+    burst: barlowBurst(geom.od, geom.id, y),
+    collapse: apiCollapsePressure(geom.od, geom.id, y),
     tension,
-    compression: bodyYieldCompressionKlbf(pipe.od, id, y)
+    compression: bodyYieldCompressionKlbf(geom.od, geom.id, y)
   };
 }
 
@@ -565,24 +719,24 @@ function pill(util) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV4";
+const STORAGE_KEY = "casingDesignProV5";
 let auditEntries = [];
 let lastAnalysis = null;
 
 const defaultState = () => ({
   catalog: [
-    { id: "S", od: 20, wt: 94, grade: "K55", conn: "BTC" },
-    { id: "I", od: 13.375, wt: 68, grade: "L80", conn: "BTC" },
-    { id: "P", od: 9.625, wt: 53.5, grade: "L80", conn: "VAM TOP" },
-    { id: "L1", od: 7, wt: 32, grade: "L80", conn: "VAM TOP" },
-    { id: "TB", od: 9.625, wt: 53.5, grade: "P110", conn: "BTC" }
+    { id: "S", od: 20, wt: 94, grade: "K55", conn: "BTC", wearPct: 0 },
+    { id: "I", od: 13.375, wt: 68, grade: "L80", conn: "BTC", wearPct: 5 },
+    { id: "P", od: 9.625, wt: 53.5, grade: "L80", conn: "VAM TOP", wearPct: 8 },
+    { id: "L1", od: 7, wt: 32, grade: "L80", conn: "VAM TOP", wearPct: 10 },
+    { id: "TB", od: 9.625, wt: 53.5, grade: "P110", conn: "BTC", wearPct: 0 }
   ],
   strings: [
-    { id: "s1", label: "Surface Casing", type: "surface", top: 0, shoe: 3000, toc: 500, pipeId: "S", fluidInt: 8.6, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 3000, dls: 1 },
-    { id: "s2", label: "Intermediate", type: "intermediate", top: 0, shoe: 8000, toc: 1500, pipeId: "I", fluidInt: 10.5, fluidExt: 9.0, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 6500, dls: 2 },
-    { id: "s3", label: "Production", type: "production", top: 0, shoe: 11000, toc: 2000, pipeId: "P", fluidInt: 11.5, fluidExt: 9.5, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 9000, dls: 2 },
-    { id: "s4", label: "Drilling Liner", type: "liner", top: 10000, shoe: 12500, toc: 10500, pipeId: "L1", fluidInt: 12.0, fluidExt: 9.8, hangOffKlbf: 280, preTensionKlbf: 0, spanFt: 2500, dls: 4 },
-    { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 4200, dls: 2 }
+    { id: "s1", label: "Surface Casing", type: "surface", top: 0, shoe: 3000, toc: 500, pipeId: "S", fluidInt: 8.6, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 3000, apbSealed: false, apbPsi: 0 },
+    { id: "s2", label: "Intermediate", type: "intermediate", top: 0, shoe: 8000, toc: 1500, pipeId: "I", fluidInt: 10.5, fluidExt: 9.0, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 6500, apbSealed: false, apbPsi: 0 },
+    { id: "s3", label: "Production", type: "production", top: 0, shoe: 11000, toc: 2000, pipeId: "P", fluidInt: 11.5, fluidExt: 9.5, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 9000, apbSealed: true, apbPsi: 1800 },
+    { id: "s4", label: "Drilling Liner", type: "liner", top: 10000, shoe: 12500, toc: 10500, pipeId: "L1", fluidInt: 12.0, fluidExt: 9.8, hangOffKlbf: 280, preTensionKlbf: 0, spanFt: 2500, apbSealed: false, apbPsi: 0 },
+    { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 4200, apbSealed: false, apbPsi: 0 }
   ],
   profiles: [
     { tvd: 0, pp: 8.6, fg: 9.0, mwInt: 8.6, mwExt: 8.6, temp: 70 },
@@ -591,6 +745,19 @@ const defaultState = () => ({
     { tvd: 11000, pp: 13.5, fg: 16.8, mwInt: 13.5, mwExt: 9.5, temp: 220 },
     { tvd: 12500, pp: 14.2, fg: 17.5, mwInt: 14.0, mwExt: 9.8, temp: 250 }
   ],
+  survey: [
+    { md: 0, inc: 0, azi: 0 },
+    { md: 3000, inc: 8, azi: 45 },
+    { md: 8000, inc: 22, azi: 75 },
+    { md: 11000, inc: 32, azi: 90 },
+    { md: 12500, inc: 38, azi: 92 }
+  ],
+  fluidSegments: {
+    s3: [
+      { top: 0, bottom: 8000, ppg: 10.5 },
+      { top: 8000, bottom: 11000, ppg: 11.8 }
+    ]
+  },
   loads: []
 });
 
@@ -622,6 +789,12 @@ function getInputs() {
     sfTriaxial: +document.getElementById("sfTriaxial").value || 1,
     sfBuckling: +document.getElementById("sfBuckling").value || 1,
     tempDerating: document.getElementById("tempDerating").value === "on",
+    defaultWearPct: +document.getElementById("defaultWearPct").value || 0,
+    apbEnabled: document.getElementById("apbEnabled").value === "on",
+    apbDefaultPsi: +document.getElementById("apbDefaultPsi").value || 0,
+    runningOverpullKlbf: +document.getElementById("runningOverpullKlbf").value || 0,
+    dragCoeff: +document.getElementById("dragCoeff").value || 0.25,
+    shockFactor: +document.getElementById("shockFactor").value || 1.15,
     signoffStatus: document.getElementById("signoffStatus").value,
     signoffNotes: document.getElementById("signoffNotes").value
   };
@@ -643,19 +816,28 @@ function setInputs(inp) {
   document.getElementById("sfTriaxial").value = inp.sfTriaxial ?? 1.25;
   document.getElementById("sfBuckling").value = inp.sfBuckling ?? 1.3;
   document.getElementById("tempDerating").value = inp.tempDerating === false ? "off" : "on";
+  document.getElementById("defaultWearPct").value = inp.defaultWearPct ?? 0;
+  document.getElementById("apbEnabled").value = inp.apbEnabled === false ? "off" : "on";
+  document.getElementById("apbDefaultPsi").value = inp.apbDefaultPsi ?? 1500;
+  document.getElementById("runningOverpullKlbf").value = inp.runningOverpullKlbf ?? 50;
+  document.getElementById("dragCoeff").value = inp.dragCoeff ?? 0.25;
+  document.getElementById("shockFactor").value = inp.shockFactor ?? 1.15;
   document.getElementById("signoffStatus").value = inp.signoffStatus || "draft";
   document.getElementById("signoffNotes").value = inp.signoffNotes || "";
 }
 
 function serializeProject() {
-  return JSON.stringify({ version: 4, inputs: getInputs(), state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 5, inputs: getInputs(), state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
   st.strings = (st.strings || []).map(s => ({
-    hangOffKlbf: 0, preTensionKlbf: 0, spanFt: Math.max((s.shoe || 0) - (s.top || 0), 500), dls: 0,
-    ...s
+    hangOffKlbf: 0, preTensionKlbf: 0, spanFt: Math.max((s.shoe || 0) - (s.top || 0), 500),
+    apbSealed: false, apbPsi: 0, ...s
   }));
+  st.catalog = (st.catalog || []).map(p => ({ wearPct: 0, ...p }));
+  if (!st.survey) st.survey = defaultState().survey;
+  if (!st.fluidSegments) st.fluidSegments = {};
   return st;
 }
 
@@ -691,7 +873,8 @@ function connOptions(sel) {
 function renderCatalog() {
   const inp = getInputs();
   document.getElementById("catalogBody").innerHTML = state.catalog.map((p, i) => {
-    const r = calcPipeRatings(p, 200, inp.tempDerating);
+    const wear = p.wearPct ?? inp.defaultWearPct ?? 0;
+    const r = calcPipeRatings(p, 200, inp.tempDerating, wear);
     p.idCalc = r.id;
     const conn = connectionLimits(r, p.conn);
     return `<tr>
@@ -700,6 +883,7 @@ function renderCatalog() {
       <td><input type="number" step="0.1" value="${p.wt}" data-cat="${i}" data-f="wt"/></td>
       <td><select data-cat="${i}" data-f="grade">${gradeOptions(p.grade)}</select></td>
       <td><select data-cat="${i}" data-f="conn">${connOptions(p.conn)}</select></td>
+      <td><input type="number" value="${wear}" data-cat="${i}" data-f="wearPct" style="width:45px"/></td>
       <td class="mono">${r.id.toFixed(3)}</td>
       <td class="mono">${Math.round(r.burst)}</td>
       <td class="mono">${Math.round(r.collapse)}</td>
@@ -716,19 +900,60 @@ function renderStrings() {
     <td><select data-str="${i}" data-f="type">
       ${["surface","intermediate","production","liner","tieback","conductor"].map(t => `<option value="${t}" ${s.type===t?"selected":""}>${t}</option>`).join("")}
     </select></td>
-    <td><input type="number" value="${s.top}" data-str="${i}" data-f="top" style="width:55px"/></td>
-    <td><input type="number" value="${s.shoe}" data-str="${i}" data-f="shoe" style="width:55px"/></td>
-    <td><input type="number" value="${s.toc}" data-str="${i}" data-f="toc" style="width:55px"/></td>
+    <td><input type="number" value="${s.top}" data-str="${i}" data-f="top" style="width:50px"/></td>
+    <td><input type="number" value="${s.shoe}" data-str="${i}" data-f="shoe" style="width:50px"/></td>
+    <td><input type="number" value="${s.toc}" data-str="${i}" data-f="toc" style="width:50px"/></td>
     <td><select data-str="${i}" data-f="pipeId">${pipeOptions(s.pipeId)}</select></td>
-    <td><input type="number" step="0.1" value="${s.fluidInt}" data-str="${i}" data-f="fluidInt" style="width:50px"/></td>
-    <td><input type="number" step="0.1" value="${s.fluidExt}" data-str="${i}" data-f="fluidExt" style="width:50px"/></td>
-    <td><input type="number" value="${s.hangOffKlbf ?? 0}" data-str="${i}" data-f="hangOffKlbf" style="width:50px"/></td>
-    <td><input type="number" value="${s.preTensionKlbf ?? 0}" data-str="${i}" data-f="preTensionKlbf" style="width:50px"/></td>
-    <td><input type="number" value="${s.spanFt ?? 3000}" data-str="${i}" data-f="spanFt" style="width:55px"/></td>
-    <td><input type="number" step="0.5" value="${s.dls ?? 0}" data-str="${i}" data-f="dls" style="width:45px"/></td>
+    <td><input type="number" step="0.1" value="${s.fluidInt}" data-str="${i}" data-f="fluidInt" style="width:45px"/></td>
+    <td><input type="number" step="0.1" value="${s.fluidExt}" data-str="${i}" data-f="fluidExt" style="width:45px"/></td>
+    <td><input type="number" value="${s.hangOffKlbf ?? 0}" data-str="${i}" data-f="hangOffKlbf" style="width:45px"/></td>
+    <td><input type="number" value="${s.preTensionKlbf ?? 0}" data-str="${i}" data-f="preTensionKlbf" style="width:45px"/></td>
+    <td><input type="number" value="${s.spanFt ?? 3000}" data-str="${i}" data-f="spanFt" style="width:50px"/></td>
+    <td><input type="checkbox" data-str="${i}" data-f="apbSealed" ${s.apbSealed ? "checked" : ""}/></td>
+    <td><input type="number" value="${s.apbPsi ?? 0}" data-str="${i}" data-f="apbPsi" style="width:50px"/></td>
     <td><button class="small danger" data-del-str="${i}">✕</button></td>
   </tr>`).join("");
   drawSchematic();
+  renderFluidSegStringSelect();
+}
+
+function renderSurvey() {
+  const derived = buildSurveyDerived();
+  document.getElementById("surveyBody").innerHTML = (state.survey || []).map((p, i) => {
+    const d = derived[i] || { tvd: 0, dls: 0 };
+    return `<tr>
+      <td><input type="number" value="${p.md}" data-survey="${i}" data-f="md"/></td>
+      <td><input type="number" step="0.1" value="${p.inc}" data-survey="${i}" data-f="inc"/></td>
+      <td><input type="number" step="0.1" value="${p.azi}" data-survey="${i}" data-f="azi"/></td>
+      <td class="mono">${(d.tvd ?? 0).toFixed(0)}</td>
+      <td class="mono">${(d.dls ?? 0).toFixed(2)}</td>
+      <td><button class="small danger" data-del-survey="${i}">✕</button></td>
+    </tr>`;
+  }).join("");
+  drawSurveyChart();
+}
+
+function renderFluidSegStringSelect() {
+  const sel = document.getElementById("fluidSegString");
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = state.strings.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+  if (cur && state.strings.some(s => s.id === cur)) sel.value = cur;
+  renderFluidSegments();
+}
+
+function renderFluidSegments() {
+  const sel = document.getElementById("fluidSegString");
+  const body = document.getElementById("fluidSegBody");
+  if (!sel || !body) return;
+  const sid = sel.value || state.strings[0]?.id;
+  const segs = fluidSegmentsFor(sid);
+  body.innerHTML = segs.map((seg, i) => `<tr>
+    <td><input type="number" value="${seg.top}" data-fseg="${i}" data-f="top"/></td>
+    <td><input type="number" value="${seg.bottom}" data-fseg="${i}" data-f="bottom"/></td>
+    <td><input type="number" step="0.1" value="${seg.ppg}" data-fseg="${i}" data-f="ppg"/></td>
+    <td><button class="small danger" data-del-fseg="${i}">✕</button></td>
+  </tr>`).join("");
 }
 
 function renderProfiles() {
@@ -793,6 +1018,7 @@ function renderAll() {
   renderCatalog();
   renderStrings();
   renderProfiles();
+  renderSurvey();
   if (!state.loads.length) generateLoadCases();
   else renderLoads();
   renderResults();
@@ -811,7 +1037,7 @@ function generateLoadCases() {
       for (const tvd of depths) {
         const pInt = internalPressureAtDepth(tvd, s, key, inp);
         const pExt = externalPressureAtDepth(tvd, s, key, inp);
-        const axial = axialForceAtDepth(tvd, s, inp);
+        const axial = axialForceAtDepth(tvd, s, inp, key);
         const temp = interpolateProfile(state.profiles, tvd, "temp");
         const zone = externalZone(tvd, s);
         loads.push({
@@ -853,12 +1079,14 @@ function runAnalysis() {
     const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
     if (!str || !pipeDef) continue;
 
-    const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating);
+    const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
+    const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
     const conn = connectionLimits(ratings, pipeDef.conn);
     const tri = apiTriaxialCheck(load.axial, load.pInt, load.pExt, ratings, conn, sf);
 
     const span = str.spanFt ?? Math.max(str.shoe - str.top, 500);
-    const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, str.dls ?? 0) / sf.buckling;
+    const dls = surveyAtTvd(load.depth).dls || 0;
+    const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, dls) / sf.buckling;
     const buckReq = Math.max(load.axial, 0);
     const buckUtil = buckAvail > 0 && buckAvail < Infinity ? buckReq / buckAvail : 0;
 
@@ -883,7 +1111,7 @@ function runAnalysis() {
       maxUtil = util;
       governing = {
         string: str.label, loadName: load.name, mode, util, depth: load.depth,
-        detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · ${load.zone} annulus · ${load.temp.toFixed(0)}°F`
+        detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · wear ${wear}% · DLS ${dls.toFixed(1)}°/100ft · ${load.zone}`
       };
     }
   }
@@ -899,7 +1127,7 @@ function runAnalysis() {
     timestamp: new Date().toISOString()
   };
   renderResults();
-  logAudit(`v4 analysis: ${rows.length} depth-wise checks, max util ${(maxUtil * 100).toFixed(1)}%`);
+  logAudit(`v5 analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%`);
   autoSave();
   document.querySelector('[data-tab="analysis"]').click();
 }
@@ -931,6 +1159,29 @@ function drawPressureChart() {
   ctx.fillText("PP", w-80, 18); ctx.fillStyle = "#ef4444"; ctx.fillText("■", w-95, 18);
   ctx.fillStyle = "#8b9ab0"; ctx.fillText("FG", w-80, 32); ctx.fillStyle = "#f59e0b"; ctx.fillText("■", w-95, 32);
   ctx.fillStyle = "#8b9ab0"; ctx.fillText("MW", w-80, 46); ctx.fillStyle = "#00b4d8"; ctx.fillText("■", w-95, 46);
+}
+
+function drawSurveyChart() {
+  const c = document.getElementById("surveyChart");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  const d = buildSurveyDerived();
+  if (d.length < 2) return;
+  const maxMd = Math.max(...d.map(p => p.md), 1);
+  const maxTvd = Math.max(...d.map(p => p.tvd), 1);
+  const maxDisp = Math.max(...d.map(p => p.md * Math.sin((p.inc || 0) * DEG)), 100);
+  const ox = 50, oy = h - 30;
+  ctx.strokeStyle = "#00b4d8"; ctx.lineWidth = 2; ctx.beginPath();
+  d.forEach((p, i) => {
+    const x = ox + (p.md * Math.sin((p.inc || 0) * DEG) / maxDisp) * (w - 80);
+    const y = oy - (p.tvd / maxTvd) * (h - 50);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = "#8b9ab0"; ctx.font = "10px system-ui";
+  ctx.fillText("Vertical Section (TVD vs displacement)", ox, 16);
 }
 
 function drawSchematic() {
@@ -1008,7 +1259,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v4 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v5 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -1017,7 +1268,7 @@ function updateReportPreview() {
     ``, `--- Results (${lastAnalysis.rows.length} checks) ---`
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
-  lines.push("", "v4 engine: depth-wise loads, TOC external, FG scenarios, API TR 5C3 triaxial w/ biaxial reduction, connections, thermal axial, buckling span.");
+  lines.push("", "v5: wear allowance, APB, deviation survey/DLS, multi-fluid columns, running drag/shock.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -1036,14 +1287,14 @@ function exportHtmlReport() {
     <style>body{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}
     h1{color:#0077b6}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:0.4rem;font-size:0.85rem}th{background:#f0f4f8}
     .banner{padding:0.75rem;border-radius:8px;margin:1rem 0;font-weight:600}.pass{background:#d1fae5}.warn{background:#fef3c7}.fail{background:#fee2e2}</style></head><body>
-    <h1>Casing Design Pro v4 — Engineering Report</h1>
+    <h1>Casing Design Pro v5 — Engineering Report</h1>
     <p><strong>Well:</strong> ${inp.wellName} &nbsp; <strong>Field:</strong> ${inp.fieldName}<br>
     <strong>Engineer:</strong> ${inp.engineer} &nbsp; <strong>Date:</strong> ${new Date().toISOString().slice(0,10)}<br>
     <strong>Sign-off:</strong> ${inp.signoffStatus}</p>
     <div class="banner ${lastAnalysis.banner.cls}">${lastAnalysis.banner.text}</div>
     <p><strong>Governing:</strong> ${lastAnalysis.governing.string} — ${lastAnalysis.governing.loadName} — ${lastAnalysis.governing.mode} (${(lastAnalysis.governing.util*100).toFixed(1)}%)</p>
     <table><thead><tr><th>String</th><th>Load</th><th>Mode</th><th>Required</th><th>Available</th><th>Util</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-    <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v4. Verify with company standards before drilling approval.</p>
+    <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v5.</p>
     </body></html>`;
   downloadBlob(new Blob([html], { type: "text/html" }), `casing_report_${inp.wellName || "well"}.html`);
 }
@@ -1085,8 +1336,8 @@ function bindEvents() {
   document.getElementById("btnDemo").onclick = () => { state = defaultState(); setInputs({ wellName:"AD-B-01H", fieldName:"Demo Field", engineer:"Lead Drilling Engineer" }); logAudit("Demo well loaded"); renderAll(); };
   document.getElementById("btnReset").onclick = () => { if (confirm("Reset all data?")) { state = defaultState(); lastAnalysis = null; auditEntries = []; logAudit("Reset to defaults"); renderAll(); } };
 
-  document.getElementById("btnAddCasing").onclick = () => { counters.pipe++; state.catalog.push({ id:`C${counters.pipe}`, od:7, wt:29, grade:"L80", conn:"BTC" }); renderCatalog(); };
-  document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:9000, dls:0 }); renderStrings(); };
+  document.getElementById("btnAddCasing").onclick = () => { counters.pipe++; state.catalog.push({ id:`C${counters.pipe}`, od:7, wt:29, grade:"L80", conn:"BTC", wearPct: getInputs().defaultWearPct }); renderCatalog(); };
+  document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:9000, apbSealed:false, apbPsi:0 }); renderStrings(); };
   document.getElementById("btnTypicalStrings").onclick = () => { state.strings = defaultState().strings; renderStrings(); logAudit("Typical 5-string set loaded"); };
   document.getElementById("btnAddProfileRow").onclick = () => { counters.profile++; state.profiles.push({ tvd: counters.profile*2000, pp:9, fg:12, mwInt:9, mwExt:8.6, temp:100 }); renderProfiles(); };
   document.getElementById("btnProfilePreset").onclick = () => {
@@ -1097,7 +1348,38 @@ function bindEvents() {
     renderProfiles();
     logAudit("Offshore pressure profile loaded (WD=1500 ft)");
   };
-  document.getElementById("btnAddLoad").onclick = () => { counters.load++; const s = state.strings[0]; state.loads.push({ id:`custom${counters.load}`, name:`Custom ${counters.load}`, stringId:s?.id, depth:s?.shoe||10000, pInt:5000, pExt:3000, axial:400, temp:200, scenario:"production" }); renderLoads(); };
+  document.getElementById("btnAddLoad").onclick = () => { counters.load++; const s = state.strings[0]; state.loads.push({ id:`custom${counters.load}`, name:`Custom ${counters.load}`, stringId:s?.id, depth:s?.shoe||10000, pInt:5000, pExt:3000, axial:400, temp:200, scenario:"production", zone:"open" }); renderLoads(); };
+
+  document.getElementById("btnAddSurvey").onclick = () => {
+    const last = state.survey[state.survey.length - 1];
+    state.survey.push({ md: (last?.md || 0) + 2000, inc: last?.inc || 0, azi: last?.azi || 0 });
+    renderSurvey();
+  };
+  document.getElementById("btnSurveyDeviated").onclick = () => {
+    state.survey = defaultState().survey;
+    renderSurvey();
+    logAudit("Deviated survey loaded");
+  };
+  document.getElementById("btnAddFluidSeg").onclick = () => {
+    const sid = document.getElementById("fluidSegString").value || state.strings[0]?.id;
+    if (!sid) return;
+    if (!state.fluidSegments[sid]) state.fluidSegments[sid] = [];
+    const segs = state.fluidSegments[sid];
+    const last = segs[segs.length - 1];
+    segs.push({ top: last?.bottom || 0, bottom: (last?.bottom || 0) + 3000, ppg: 10.5 });
+    renderFluidSegments();
+  };
+  document.getElementById("btnFluidSegDemo").onclick = () => {
+    const sid = document.getElementById("fluidSegString").value || "s3";
+    state.fluidSegments[sid] = defaultState().fluidSegments.s3;
+    renderFluidSegments();
+  };
+  document.getElementById("fluidSegString").onchange = renderFluidSegments;
+
+  document.getElementById("surveyBody").addEventListener("input", onSurveyEdit);
+  document.getElementById("surveyBody").addEventListener("change", onSurveyEdit);
+  document.getElementById("fluidSegBody").addEventListener("input", onFluidSegEdit);
+  document.getElementById("fluidSegBody").addEventListener("change", onFluidSegEdit);
 
   document.getElementById("catalogBody").addEventListener("input", onCatalogEdit);
   document.getElementById("catalogBody").addEventListener("change", onCatalogEdit);
@@ -1113,6 +1395,13 @@ function bindEvents() {
     const ds = e.target.dataset.delStr; if (ds !== undefined) { state.strings.splice(+ds, 1); renderStrings(); return; }
     const dp = e.target.dataset.delProf; if (dp !== undefined) { state.profiles.splice(+dp, 1); renderProfiles(); return; }
     const dl = e.target.dataset.delLoad; if (dl !== undefined) { state.loads.splice(+dl, 1); renderLoads(); return; }
+    const dsv = e.target.dataset.delSurvey; if (dsv !== undefined) { state.survey.splice(+dsv, 1); renderSurvey(); return; }
+    const dfs = e.target.dataset.delFseg; if (dfs !== undefined) {
+      const sid = document.getElementById("fluidSegString").value;
+      state.fluidSegments[sid]?.splice(+dfs, 1);
+      renderFluidSegments();
+      return;
+    }
   });
 }
 
@@ -1120,6 +1409,7 @@ function onCatalogEdit(e) {
   const i = +e.target.dataset.cat, f = e.target.dataset.f;
   if (isNaN(i) || !f) return;
   const v = ["id","grade","conn"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (f === "wearPct" && isNaN(v)) return;
   if (typeof v === "number" && isNaN(v)) return;
   state.catalog[i][f] = v;
   renderCatalog();
@@ -1128,11 +1418,34 @@ function onCatalogEdit(e) {
 function onStringEdit(e) {
   const i = +e.target.dataset.str, f = e.target.dataset.f;
   if (isNaN(i) || !f) return;
+  if (f === "apbSealed") {
+    state.strings[i][f] = e.target.checked;
+    return;
+  }
   const v = ["label","type","pipeId"].includes(f) ? e.target.value : parseFloat(e.target.value);
   if (typeof v === "number" && isNaN(v)) return;
   state.strings[i][f] = v;
   if (["label","type","pipeId"].includes(f)) drawSchematic();
   else renderStrings();
+}
+
+function onSurveyEdit(e) {
+  const i = +e.target.dataset.survey, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const v = parseFloat(e.target.value);
+  if (isNaN(v)) return;
+  state.survey[i][f] = v;
+  renderSurvey();
+}
+
+function onFluidSegEdit(e) {
+  const i = +e.target.dataset.fseg, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const sid = document.getElementById("fluidSegString").value;
+  if (!state.fluidSegments[sid]) return;
+  const v = parseFloat(e.target.value);
+  if (isNaN(v)) return;
+  state.fluidSegments[sid][i][f] = v;
 }
 
 function onProfileEdit(e) {
@@ -1155,12 +1468,13 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV4");
     if (!saved) saved = localStorage.getItem("casingDesignProV3");
     if (saved) loadProject(JSON.parse(saved));
     else { state = defaultState(); renderAll(); }
   } catch { state = defaultState(); renderAll(); }
   bindEvents();
-  logAudit("Casing Design Pro v4 initialized");
+  logAudit("Casing Design Pro v5 initialized");
   setInterval(autoSave, 30000);
 }
 
