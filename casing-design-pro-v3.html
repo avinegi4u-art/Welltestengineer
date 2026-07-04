@@ -5,103 +5,306 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Casing Design Pro v5 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0a0e14; --surface: #111720; --surface-2: #1a212e; --surface-3: #222c3d;
-      --border: #2a3548; --text: #e8edf5; --muted: #8b9ab0;
-      --accent: #00b4d8; --accent-2: #48cae4; --warn: #f59e0b; --bad: #ef4444; --good: #10b981;
-      --radius: 14px; --shadow: 0 18px 45px rgba(0,0,0,0.35); color-scheme: dark;
+      --bg: #070b10; --surface: #0f141c; --surface-2: #161d28; --surface-3: #1e2736;
+      --border: #2a3548; --border-light: rgba(255,255,255,0.06);
+      --text: #eef2f7; --muted: #8b9ab0; --muted-2: #5c6b82;
+      --accent: #00b4d8; --accent-dim: rgba(0,180,216,0.12); --accent-2: #48cae4;
+      --warn: #f59e0b; --bad: #ef4444; --good: #10b981;
+      --radius: 14px; --radius-sm: 8px;
+      --shadow: 0 20px 50px rgba(0,0,0,0.45);
+      --header-h: 64px;
+      color-scheme: dark;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif;
-      background: radial-gradient(circle at 10% 0%, rgba(0,180,216,0.12), transparent 30rem),
-        linear-gradient(145deg, #070b10, var(--bg) 50%, #0d1520);
-      color: var(--text);
+      margin: 0; min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%, rgba(0,180,216,0.14), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 0%, rgba(72,202,228,0.08), transparent),
+        var(--bg);
+      color: var(--text); line-height: 1.5;
     }
     button, input, select, textarea { font: inherit; color: inherit; }
     button {
-      border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2);
-      padding: 0.55rem 0.9rem; cursor: pointer; transition: 0.15s ease;
+      border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+      padding: 0.5rem 0.85rem; cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.12s;
+      font-weight: 500; font-size: 0.82rem;
     }
-    button:hover { border-color: var(--accent); transform: translateY(-1px); }
-    button.primary { background: linear-gradient(135deg, var(--accent), #0096c7); color: #041018; border: 0; font-weight: 700; }
-    button.danger { border-color: rgba(239,68,68,0.5); color: var(--bad); }
-    button.small { padding: 0.35rem 0.65rem; font-size: 0.78rem; }
+    button:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-3); transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.primary {
+      background: linear-gradient(135deg, #00b4d8, #007ea8); color: #fff; border: 0;
+      font-weight: 600; box-shadow: 0 4px 16px rgba(0,180,216,0.25);
+    }
+    button.primary:hover:not(:disabled) { box-shadow: 0 6px 22px rgba(0,180,216,0.35); }
+    button.danger { border-color: rgba(239,68,68,0.45); color: #fca5a5; background: rgba(239,68,68,0.08); }
+    button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+    button.ghost:hover { color: var(--text); background: var(--surface-2); border-color: var(--border); }
+    button.small { padding: 0.32rem 0.6rem; font-size: 0.75rem; border-radius: 8px; }
+    button.icon-btn { padding: 0.4rem 0.55rem; min-width: 32px; }
     input, select, textarea {
-      width: 100%; border: 1px solid var(--border); border-radius: 10px;
-      background: #0c121a; padding: 0.55rem 0.7rem; outline: none;
+      width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: #0a1018; padding: 0.5rem 0.65rem; outline: none; font-size: 0.84rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,180,216,0.12); }
-    label { display: grid; gap: 0.3rem; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-    .app { width: min(1520px, calc(100% - 2rem)); margin: 0 auto; padding: 1rem 0 2rem; }
-    .hero { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .brand h1 { margin: 0; font-size: clamp(1.4rem, 1rem + 2vw, 2.2rem); background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .brand p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem; }
-    .badges { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: flex-start; }
-    .badge { padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.72rem; border: 1px solid rgba(0,180,216,0.25); background: rgba(0,180,216,0.08); color: var(--accent); }
-    .tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,180,216,0.15);
+    }
+    input[type="checkbox"] { width: auto; accent-color: var(--accent); cursor: pointer; }
+    label { display: grid; gap: 0.28rem; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+    label.inline { display: flex; align-items: center; gap: 0.45rem; text-transform: none; font-size: 0.82rem; color: var(--text); }
+
+    .app { width: min(1560px, calc(100% - 1.5rem)); margin: 0 auto; padding: 0 0 5rem; }
+
+    /* Top bar */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,11,16,0.88); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0.65rem 0; margin-bottom: 0.75rem;
+    }
+    .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(0,180,216,0.25), rgba(0,119,182,0.15));
+      border: 1px solid rgba(0,180,216,0.3); display: grid; place-items: center; font-size: 1.2rem;
+    }
+    .brand h1 {
+      margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+    }
+    .brand h1 span { color: var(--accent); }
+    .brand p { margin: 0; font-size: 0.72rem; color: var(--muted); max-width: 420px; }
+    .topbar-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .status-pill {
+      padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface-2);
+    }
+    .status-pill.idle { color: var(--muted); }
+    .status-pill.pass { color: var(--good); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1); }
+    .status-pill.warn { color: var(--warn); border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); }
+    .status-pill.fail { color: var(--bad); border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); }
+    .status-pill.running { color: var(--accent); border-color: rgba(0,180,216,0.4); animation: pulse 1.2s ease infinite; }
+    @keyframes pulse { 50% { opacity: 0.65; } }
+
+    /* Workflow */
+    .workflow {
+      display: flex; gap: 0.35rem; margin-bottom: 0.85rem; overflow-x: auto; padding-bottom: 0.25rem;
+    }
+    .wf-step {
+      flex: 1; min-width: 100px; padding: 0.45rem 0.65rem; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface); font-size: 0.7rem;
+      color: var(--muted-2); text-align: center; cursor: pointer; transition: 0.15s;
+    }
+    .wf-step:hover { border-color: var(--accent); color: var(--muted); }
+    .wf-step.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .wf-step.done { border-color: rgba(16,185,129,0.35); color: var(--good); }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.85rem;
+      padding: 0.3rem; background: var(--surface); border-radius: 12px; border: 1px solid var(--border-light);
+    }
     .tab {
-      padding: 0.55rem 0.95rem; border-radius: 999px; border: 1px solid var(--border);
-      background: var(--surface); cursor: pointer; font-size: 0.82rem; color: var(--muted);
+      padding: 0.48rem 0.85rem; border-radius: 8px; border: 1px solid transparent;
+      background: transparent; cursor: pointer; font-size: 0.8rem; color: var(--muted); font-weight: 500;
     }
-    .tab.active { color: var(--text); border-color: var(--accent); background: rgba(0,180,216,0.1); }
+    .tab:hover { color: var(--text); background: var(--surface-2); }
+    .tab.active { color: var(--text); background: var(--surface-3); border-color: var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
     .panel {
-      display: none; background: linear-gradient(145deg, var(--surface), #0e141d);
-      border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow);
+      display: none; animation: fadeIn 0.25s ease;
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: var(--radius); padding: 1.1rem; box-shadow: var(--shadow);
     }
     .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
     .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0.75rem; }
-    @media (max-width: 1000px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-    .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem; }
-    .card h3 { margin: 0 0 0.6rem; font-size: 0.88rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .row { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
-    .field { flex: 1; min-width: 120px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0.7rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 0.7rem; }
+    @media (max-width: 1100px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface-2); border: 1px solid var(--border-light);
+      border-radius: 12px; padding: 1rem; transition: border-color 0.2s;
+    }
+    .card:hover { border-color: rgba(0,180,216,0.15); }
+    .card h3 {
+      margin: 0 0 0.5rem; font-size: 0.78rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+    }
+    .card-desc { margin: 0 0 0.75rem; font-size: 0.78rem; color: var(--muted-2); line-height: 1.45; }
+
+    .kpi {
+      padding: 0.85rem; border-radius: 10px; border: 1px solid var(--border-light);
+      background: var(--surface-3); text-align: center;
+    }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; font-family: "JetBrains Mono", monospace; line-height: 1.2; }
+    .kpi .lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+    .kpi.good .val { color: var(--good); }
+    .kpi.warn .val { color: var(--warn); }
+    .kpi.bad .val { color: var(--bad); }
+    .kpi.accent .val { color: var(--accent); }
+
+    .governing-box {
+      padding: 1rem; border-radius: 10px; border: 1px solid var(--border);
+      background: linear-gradient(135deg, var(--surface-3), var(--surface-2));
+    }
+    .util-meter { height: 8px; border-radius: 999px; background: var(--border); margin: 0.6rem 0; overflow: hidden; }
+    .util-meter-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+    .util-meter-fill.ok { background: var(--good); }
+    .util-meter-fill.warn { background: var(--warn); }
+    .util-meter-fill.bad { background: var(--bad); }
+
     table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
-    th { text-align: left; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; padding: 0.45rem 0.35rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--surface-2); }
-    td { padding: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
-    td input, td select { padding: 0.35rem 0.45rem; font-size: 0.74rem; }
-    .table-wrap { overflow: auto; max-height: 380px; border: 1px solid var(--border); border-radius: 10px; }
-    .pill { display: inline-flex; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; }
+    th {
+      text-align: left; color: var(--muted); font-size: 0.65rem; text-transform: uppercase;
+      letter-spacing: 0.05em; padding: 0.5rem 0.4rem; border-bottom: 2px solid var(--border);
+      position: sticky; top: 0; background: var(--surface-2); z-index: 2; font-weight: 600;
+    }
+    td { padding: 0.38rem 0.4rem; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+    tr:hover td { background: rgba(0,180,216,0.03); }
+    tr.row-fail td { background: rgba(239,68,68,0.06); }
+    tr.row-warn td { background: rgba(245,158,11,0.05); }
+    td input, td select { padding: 0.32rem 0.42rem; font-size: 0.74rem; border-radius: 6px; }
+    .table-wrap {
+      overflow: auto; max-height: 420px; border: 1px solid var(--border);
+      border-radius: 10px; background: #0a0f16;
+    }
+    .table-meta { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.5rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+
+    .pill { display: inline-flex; padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.02em; }
     .pill.ok { background: rgba(16,185,129,0.15); color: var(--good); }
     .pill.warn { background: rgba(245,158,11,0.15); color: var(--warn); }
     .pill.bad { background: rgba(239,68,68,0.15); color: var(--bad); }
-    .status-banner { padding: 0.65rem 0.9rem; border-radius: 10px; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; }
-    .status-banner.pass { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: var(--good); }
-    .status-banner.warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: var(--warn); }
-    .status-banner.fail { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: var(--bad); }
-    canvas.chart { width: 100%; height: 260px; background: #05070b; border: 1px solid var(--border); border-radius: 10px; }
-    .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }
-    .audit { font-family: ui-monospace, monospace; font-size: 0.72rem; max-height: 180px; overflow: auto; color: var(--muted); }
-    .mono { font-family: ui-monospace, monospace; }
+    .pill.info { background: var(--accent-dim); color: var(--accent); }
+
+    .status-banner { padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 0.85rem; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    .status-banner.pass { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.35); color: var(--good); }
+    .status-banner.warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.35); color: var(--warn); }
+    .status-banner.fail { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.35); color: var(--bad); }
+
+    canvas.chart { width: 100%; height: 280px; background: #060a0f; border: 1px solid var(--border); border-radius: 10px; display: block; }
+
+    .toolbar { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0.75rem; }
+    .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.65rem; }
+    .filter-bar select { width: auto; min-width: 140px; font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+
+    .audit {
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.7rem;
+      max-height: 220px; overflow: auto; color: var(--muted); line-height: 1.6;
+      padding: 0.5rem; background: #0a0f16; border-radius: 8px; border: 1px solid var(--border-light);
+    }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
     .muted { color: var(--muted); font-size: 0.78rem; }
-    .signoff { border: 1px dashed rgba(0,180,216,0.35); padding: 0.75rem; border-radius: 10px; }
-    @media print { .tabs, .toolbar, button { display: none !important; } .panel { display: block !important; } }
+    .signoff { border: 1px dashed rgba(0,180,216,0.3); padding: 0.85rem; border-radius: 10px; background: rgba(0,180,216,0.03); }
+
+    .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--muted); }
+    .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+
+    .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 1rem 0 0.5rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border-light); font-weight: 600; }
+
+    .footer { margin-top: 2rem; padding: 1rem 0; border-top: 1px solid var(--border-light); font-size: 0.68rem; color: var(--muted-2); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* Toast */
+    .toast-wrap { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 200; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+    .toast {
+      padding: 0.65rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 500;
+      background: var(--surface-3); border: 1px solid var(--border); box-shadow: var(--shadow);
+      animation: slideIn 0.3s ease; pointer-events: auto; max-width: 340px;
+    }
+    .toast.success { border-color: rgba(16,185,129,0.4); }
+    .toast.error { border-color: rgba(239,68,68,0.4); }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } }
+
+    /* Loading overlay */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0; z-index: 150;
+      background: rgba(7,11,16,0.7); backdrop-filter: blur(4px);
+      place-items: center;
+    }
+    .loading-overlay.show { display: grid; }
+    .spinner {
+      width: 44px; height: 44px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .kbd { font-family: "JetBrains Mono", monospace; font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-3); color: var(--muted); }
+
+    .help-overlay {
+      display: none; position: fixed; inset: 0; z-index: 160;
+      background: rgba(7,11,16,0.78); backdrop-filter: blur(6px); place-items: center; padding: 1rem;
+    }
+    .help-overlay.show { display: grid; }
+    .help-panel {
+      width: min(480px, 100%); background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow);
+    }
+    .help-panel h2 { margin: 0 0 0.75rem; font-size: 1rem; }
+    .help-panel dl { margin: 0; display: grid; gap: 0.55rem; font-size: 0.82rem; }
+    .help-panel dt { font-weight: 600; color: var(--text); }
+    .help-panel dd { margin: 0 0 0.5rem; color: var(--muted); }
+    .help-panel .help-actions { margin-top: 1rem; display: flex; justify-content: flex-end; }
+
+    @media print {
+      .topbar, .tabs, .workflow, .toolbar, .filter-bar, button, .toast-wrap, .loading-overlay, .help-overlay { display: none !important; }
+      .panel { display: block !important; break-inside: avoid; }
+      body { background: white; color: black; }
+    }
+    @media (max-width: 640px) {
+      .brand p { display: none; }
+      .wf-step { min-width: 72px; font-size: 0.62rem; }
+    }
   </style>
 </head>
 <body>
 <div class="app">
-  <header class="hero">
-    <div class="brand">
-      <h1>Casing Design Pro v5</h1>
-      <p>Survey · multi-fluid · wear · APB · running drag/shock · depth-wise API TR 5C3 triaxial</p>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">⛯</div>
+        <div>
+          <h1>Casing Design <span>Pro v5</span></h1>
+          <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-pill idle" id="globalStatus">Ready</span>
+        <span class="status-pill idle" id="autosaveBadge">Autosave off</span>
+        <button class="primary" id="btnRunAllTop">▶ Run Analysis</button>
+        <button class="ghost small" id="btnHelp" title="Keyboard shortcuts">?</button>
+      </div>
     </div>
-    <div class="badges">
-      <span class="badge">API 5CT / TR 5C3</span>
-      <span class="badge">Local-first</span>
-      <span class="badge" id="autosaveBadge">Autosave off</span>
-    </div>
-  </header>
+  </div>
+
+  <div class="workflow" id="workflow">
+    <div class="wf-step active" data-goto="project">① Project</div>
+    <div class="wf-step" data-goto="profiles">② Profiles</div>
+    <div class="wf-step" data-goto="strings">③ Strings</div>
+    <div class="wf-step" data-goto="survey">④ Survey</div>
+    <div class="wf-step" data-goto="loads">⑤ Loads</div>
+    <div class="wf-step" data-goto="analysis">⑥ Analysis</div>
+    <div class="wf-step" data-goto="reports">⑦ Report</div>
+  </div>
 
   <nav class="tabs" id="tabNav">
-    <button class="tab active" data-tab="project">1 · Project</button>
-    <button class="tab" data-tab="profiles">2 · Pressure Profiles</button>
-    <button class="tab" data-tab="strings">3 · Casing Strings</button>
-    <button class="tab" data-tab="loads">4 · Load Cases</button>
-    <button class="tab" data-tab="analysis">5 · Analysis</button>
-    <button class="tab" data-tab="reports">6 · Reports & Audit</button>
-    <button class="tab" data-tab="survey">7 · Survey & Fluids</button>
+    <button class="tab active" data-tab="project">Project</button>
+    <button class="tab" data-tab="profiles">Profiles</button>
+    <button class="tab" data-tab="strings">Strings</button>
+    <button class="tab" data-tab="survey">Survey</button>
+    <button class="tab" data-tab="loads">Loads</button>
+    <button class="tab" data-tab="analysis">Analysis</button>
+    <button class="tab" data-tab="reports">Report</button>
   </nav>
 
   <section class="panel active" id="panel-project">
@@ -121,7 +324,8 @@
           <label class="field">Analysis Step (ft)<input id="analysisStepFt" type="number" value="1000" min="250" step="250" /></label>
           <label class="field">Ref / Install Temp (°F)<input id="refTempF" type="number" value="70" /></label>
         </div>
-        <div class="grid-3" style="margin-top:0.65rem">
+        <div class="section-title">Safety Factors</div>
+        <div class="grid-3" style="margin-top:0.5rem">
           <label class="field">Burst SF<input id="sfBurst" type="number" step="0.05" value="1.10" /></label>
           <label class="field">Collapse SF<input id="sfCollapse" type="number" step="0.05" value="1.00" /></label>
           <label class="field">Tension SF<input id="sfTension" type="number" step="0.05" value="1.20" /></label>
@@ -131,7 +335,7 @@
             <select id="tempDerating"><option value="on" selected>Enabled</option><option value="off">Disabled</option></select>
           </label>
         </div>
-        <h3 style="margin-top:1rem;font-size:0.82rem">Advanced Loads</h3>
+        <div class="section-title">Advanced Loads</div>
         <div class="grid-3">
           <label class="field">Default Wear (%)<input id="defaultWearPct" type="number" step="1" value="0" min="0" max="50" /></label>
           <label class="field">APB Enabled
@@ -144,14 +348,14 @@
         </div>
       </div>
       <div class="card">
-        <h3>Project Files</h3>
-        <p class="muted">Save complete well design as JSON. Autosaves to browser storage every 30 s.</p>
+        <h3>Project Control</h3>
+        <p class="card-desc">Save, load, and run the full integrity workflow. Autosaves every 30 s. <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to run analysis.</p>
         <div class="toolbar">
           <button class="primary" id="btnRunAll">▶ Run Full Analysis</button>
-          <button id="btnSaveProject">💾 Save JSON</button>
-          <button id="btnLoadProject">📂 Load JSON</button>
-          <button id="btnDemo">📋 Load Demo Well</button>
-          <button class="danger" id="btnReset">↺ Reset</button>
+          <button id="btnSaveProject">Save JSON</button>
+          <button id="btnLoadProject">Load JSON</button>
+          <button id="btnDemo">Demo Well</button>
+          <button class="danger" id="btnReset">Reset</button>
         </div>
         <input type="file" id="fileInput" accept="application/json,.json" hidden />
         <div class="signoff" style="margin-top:0.75rem">
@@ -168,7 +372,7 @@
     <div class="grid-2">
       <div class="card">
         <h3>Pressure & Temperature Profile</h3>
-        <p class="muted">Depth-based pore pressure (PP), fracture gradient (FG), mud weight (MW), and temperature.</p>
+        <p class="card-desc">Pore pressure, fracture gradient, mud weight, and geothermal gradient vs TVD.</p>
         <div class="toolbar">
           <button class="small" id="btnAddProfileRow">+ Add Point</button>
           <button class="small" id="btnProfilePreset">Load Typical Offshore</button>
@@ -190,7 +394,7 @@
           <button class="small" id="btnAddCasing">+ Add Pipe</button>
           <button class="small" id="btnRecalcRatings">↻ Recalculate All Ratings</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID calc</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
       </div>
       <div class="card">
         <h3>Casing Strings</h3>
@@ -204,13 +408,48 @@
     </div>
   </section>
 
+  <section class="panel" id="panel-survey">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Deviation Survey (MD · Inc · Azi)</h3>
+        <p class="card-desc">DLS from survey overrides manual string DLS for buckling. TVD computed via minimum curvature.</p>
+        <div class="toolbar">
+          <button class="small" id="btnAddSurvey">+ Survey Point</button>
+          <button class="small" id="btnSurveyDeviated">Load Deviated Demo</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>MD (ft)</th><th>Inc (°)</th><th>Azi (°)</th><th>TVD calc</th><th>DLS</th><th></th></tr></thead><tbody id="surveyBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Well Path</h3>
+        <canvas class="chart" id="surveyChart" width="600" height="260"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h3>Multi-Fluid Internal Columns</h3>
+      <p class="card-desc">Segmented fluid columns per string for internal hydrostatic pressure (replaces single fluid Int when defined).</p>
+      <div class="toolbar">
+        <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;color:var(--text)">String
+          <select id="fluidSegString" style="width:auto;min-width:180px"></select>
+        </label>
+        <button class="small" id="btnAddFluidSeg">+ Fluid Segment</button>
+        <button class="small" id="btnFluidSegDemo">Demo 2-Fluid Column</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Top TVD (ft)</th><th>Bottom TVD (ft)</th><th>Fluid (ppg)</th><th></th></tr></thead><tbody id="fluidSegBody"></tbody></table></div>
+    </div>
+  </section>
+
   <section class="panel" id="panel-loads">
     <div class="card">
       <h3>Load Case Matrix</h3>
-      <p class="muted">Auto-generated at depth steps along each string. TOC governs external pressure; FG governs kick/test/frac.</p>
+      <p class="card-desc">Auto-generated at depth steps along each string. TOC governs external pressure; FG governs kick/test/frac.</p>
       <div class="toolbar">
-        <button class="small" id="btnGenLoads">↻ Regenerate Load Cases</button>
-        <button class="small" id="btnAddLoad">+ Custom Load</button>
+        <button class="small" id="btnGenLoads">Regenerate</button>
+        <button class="small" id="btnAddLoad">+ Custom</button>
+        <span class="pill info" id="loadCountBadge">0 loads</span>
+      </div>
+      <div class="filter-bar">
+        <label class="inline">String <select id="loadFilterString"><option value="">All strings</option></select></label>
+        <label class="inline">Scenario <select id="loadFilterScenario"><option value="">All scenarios</option></select></label>
       </div>
       <div class="table-wrap"><table><thead><tr><th>Load Case</th><th>String</th><th>TVD</th><th>P Int</th><th>P Ext</th><th>Axial</th><th>Temp</th><th>Scenario</th><th>Zone</th><th></th></tr></thead><tbody id="loadsBody"></tbody></table></div>
     </div>
@@ -218,16 +457,28 @@
 
   <section class="panel" id="panel-analysis">
     <div id="analysisBanner"></div>
+    <div class="grid-4" id="kpiRow" style="margin-bottom:1rem;display:none">
+      <div class="kpi accent"><div class="val" id="kpiChecks">—</div><div class="lbl">Total Checks</div></div>
+      <div class="kpi" id="kpiMax"><div class="val" id="kpiMaxUtil">—</div><div class="lbl">Max Utilization</div></div>
+      <div class="kpi" id="kpiFail"><div class="val" id="kpiFailures">—</div><div class="lbl">Failures</div></div>
+      <div class="kpi" id="kpiMarg"><div class="val" id="kpiMarginal">—</div><div class="lbl">Marginal</div></div>
+    </div>
     <div class="grid-2">
       <div class="card">
         <h3>Design Check Results</h3>
+        <div class="filter-bar">
+          <label class="inline">Show <select id="resultFilter"><option value="all">All results</option><option value="fail">Failures only</option><option value="warn">Marginal + Fail</option><option value="top">Top 100 by util</option></select></label>
+          <label class="inline">String <select id="resultFilterString"><option value="">All</option></select></label>
+        </div>
+        <div class="table-meta"><span id="resultsMeta">Run analysis to see results</span></div>
         <div class="table-wrap"><table><thead><tr><th>String</th><th>Load @ TVD</th><th>Check</th><th>Required</th><th>Available</th><th>Util %</th><th>Status</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+        <div id="resultsEmpty" class="empty-state" style="display:none"><div class="icon">📐</div><p>No results match the current filter.</p></div>
       </div>
       <div class="card">
         <h3>Governing Case</h3>
-        <div id="governingCard" class="muted">Run analysis to see governing load case.</div>
-        <h3 style="margin-top:1rem">Utilization vs Depth</h3>
-        <canvas class="chart" id="utilChart" width="600" height="260"></canvas>
+        <div id="governingCard" class="governing-box muted">Run analysis to see governing load case.</div>
+        <h3 style="margin-top:1.25rem">Utilization vs Depth</h3>
+        <canvas class="chart" id="utilChart" width="600" height="280"></canvas>
       </div>
     </div>
   </section>
@@ -250,35 +501,31 @@
     </div>
   </section>
 
-  <section class="panel" id="panel-survey">
-    <div class="grid-2">
-      <div class="card">
-        <h3>Deviation Survey (MD · Inc · Azi)</h3>
-        <p class="muted">DLS from survey overrides manual string DLS for buckling. TVD computed via minimum curvature.</p>
-        <div class="toolbar">
-          <button class="small" id="btnAddSurvey">+ Survey Point</button>
-          <button class="small" id="btnSurveyDeviated">Load Deviated Demo</button>
-        </div>
-        <div class="table-wrap"><table><thead><tr><th>MD (ft)</th><th>Inc (°)</th><th>Azi (°)</th><th>TVD calc</th><th>DLS</th><th></th></tr></thead><tbody id="surveyBody"></tbody></table></div>
-      </div>
-      <div class="card">
-        <h3>Well Path</h3>
-        <canvas class="chart" id="surveyChart" width="600" height="260"></canvas>
-      </div>
-    </div>
-    <div class="card" style="margin-top:1rem">
-      <h3>Multi-Fluid Internal Columns</h3>
-      <p class="muted">Segmented fluid columns per string for internal hydrostatic pressure (replaces single fluid Int when defined).</p>
-      <div class="toolbar">
-        <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;color:var(--text)">String
-          <select id="fluidSegString" style="width:auto;min-width:180px"></select>
-        </label>
-        <button class="small" id="btnAddFluidSeg">+ Fluid Segment</button>
-        <button class="small" id="btnFluidSegDemo">Demo 2-Fluid Column</button>
-      </div>
-      <div class="table-wrap"><table><thead><tr><th>Top TVD (ft)</th><th>Bottom TVD (ft)</th><th>Fluid (ppg)</th><th></th></tr></thead><tbody id="fluidSegBody"></tbody></table></div>
-    </div>
-  </section>
+  <footer class="footer">
+    <span>Casing Design Pro v5 · Local-first · API 5CT / TR 5C3</span>
+    <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
+  </footer>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="help-overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="help-panel">
+    <h2 id="helpTitle">Shortcuts &amp; Workflow</h2>
+    <dl>
+      <dt><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span></dt>
+      <dd>Run full integrity analysis from any tab.</dd>
+      <dt><span class="kbd">Esc</span></dt>
+      <dd>Close this help panel.</dd>
+      <dt>Workflow steps (top bar)</dt>
+      <dd>Click ①–⑦ to jump between Project → Report. Completed steps show green.</dd>
+      <dt>Filters</dt>
+      <dd>Loads and Analysis tabs support string/scenario filters without re-running.</dd>
+      <dt>Autosave</dt>
+      <dd>Project state saves to browser storage every 30 seconds.</dd>
+    </dl>
+    <div class="help-actions"><button id="btnHelpClose">Close</button></div>
+  </div>
 </div>
 
 <script>
@@ -718,6 +965,123 @@ function pill(util) {
   return `<span class="pill ${s.cls}">${s.text}</span>`;
 }
 
+/* ===== UI HELPERS ===== */
+let activeTab = "project";
+
+function toast(msg, type = "success") {
+  const wrap = document.getElementById("toastWrap");
+  if (!wrap) return;
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transition = "opacity 0.3s";
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+
+function switchTab(tabId) {
+  activeTab = tabId;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tabId));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${tabId}`));
+  updateWorkflow();
+  if (tabId === "profiles") requestAnimationFrame(drawPressureChart);
+  if (tabId === "strings") requestAnimationFrame(drawSchematic);
+  if (tabId === "survey") requestAnimationFrame(drawSurveyChart);
+  if (tabId === "analysis") requestAnimationFrame(drawUtilChart);
+}
+
+function updateWorkflow() {
+  const order = ["project", "profiles", "strings", "survey", "loads", "analysis", "reports"];
+  const idx = order.indexOf(activeTab);
+  document.querySelectorAll(".wf-step").forEach(el => {
+    const gi = order.indexOf(el.dataset.goto);
+    el.classList.remove("active", "done");
+    if (el.dataset.goto === activeTab) el.classList.add("active");
+    else if (gi >= 0 && gi < idx) el.classList.add("done");
+  });
+}
+
+function updateSubtitle() {
+  const inp = getInputs();
+  const el = document.getElementById("wellSubtitle");
+  if (el) el.textContent = `${inp.wellName || "Unnamed"} · ${inp.fieldName || "—"} · ${inp.engineer || "Engineer"}`;
+}
+
+function setGlobalStatus(cls, text) {
+  const el = document.getElementById("globalStatus");
+  if (!el) return;
+  el.className = `status-pill ${cls}`;
+  el.textContent = text;
+}
+
+function showLoading(on) {
+  document.getElementById("loadingOverlay")?.classList.toggle("show", on);
+}
+
+function showHelp() {
+  document.getElementById("helpOverlay")?.classList.add("show");
+}
+
+function hideHelp() {
+  document.getElementById("helpOverlay")?.classList.remove("show");
+}
+
+function utilMeterClass(u) {
+  if (u >= 1) return "bad";
+  if (u >= 0.85) return "warn";
+  return "ok";
+}
+
+function populateFilterDropdowns() {
+  const loadStr = document.getElementById("loadFilterString");
+  const loadSc = document.getElementById("loadFilterScenario");
+  const resStr = document.getElementById("resultFilterString");
+  if (loadStr) {
+    const v = loadStr.value;
+    loadStr.innerHTML = `<option value="">All strings</option>` +
+      state.strings.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+    loadStr.value = v;
+  }
+  if (loadSc) {
+    const v = loadSc.value;
+    loadSc.innerHTML = `<option value="">All scenarios</option>` +
+      Object.entries(SCENARIOS).map(([k, sc]) => `<option value="${k}">${sc.label}</option>`).join("");
+    loadSc.value = v;
+  }
+  if (resStr) {
+    const v = resStr.value;
+    const labels = [...new Set(state.strings.map(s => s.label))];
+    resStr.innerHTML = `<option value="">All</option>` + labels.map(l => `<option value="${l}">${l}</option>`).join("");
+    resStr.value = v;
+  }
+}
+
+function getFilteredLoads() {
+  const strF = document.getElementById("loadFilterString")?.value || "";
+  const scF = document.getElementById("loadFilterScenario")?.value || "";
+  return state.loads.filter(l => {
+    if (strF && l.stringId !== strF) return false;
+    if (scF && l.scenario !== scF) return false;
+    return true;
+  });
+}
+
+function getFilteredResults(rows) {
+  const mode = document.getElementById("resultFilter")?.value || "all";
+  const strF = document.getElementById("resultFilterString")?.value || "";
+  let r = [...rows];
+  if (strF) r = r.filter(x => x.string === strF);
+  if (mode === "fail") r = r.filter(x => x.util >= 1);
+  else if (mode === "warn") r = r.filter(x => x.util >= 0.85);
+  r.sort((a, b) => b.util - a.util);
+  if (mode === "top") r = r.slice(0, 100);
+  else if (mode !== "fail") r = r.slice(0, 500);
+  return r;
+}
+
 /* ===== STATE ===== */
 const STORAGE_KEY = "casingDesignProV5";
 let auditEntries = [];
@@ -970,48 +1334,92 @@ function renderProfiles() {
 }
 
 function renderLoads() {
-  document.getElementById("loadsBody").innerHTML = state.loads.map((l, i) => `<tr>
-    <td><input value="${l.name}" data-load="${i}" data-f="name" style="width:120px"/></td>
-    <td><select data-load="${i}" data-f="stringId">${state.strings.map(s => `<option value="${s.id}" ${l.stringId===s.id?"selected":""}>${s.label}</option>`).join("")}</select></td>
-    <td><input type="number" value="${l.depth}" data-load="${i}" data-f="depth" style="width:55px"/></td>
-    <td><input type="number" value="${Math.round(l.pInt)}" data-load="${i}" data-f="pInt" style="width:60px"/></td>
-    <td><input type="number" value="${Math.round(l.pExt)}" data-load="${i}" data-f="pExt" style="width:60px"/></td>
-    <td><input type="number" step="0.1" value="${l.axial.toFixed(1)}" data-load="${i}" data-f="axial" style="width:55px"/></td>
-    <td><input type="number" value="${Math.round(l.temp)}" data-load="${i}" data-f="temp" style="width:50px"/></td>
-    <td><select data-load="${i}" data-f="scenario">${Object.entries(SCENARIOS).map(([k,v]) => `<option value="${k}" ${l.scenario===k?"selected":""}>${k}</option>`).join("")}</select></td>
+  populateFilterDropdowns();
+  const filtered = getFilteredLoads();
+  const badge = document.getElementById("loadCountBadge");
+  if (badge) badge.textContent = `${filtered.length} / ${state.loads.length} loads`;
+
+  document.getElementById("loadsBody").innerHTML = filtered.map((l, i) => {
+    const str = state.strings.find(s => s.id === l.stringId);
+    const scLabel = SCENARIOS[l.scenario]?.label || l.scenario;
+    return `<tr>
+    <td title="${l.name}"><input value="${l.name}" data-load="${state.loads.indexOf(l)}" data-f="name" style="width:110px"/></td>
+    <td>${str?.label || "—"}</td>
+    <td class="mono">${l.depth}</td>
+    <td class="mono">${Math.round(l.pInt)}</td>
+    <td class="mono">${Math.round(l.pExt)}</td>
+    <td class="mono">${l.axial.toFixed(1)}</td>
+    <td class="mono">${Math.round(l.temp)}</td>
+    <td><span class="pill info">${scLabel.split(" / ")[0]}</span></td>
     <td class="muted">${l.zone || ""}</td>
-    <td><button class="small danger" data-del-load="${i}">✕</button></td>
-  </tr>`).join("");
+    <td><button class="small danger icon-btn" data-del-load="${state.loads.indexOf(l)}">✕</button></td>
+  </tr>`;
+  }).join("");
 }
 
 function renderResults() {
   const body = document.getElementById("resultsBody");
   const banner = document.getElementById("analysisBanner");
   const gov = document.getElementById("governingCard");
+  const kpiRow = document.getElementById("kpiRow");
+  const empty = document.getElementById("resultsEmpty");
+  const meta = document.getElementById("resultsMeta");
+
   if (!lastAnalysis || !lastAnalysis.rows.length) {
     body.innerHTML = "";
     banner.innerHTML = "";
-    gov.textContent = "Run analysis to see governing load case.";
+    gov.innerHTML = `<div class="empty-state"><div class="icon">📐</div><p>Configure well data and click <strong>Run Analysis</strong> to evaluate casing integrity.</p></div>`;
+    kpiRow.style.display = "none";
+    if (meta) meta.textContent = "Run analysis to see results";
+    if (empty) empty.style.display = "none";
+    setGlobalStatus("idle", "Ready");
     return;
   }
-  body.innerHTML = lastAnalysis.rows
-    .sort((a, b) => b.util - a.util)
-    .slice(0, 500)
-    .map(r => `<tr>
-    <td>${r.string}</td><td>${r.loadName}</td><td>${r.mode}</td>
+
+  const failures = lastAnalysis.rows.filter(r => r.util >= 1).length;
+  const marginals = lastAnalysis.rows.filter(r => r.util >= 0.85 && r.util < 1).length;
+  const maxUtil = Math.max(...lastAnalysis.rows.map(r => r.util), 0);
+  const filtered = getFilteredResults(lastAnalysis.rows);
+
+  kpiRow.style.display = "grid";
+  document.getElementById("kpiChecks").textContent = lastAnalysis.rows.length;
+  document.getElementById("kpiMaxUtil").textContent = `${(maxUtil * 100).toFixed(1)}%`;
+  document.getElementById("kpiFailures").textContent = failures;
+  document.getElementById("kpiMarginal").textContent = marginals;
+  document.getElementById("kpiMax").className = `kpi ${utilMeterClass(maxUtil)}`;
+  document.getElementById("kpiFail").className = `kpi ${failures > 0 ? "bad" : "good"}`;
+  document.getElementById("kpiMarg").className = `kpi ${marginals > 0 ? "warn" : "good"}`;
+
+  body.innerHTML = filtered.map(r => {
+    const rowCls = r.util >= 1 ? "row-fail" : r.util >= 0.85 ? "row-warn" : "";
+    return `<tr class="${rowCls}">
+    <td>${r.string}</td><td style="max-width:160px;font-size:0.72rem">${r.loadName}</td><td>${r.mode}</td>
     <td class="mono">${r.unit === "ratio" ? (r.required * 100).toFixed(1) + "%" : Math.round(r.required) + " " + r.unit}</td>
     <td class="mono">${r.unit === "ratio" ? "100%" : Math.round(r.available) + " " + r.unit}</td>
     <td><strong>${(r.util * 100).toFixed(1)}%</strong></td><td>${pill(r.util)}</td>
-  </tr>`).join("");
-  if (lastAnalysis.rows.length > 500) {
-    body.innerHTML += `<tr><td colspan="7" class="muted">Showing top 500 of ${lastAnalysis.rows.length} checks (sorted by utilization)</td></tr>`;
-  }
+  </tr>`;
+  }).join("");
+
+  if (empty) empty.style.display = filtered.length ? "none" : "block";
+  if (meta) meta.textContent = `Showing ${filtered.length} of ${lastAnalysis.rows.length} checks`;
+
   const b = lastAnalysis.banner;
-  banner.innerHTML = `<div class="status-banner ${b.cls}">${b.text}</div>`;
-  gov.innerHTML = `<strong>${lastAnalysis.governing.string}</strong> · ${lastAnalysis.governing.loadName} · ${lastAnalysis.governing.mode}<br>
-    Utilization <strong>${(lastAnalysis.governing.util * 100).toFixed(1)}%</strong> · Depth ${lastAnalysis.governing.depth} ft · ${lastAnalysis.governing.detail}`;
+  banner.innerHTML = `<div class="status-banner ${b.cls}">${b.cls === "pass" ? "✓" : b.cls === "warn" ? "⚠" : "✗"} ${b.text}</div>`;
+  setGlobalStatus(b.cls === "pass" ? "pass" : b.cls === "warn" ? "warn" : "fail", b.text.split("—")[0].trim());
+
+  const g = lastAnalysis.governing;
+  const gCls = utilMeterClass(g.util);
+  gov.className = "governing-box";
+  gov.innerHTML = `
+    <div style="font-size:0.85rem"><strong>${g.string}</strong> · ${g.loadName}</div>
+    <div style="margin:0.4rem 0;font-size:1.35rem;font-weight:700;font-family:JetBrains Mono,monospace;color:var(--${gCls === "bad" ? "bad" : gCls === "warn" ? "warn" : "good"})">${(g.util * 100).toFixed(1)}%</div>
+    <div class="util-meter"><div class="util-meter-fill ${gCls}" style="width:${Math.min(g.util * 100, 100)}%"></div></div>
+    <div style="font-size:0.78rem;color:var(--muted)">${g.mode} @ ${g.depth} ft TVD</div>
+    <div style="font-size:0.72rem;color:var(--muted-2);margin-top:0.35rem">${g.detail || ""}</div>`;
+
   drawUtilChart();
   updateReportPreview();
+  populateFilterDropdowns();
 }
 
 function renderAll() {
@@ -1019,14 +1427,18 @@ function renderAll() {
   renderStrings();
   renderProfiles();
   renderSurvey();
-  if (!state.loads.length) generateLoadCases();
+  if (!state.loads.length) generateLoadCases(false);
   else renderLoads();
   renderResults();
+  updateSubtitle();
+  populateFilterDropdowns();
+  updateWorkflow();
+  updateReportPreview();
   document.getElementById("auditLog").textContent = auditEntries.join("\n");
 }
 
 /* ===== LOAD GENERATION & ANALYSIS ===== */
-function generateLoadCases() {
+function generateLoadCases(render = true) {
   const inp = getInputs();
   const step = inp.analysisStepFt || 1000;
   const loads = [];
@@ -1053,83 +1465,101 @@ function generateLoadCases() {
     }
   }
   state.loads = loads;
-  renderLoads();
-  logAudit(`Generated ${loads.length} depth-wise load points (step ${step} ft)`);
+  if (render) {
+    renderLoads();
+    logAudit(`Generated ${loads.length} depth-wise load points (step ${step} ft)`);
+    toast(`Generated ${loads.length} load cases`);
+  }
 }
 
 function runAnalysis() {
   const inp = getInputs();
-  if (!state.strings.length) { alert("Add at least one casing string."); return; }
-  if (!state.loads.length) generateLoadCases();
+  if (!state.strings.length) { toast("Add at least one casing string.", "error"); return; }
 
-  const sf = {
-    burst: inp.sfBurst, collapse: inp.sfCollapse,
-    tension: inp.sfTension, triaxial: inp.sfTriaxial, buckling: inp.sfBuckling
-  };
+  setGlobalStatus("running", "Analyzing…");
+  showLoading(true);
 
-  const rows = [];
-  const depthChart = [];
-  let maxUtil = 0;
-  let governing = null;
-  let failures = 0;
-  let marginals = 0;
+  setTimeout(() => {
+    try {
+      if (!state.loads.length) generateLoadCases(false);
 
-  for (const load of state.loads) {
-    const str = state.strings.find(s => s.id === load.stringId);
-    const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
-    if (!str || !pipeDef) continue;
-
-    const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
-    const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
-    const conn = connectionLimits(ratings, pipeDef.conn);
-    const tri = apiTriaxialCheck(load.axial, load.pInt, load.pExt, ratings, conn, sf);
-
-    const span = str.spanFt ?? Math.max(str.shoe - str.top, 500);
-    const dls = surveyAtTvd(load.depth).dls || 0;
-    const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, dls) / sf.buckling;
-    const buckReq = Math.max(load.axial, 0);
-    const buckUtil = buckAvail > 0 && buckAvail < Infinity ? buckReq / buckAvail : 0;
-
-    const util = Math.max(tri.util, buckUtil);
-    let mode = tri.mode;
-    if (buckUtil > tri.util) mode = "Buckling";
-
-    const required = mode === "Buckling" ? buckReq : (tri.mode === "Burst" ? tri.burstReq : tri.mode === "Collapse" ? tri.collapseReq : tri.mode === "Tension" ? tri.tensionReq : tri.mode === "Compression" ? tri.compReq : tri.triReq);
-    const available = mode === "Buckling" ? buckAvail : (tri.mode === "Burst" ? tri.burstAvail : tri.mode === "Collapse" ? tri.collapseAvail : tri.mode === "Tension" ? tri.tensionAvail : tri.mode === "Compression" ? tri.compAvail : 1);
-    const unit = mode === "Buckling" ? "klbf" : (tri.mode === "Triaxial" ? "ratio" : "psi");
-
-    rows.push({
-      string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
-      required, available, util, unit, depth: load.depth,
-      zone: load.zone, scenario: load.scenario
-    });
-    depthChart.push({ depth: load.depth, util, string: str.label, scenario: load.scenario });
-
-    if (util >= 1) failures++;
-    else if (util >= 0.85) marginals++;
-    if (util > maxUtil) {
-      maxUtil = util;
-      governing = {
-        string: str.label, loadName: load.name, mode, util, depth: load.depth,
-        detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · wear ${wear}% · DLS ${dls.toFixed(1)}°/100ft · ${load.zone}`
+      const sf = {
+        burst: inp.sfBurst, collapse: inp.sfCollapse,
+        tension: inp.sfTension, triaxial: inp.sfTriaxial, buckling: inp.sfBuckling
       };
+
+      const rows = [];
+      const depthChart = [];
+      let maxUtil = 0;
+      let governing = null;
+      let failures = 0;
+      let marginals = 0;
+
+      for (const load of state.loads) {
+        const str = state.strings.find(s => s.id === load.stringId);
+        const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
+        if (!str || !pipeDef) continue;
+
+        const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
+        const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
+        const conn = connectionLimits(ratings, pipeDef.conn);
+        const tri = apiTriaxialCheck(load.axial, load.pInt, load.pExt, ratings, conn, sf);
+
+        const span = str.spanFt ?? Math.max(str.shoe - str.top, 500);
+        const dls = surveyAtTvd(load.depth).dls || 0;
+        const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, dls) / sf.buckling;
+        const buckReq = Math.max(load.axial, 0);
+        const buckUtil = buckAvail > 0 && buckAvail < Infinity ? buckReq / buckAvail : 0;
+
+        const util = Math.max(tri.util, buckUtil);
+        let mode = tri.mode;
+        if (buckUtil > tri.util) mode = "Buckling";
+
+        const required = mode === "Buckling" ? buckReq : (tri.mode === "Burst" ? tri.burstReq : tri.mode === "Collapse" ? tri.collapseReq : tri.mode === "Tension" ? tri.tensionReq : tri.mode === "Compression" ? tri.compReq : tri.triReq);
+        const available = mode === "Buckling" ? buckAvail : (tri.mode === "Burst" ? tri.burstAvail : tri.mode === "Collapse" ? tri.collapseAvail : tri.mode === "Tension" ? tri.tensionAvail : tri.mode === "Compression" ? tri.compAvail : 1);
+        const unit = mode === "Buckling" ? "klbf" : (tri.mode === "Triaxial" ? "ratio" : "psi");
+
+        rows.push({
+          string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
+          required, available, util, unit, depth: load.depth,
+          zone: load.zone, scenario: load.scenario
+        });
+        depthChart.push({ depth: load.depth, util, string: str.label, scenario: load.scenario });
+
+        if (util >= 1) failures++;
+        else if (util >= 0.85) marginals++;
+        if (util > maxUtil) {
+          maxUtil = util;
+          governing = {
+            string: str.label, loadName: load.name, mode, util, depth: load.depth,
+            detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · wear ${wear}% · DLS ${dls.toFixed(1)}°/100ft · ${load.zone}`
+          };
+        }
+      }
+
+      let banner;
+      if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
+      else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
+      else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
+
+      lastAnalysis = {
+        rows, depthChart, banner,
+        governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "" },
+        timestamp: new Date().toISOString()
+      };
+      renderResults();
+      logAudit(`Analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%`);
+      autoSave();
+      updateWorkflow();
+      switchTab("analysis");
+      toast(`Analysis complete — ${rows.length} checks`, failures > 0 ? "error" : "success");
+    } catch (err) {
+      setGlobalStatus("fail", "Analysis error");
+      toast(err.message || "Analysis failed", "error");
+    } finally {
+      showLoading(false);
     }
-  }
-
-  let banner;
-  if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
-  else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
-  else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
-
-  lastAnalysis = {
-    rows, depthChart, banner,
-    governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "" },
-    timestamp: new Date().toISOString()
-  };
-  renderResults();
-  logAudit(`v5 analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%`);
-  autoSave();
-  document.querySelector('[data-tab="analysis"]').click();
+  }, 50);
 }
 
 /* ===== CHARTS ===== */
@@ -1273,14 +1703,15 @@ function updateReportPreview() {
 }
 
 function exportCsv() {
-  if (!lastAnalysis) { alert("Run analysis first."); return; }
+  if (!lastAnalysis) { toast("Run analysis first.", "error"); return; }
   const hdr = "String,Load,Mode,Required,Available,Utilization,Unit,Depth\n";
   const rows = lastAnalysis.rows.map(r => `"${r.string}","${r.loadName}","${r.mode}",${r.required},${r.available},${(r.util*100).toFixed(1)}%,${r.unit},${r.depth}`).join("\n");
   downloadBlob(new Blob(["\uFEFF" + hdr + rows], { type: "text/csv" }), `casing_design_${getInputs().wellName || "well"}.csv`);
+  toast("CSV exported");
 }
 
 function exportHtmlReport() {
-  if (!lastAnalysis) { alert("Run analysis first."); return; }
+  if (!lastAnalysis) { toast("Run analysis first.", "error"); return; }
   const inp = getInputs();
   const rows = lastAnalysis.rows.map(r => `<tr><td>${r.string}</td><td>${r.loadName}</td><td>${r.mode}</td><td>${Math.round(r.required)}</td><td>${Math.round(r.available)}</td><td>${(r.util*100).toFixed(1)}%</td><td>${pill(r.util)}</td></tr>`).join("");
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Casing Design Report — ${inp.wellName}</title>
@@ -1297,6 +1728,7 @@ function exportHtmlReport() {
     <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v5.</p>
     </body></html>`;
   downloadBlob(new Blob([html], { type: "text/html" }), `casing_report_${inp.wellName || "well"}.html`);
+  toast("HTML report exported");
 }
 
 function downloadBlob(blob, name) {
@@ -1310,31 +1742,84 @@ function bindEvents() {
   document.getElementById("tabNav").addEventListener("click", e => {
     const tab = e.target.closest(".tab");
     if (!tab) return;
-    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
-    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${tab.dataset.tab}`));
+    switchTab(tab.dataset.tab);
+  });
+
+  document.getElementById("workflow")?.addEventListener("click", e => {
+    const step = e.target.closest(".wf-step");
+    if (step?.dataset.goto) switchTab(step.dataset.goto);
   });
 
   document.getElementById("btnRunAll").onclick = runAnalysis;
-  document.getElementById("btnGenLoads").onclick = generateLoadCases;
-  document.getElementById("btnRecalcRatings").onclick = () => { renderCatalog(); logAudit("Ratings recalculated"); };
+  document.getElementById("btnRunAllTop").onclick = runAnalysis;
+  document.getElementById("btnGenLoads").onclick = () => generateLoadCases(true);
+  document.getElementById("btnRecalcRatings").onclick = () => { renderCatalog(); logAudit("Ratings recalculated"); toast("Ratings recalculated"); };
   document.getElementById("btnExportCsv").onclick = exportCsv;
   document.getElementById("btnExportHtml").onclick = exportHtmlReport;
   document.getElementById("btnPrint").onclick = () => window.print();
 
+  document.getElementById("btnHelp")?.addEventListener("click", showHelp);
+  document.getElementById("btnHelpClose")?.addEventListener("click", hideHelp);
+  document.getElementById("helpOverlay")?.addEventListener("click", e => {
+    if (e.target.id === "helpOverlay") hideHelp();
+  });
+
+  ["resultFilter", "resultFilterString"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", renderResults);
+  });
+  ["loadFilterString", "loadFilterScenario"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", renderLoads);
+  });
+  ["wellName", "fieldName", "engineerName"].forEach(id => {
+    document.getElementById(id)?.addEventListener("input", updateSubtitle);
+  });
+
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      runAnalysis();
+    }
+    if (e.key === "Escape") hideHelp();
+  });
+
   document.getElementById("btnSaveProject").onclick = () => {
     downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
     logAudit("Project exported to JSON");
+    toast("Project saved to JSON");
   };
   document.getElementById("btnLoadProject").onclick = () => document.getElementById("fileInput").click();
   document.getElementById("fileInput").onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch(err) { alert(err.message); } };
+    r.onload = () => {
+      try {
+        loadProject(JSON.parse(r.result));
+        toast("Project loaded");
+      } catch (err) {
+        toast(err.message || "Invalid project file", "error");
+      }
+    };
     r.readAsText(f);
     e.target.value = "";
   };
-  document.getElementById("btnDemo").onclick = () => { state = defaultState(); setInputs({ wellName:"AD-B-01H", fieldName:"Demo Field", engineer:"Lead Drilling Engineer" }); logAudit("Demo well loaded"); renderAll(); };
-  document.getElementById("btnReset").onclick = () => { if (confirm("Reset all data?")) { state = defaultState(); lastAnalysis = null; auditEntries = []; logAudit("Reset to defaults"); renderAll(); } };
+  document.getElementById("btnDemo").onclick = () => {
+    state = defaultState();
+    setInputs({ wellName: "AD-B-01H", fieldName: "Demo Field", engineer: "Lead Drilling Engineer" });
+    lastAnalysis = null;
+    logAudit("Demo well loaded");
+    renderAll();
+    toast("Demo well loaded");
+  };
+  document.getElementById("btnReset").onclick = () => {
+    if (confirm("Reset all data?")) {
+      state = defaultState();
+      lastAnalysis = null;
+      auditEntries = [];
+      logAudit("Reset to defaults");
+      renderAll();
+      toast("Project reset");
+    }
+  };
 
   document.getElementById("btnAddCasing").onclick = () => { counters.pipe++; state.catalog.push({ id:`C${counters.pipe}`, od:7, wt:29, grade:"L80", conn:"BTC", wearPct: getInputs().defaultWearPct }); renderCatalog(); };
   document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:9000, apbSealed:false, apbPsi:0 }); renderStrings(); };
@@ -1474,6 +1959,8 @@ function init() {
     else { state = defaultState(); renderAll(); }
   } catch { state = defaultState(); renderAll(); }
   bindEvents();
+  updateSubtitle();
+  updateWorkflow();
   logAudit("Casing Design Pro v5 initialized");
   setInterval(autoSave, 30000);
 }
