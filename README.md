@@ -19,6 +19,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 | `dst-2-bha-reference.js` | Embedded reference string for one-click load in the tally app |
 | `vertical-kill-sheet-app.html` | Vertical well kill sheet with live formulas |
 | `acid-calculator-v5.html` | Acid job calculator |
-| `Carbonate Acid Job Calculator.html` | Carbonate acid job planner |
+| `CasingDesign.html` | WellCat-style casing screening v2.1 — burst, collapse, tension (superseded by Pro v3) |
+| `casing-design-pro-v3.html` | **Casing Design Pro v4** — depth-wise loads, TOC external pressure, FG kick/test/frac, API TR 5C3 triaxial w/ biaxial reduction, connection ratings, liner/tieback loads, thermal axial, buckling span+DLS, offshore hydrostatics |
 
 Open any `.html` file in a browser — no build step required.

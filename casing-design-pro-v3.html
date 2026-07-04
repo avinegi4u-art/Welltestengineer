@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casing Design Pro v4 — WellCat-Class Integrity Suite</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0a0e14; --surface: #111720; --surface-2: #1a212e; --surface-3: #222c3d;
+      --border: #2a3548; --text: #e8edf5; --muted: #8b9ab0;
+      --accent: #00b4d8; --accent-2: #48cae4; --warn: #f59e0b; --bad: #ef4444; --good: #10b981;
+      --radius: 14px; --shadow: 0 18px 45px rgba(0,0,0,0.35); color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif;
+      background: radial-gradient(circle at 10% 0%, rgba(0,180,216,0.12), transparent 30rem),
+        linear-gradient(145deg, #070b10, var(--bg) 50%, #0d1520);
+      color: var(--text);
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button {
+      border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2);
+      padding: 0.55rem 0.9rem; cursor: pointer; transition: 0.15s ease;
+    }
+    button:hover { border-color: var(--accent); transform: translateY(-1px); }
+    button.primary { background: linear-gradient(135deg, var(--accent), #0096c7); color: #041018; border: 0; font-weight: 700; }
+    button.danger { border-color: rgba(239,68,68,0.5); color: var(--bad); }
+    button.small { padding: 0.35rem 0.65rem; font-size: 0.78rem; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: #0c121a; padding: 0.55rem 0.7rem; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,180,216,0.12); }
+    label { display: grid; gap: 0.3rem; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .app { width: min(1520px, calc(100% - 2rem)); margin: 0 auto; padding: 1rem 0 2rem; }
+    .hero { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .brand h1 { margin: 0; font-size: clamp(1.4rem, 1rem + 2vw, 2.2rem); background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem; }
+    .badges { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: flex-start; }
+    .badge { padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.72rem; border: 1px solid rgba(0,180,216,0.25); background: rgba(0,180,216,0.08); color: var(--accent); }
+    .tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .tab {
+      padding: 0.55rem 0.95rem; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--surface); cursor: pointer; font-size: 0.82rem; color: var(--muted);
+    }
+    .tab.active { color: var(--text); border-color: var(--accent); background: rgba(0,180,216,0.1); }
+    .panel {
+      display: none; background: linear-gradient(145deg, var(--surface), #0e141d);
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow);
+    }
+    .panel.active { display: block; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0.75rem; }
+    @media (max-width: 1000px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+    .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem; }
+    .card h3 { margin: 0 0 0.6rem; font-size: 0.88rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .row { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
+    .field { flex: 1; min-width: 120px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    th { text-align: left; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; padding: 0.45rem 0.35rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--surface-2); }
+    td { padding: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    td input, td select { padding: 0.35rem 0.45rem; font-size: 0.74rem; }
+    .table-wrap { overflow: auto; max-height: 380px; border: 1px solid var(--border); border-radius: 10px; }
+    .pill { display: inline-flex; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; }
+    .pill.ok { background: rgba(16,185,129,0.15); color: var(--good); }
+    .pill.warn { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .pill.bad { background: rgba(239,68,68,0.15); color: var(--bad); }
+    .status-banner { padding: 0.65rem 0.9rem; border-radius: 10px; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; }
+    .status-banner.pass { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: var(--good); }
+    .status-banner.warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: var(--warn); }
+    .status-banner.fail { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: var(--bad); }
+    canvas.chart { width: 100%; height: 260px; background: #05070b; border: 1px solid var(--border); border-radius: 10px; }
+    .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }
+    .audit { font-family: ui-monospace, monospace; font-size: 0.72rem; max-height: 180px; overflow: auto; color: var(--muted); }
+    .mono { font-family: ui-monospace, monospace; }
+    .muted { color: var(--muted); font-size: 0.78rem; }
+    .signoff { border: 1px dashed rgba(0,180,216,0.35); padding: 0.75rem; border-radius: 10px; }
+    @media print { .tabs, .toolbar, button { display: none !important; } .panel { display: block !important; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="brand">
+      <h1>Casing Design Pro v4</h1>
+      <p>Depth-wise loads · TOC external pressure · FG scenarios · API TR 5C3 triaxial · connections · thermal · buckling</p>
+    </div>
+    <div class="badges">
+      <span class="badge">API 5CT / TR 5C3</span>
+      <span class="badge">Local-first</span>
+      <span class="badge" id="autosaveBadge">Autosave off</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabNav">
+    <button class="tab active" data-tab="project">1 · Project</button>
+    <button class="tab" data-tab="profiles">2 · Pressure Profiles</button>
+    <button class="tab" data-tab="strings">3 · Casing Strings</button>
+    <button class="tab" data-tab="loads">4 · Load Cases</button>
+    <button class="tab" data-tab="analysis">5 · Analysis</button>
+    <button class="tab" data-tab="reports">6 · Reports & Audit</button>
+  </nav>
+
+  <section class="panel active" id="panel-project">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Well & Design Basis</h3>
+        <div class="grid-3">
+          <label class="field">Well Name<input id="wellName" value="AD-B-01H" /></label>
+          <label class="field">Field<input id="fieldName" value="Demo Field" /></label>
+          <label class="field">Engineer<input id="engineerName" value="Lead Drilling Engineer" /></label>
+          <label class="field">Design Code
+            <select id="designCode"><option value="api">API 5CT / TR 5C3</option><option value="iso">ISO 10400</option></select>
+          </label>
+          <label class="field">Water Depth (ft)<input id="waterDepth" type="number" value="0" /></label>
+          <label class="field">Rig Floor Elev (ft)<input id="rigElev" type="number" value="75" /></label>
+          <label class="field">Seawater (ppg)<input id="seawaterPpg" type="number" step="0.1" value="8.6" /></label>
+          <label class="field">Analysis Step (ft)<input id="analysisStepFt" type="number" value="1000" min="250" step="250" /></label>
+          <label class="field">Ref / Install Temp (°F)<input id="refTempF" type="number" value="70" /></label>
+        </div>
+        <div class="grid-3" style="margin-top:0.65rem">
+          <label class="field">Burst SF<input id="sfBurst" type="number" step="0.05" value="1.10" /></label>
+          <label class="field">Collapse SF<input id="sfCollapse" type="number" step="0.05" value="1.00" /></label>
+          <label class="field">Tension SF<input id="sfTension" type="number" step="0.05" value="1.20" /></label>
+          <label class="field">Triaxial SF<input id="sfTriaxial" type="number" step="0.05" value="1.25" /></label>
+          <label class="field">Buckling SF<input id="sfBuckling" type="number" step="0.05" value="1.30" /></label>
+          <label class="field">Temp Derating
+            <select id="tempDerating"><option value="on" selected>Enabled</option><option value="off">Disabled</option></select>
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Project Files</h3>
+        <p class="muted">Save complete well design as JSON. Autosaves to browser storage every 30 s.</p>
+        <div class="toolbar">
+          <button class="primary" id="btnRunAll">▶ Run Full Analysis</button>
+          <button id="btnSaveProject">💾 Save JSON</button>
+          <button id="btnLoadProject">📂 Load JSON</button>
+          <button id="btnDemo">📋 Load Demo Well</button>
+          <button class="danger" id="btnReset">↺ Reset</button>
+        </div>
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+        <div class="signoff" style="margin-top:0.75rem">
+          <label>Office Sign-off Status
+            <select id="signoffStatus"><option value="draft">Draft</option><option value="review">Under Review</option><option value="approved">Approved for Drilling</option></select>
+          </label>
+          <label style="margin-top:0.5rem">Sign-off Notes<textarea id="signoffNotes" rows="3" placeholder="Peer review comments, assumptions, limitations..."></textarea></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-profiles">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Pressure & Temperature Profile</h3>
+        <p class="muted">Depth-based pore pressure (PP), fracture gradient (FG), mud weight (MW), and temperature.</p>
+        <div class="toolbar">
+          <button class="small" id="btnAddProfileRow">+ Add Point</button>
+          <button class="small" id="btnProfilePreset">Load Typical Offshore</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>TVD (ft)</th><th>PP (ppg)</th><th>FG (ppg)</th><th>MW Int (ppg)</th><th>MW Ext (ppg)</th><th>Temp (°F)</th><th></th></tr></thead><tbody id="profileBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Pressure vs Depth</h3>
+        <canvas class="chart" id="pressureChart" width="600" height="260"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-strings">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Casing Catalog — API Ratings from Pipe Properties</h3>
+        <div class="toolbar">
+          <button class="small" id="btnAddCasing">+ Add Pipe</button>
+          <button class="small" id="btnRecalcRatings">↻ Recalculate All Ratings</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>ID</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Casing Strings</h3>
+        <div class="toolbar">
+          <button class="small" id="btnAddString">+ Add String</button>
+          <button class="small" id="btnTypicalStrings">Typical 5-String Set</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Type</th><th>Top</th><th>Shoe</th><th>TOC</th><th>Pipe</th><th>Fl Int</th><th>Fl Ext</th><th>Hang (klbf)</th><th>PreTen</th><th>Span</th><th>DLS</th><th></th></tr></thead><tbody id="stringsBody"></tbody></table></div>
+        <canvas class="chart" id="schematicChart" width="600" height="280" style="margin-top:0.75rem"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-loads">
+    <div class="card">
+      <h3>Load Case Matrix</h3>
+      <p class="muted">Auto-generated at depth steps along each string. TOC governs external pressure; FG governs kick/test/frac.</p>
+      <div class="toolbar">
+        <button class="small" id="btnGenLoads">↻ Regenerate Load Cases</button>
+        <button class="small" id="btnAddLoad">+ Custom Load</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Load Case</th><th>String</th><th>TVD</th><th>P Int</th><th>P Ext</th><th>Axial</th><th>Temp</th><th>Scenario</th><th>Zone</th><th></th></tr></thead><tbody id="loadsBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-analysis">
+    <div id="analysisBanner"></div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Design Check Results</h3>
+        <div class="table-wrap"><table><thead><tr><th>String</th><th>Load @ TVD</th><th>Check</th><th>Required</th><th>Available</th><th>Util %</th><th>Status</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Governing Case</h3>
+        <div id="governingCard" class="muted">Run analysis to see governing load case.</div>
+        <h3 style="margin-top:1rem">Utilization vs Depth</h3>
+        <canvas class="chart" id="utilChart" width="600" height="260"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-reports">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Export</h3>
+        <div class="toolbar">
+          <button id="btnExportCsv">⬇ CSV Results</button>
+          <button id="btnExportHtml">⬇ HTML Report</button>
+          <button id="btnPrint">🖨 Print</button>
+        </div>
+        <div id="reportPreview" class="muted" style="margin-top:0.75rem; white-space:pre-wrap; font-size:0.78rem"></div>
+      </div>
+      <div class="card">
+        <h3>Engineering Audit Trail</h3>
+        <div class="audit" id="auditLog"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===== API 5CT / TR 5C3 ENGINE ===== */
+const GRADES = {
+  H40: { yield: 40000, uts: 60000 }, J55: { yield: 55000, uts: 75000 }, K55: { yield: 55000, uts: 95000 },
+  N80: { yield: 80000, uts: 100000 }, L80: { yield: 80000, uts: 95000 }, C90: { yield: 90000, uts: 100000 },
+  T95: { yield: 95000, uts: 105000 }, P110: { yield: 110000, uts: 125000 }, Q125: { yield: 125000, uts: 135000 }
+};
+
+const SCENARIOS = {
+  production: { label: "Production / Worst Case" },
+  cementing: { label: "Cementing / Displacement" },
+  pressureTest: { label: "Pressure Test" },
+  kick: { label: "Kick / Well Control" },
+  evacuation: { label: "Evacuation / Lost Returns" },
+  stimulation: { label: "Stimulation / Frac" }
+};
+
+const CONNECTIONS = {
+  BTC: { burstF: 1.0, collapseF: 1.0, tensionF: 0.55, compressionF: 0.55 },
+  LTC: { burstF: 0.95, collapseF: 0.95, tensionF: 0.55, compressionF: 0.55 },
+  STC: { burstF: 0.9, collapseF: 0.9, tensionF: 0.5, compressionF: 0.5 },
+  "VAM TOP": { burstF: 0.92, collapseF: 0.88, tensionF: 0.72, compressionF: 0.65 },
+  "VAM 21": { burstF: 0.9, collapseF: 0.86, tensionF: 0.7, compressionF: 0.63 },
+  TSH: { burstF: 0.88, collapseF: 0.85, tensionF: 0.68, compressionF: 0.6 },
+  FOX: { burstF: 0.9, collapseF: 0.87, tensionF: 0.7, compressionF: 0.62 }
+};
+
+const STEEL_ALPHA = 6.5e-6;
+
+const TYPE_COLORS = {
+  surface: "#48cae4", intermediate: "#00b4d8", production: "#0077b6",
+  liner: "#ff6b35", tieback: "#f59e0b", conductor: "#94a3b8"
+};
+
+function pipeIdFromWeight(od, wtPpf) {
+  const K = (0.7854 * 490) / 144;
+  const idSq = od * od - wtPpf / K;
+  if (idSq <= 0) return od * 0.85;
+  return Math.sqrt(idSq);
+}
+
+function wallThickness(od, id) { return (od - id) / 2; }
+
+function barlowBurst(od, id, yieldPsi) {
+  const t = wallThickness(od, id);
+  return 0.875 * ((2 * yieldPsi * t) / od);
+}
+
+function apiCollapsePressure(od, id, yieldPsi) {
+  const t = wallThickness(od, id);
+  const D_t = od / t;
+  const Yp = yieldPsi;
+  const E = 30e6;
+  const YpE = (2 * Yp) / E;
+  const A = 2.8762 + 0.10679e-5 * Yp + 0.21301e-10 * Yp * Yp - 0.53132e-16 * Yp ** 3;
+  const B = 0.026233 + 0.50636e-6 * Yp;
+  const C = -465.93 + 0.030867 * Yp - 0.10483e-7 * Yp * Yp + 0.36989e-13 * Yp ** 3;
+  const F = 46.95e6 * (3 * B / (2 + B)) ** 3 * YpE ** (B / (2 + B));
+  const G = F * YpE;
+  const Pyp = (2 * Yp * (D_t - 1)) / (D_t * D_t);
+  const Pp = Yp * (C / D_t - G);
+  const Pe = 46.95e6 / (D_t * (D_t - 1) ** 2);
+  let Pc;
+  if (D_t < 12.5) Pc = Pyp;
+  else if (D_t < 15) Pc = Math.min(Pyp, Pp);
+  else if (D_t < 25) Pc = Math.min(Pp, Pe);
+  else Pc = Pe;
+  return 0.875 * Math.max(Pc, 0);
+}
+
+function bodyYieldTensionKlbf(od, id, yieldPsi) {
+  const area = (Math.PI / 4) * (od * od - id * id);
+  return (0.875 * yieldPsi * area) / 1000;
+}
+
+function tempDeratingFactor(grade, tempF) {
+  const pts = {
+    K55: [[250, 1], [300, 1], [350, 0.99], [400, 0.96], [450, 0.93]],
+    L80: [[250, 1], [300, 0.97], [350, 0.94], [400, 0.91], [450, 0.87]],
+    N80: [[250, 1], [300, 0.97], [350, 0.94], [400, 0.91], [450, 0.87]],
+    P110: [[250, 1], [300, 0.96], [350, 0.93], [400, 0.9], [450, 0.86]],
+    Q125: [[250, 1], [300, 0.95], [350, 0.92], [400, 0.89], [450, 0.85]]
+  }[grade] || [[250, 1], [300, 0.97], [350, 0.94], [400, 0.91], [450, 0.87]];
+  if (tempF <= pts[0][0]) return 1;
+  for (let i = 1; i < pts.length; i++) {
+    if (tempF <= pts[i][0]) {
+      const [t0, f0] = pts[i - 1];
+      const [t1, f1] = pts[i];
+      return f0 + ((f1 - f0) * (tempF - t0)) / (t1 - t0);
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+
+function interpolateProfile(profiles, depth, field) {
+  if (!profiles.length) return 0;
+  const sorted = [...profiles].sort((a, b) => a.tvd - b.tvd);
+  if (depth <= sorted[0].tvd) return sorted[0][field];
+  if (depth >= sorted[sorted.length - 1].tvd) return sorted[sorted.length - 1][field];
+  for (let i = 1; i < sorted.length; i++) {
+    if (depth <= sorted[i].tvd) {
+      const a = sorted[i - 1];
+      const b = sorted[i];
+      const f = (depth - a.tvd) / (b.tvd - a.tvd);
+      return a[field] + f * (b[field] - a[field]);
+    }
+  }
+  return sorted[0][field];
+}
+
+function hydrostaticPsi(ppg, tvd) { return ppg * 0.052 * Math.max(tvd, 0); }
+
+function offshoreExternalPsi(tvd, mwExt, inp) {
+  const sw = inp.seawaterPpg || 8.6;
+  const wd = inp.waterDepth || 0;
+  if (wd <= 0) return hydrostaticPsi(mwExt, tvd);
+  const mudlineTvd = wd + (inp.rigElev || 0);
+  if (tvd <= mudlineTvd) return hydrostaticPsi(sw, tvd);
+  return hydrostaticPsi(sw, mudlineTvd) + hydrostaticPsi(mwExt, tvd - mudlineTvd);
+}
+
+function externalZone(tvd, string) {
+  const toc = string.toc ?? string.top;
+  return tvd < toc ? "open" : "cemented";
+}
+
+function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
+  const pp = interpolateProfile(state.profiles, tvd, "pp");
+  const mwE = string.fluidExt ?? interpolateProfile(state.profiles, tvd, "mwExt");
+  const pPP = hydrostaticPsi(pp, tvd);
+  const toc = string.toc ?? string.top;
+  const zone = externalZone(tvd, string);
+
+  if (scenarioKey === "evacuation") {
+    return zone === "cemented" ? pPP * 0.9 : offshoreExternalPsi(tvd, mwE, inp) * 0.15;
+  }
+  if (zone === "open") {
+    return offshoreExternalPsi(tvd, mwE, inp);
+  }
+  if (scenarioKey === "production") return pPP * 0.65;
+  if (scenarioKey === "stimulation") return pPP * 0.75;
+  return pPP;
+}
+
+function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
+  const fg = interpolateProfile(state.profiles, tvd, "fg");
+  const pp = interpolateProfile(state.profiles, tvd, "pp");
+  const mwI = string.fluidInt ?? interpolateProfile(state.profiles, tvd, "mwInt");
+  const pFG = hydrostaticPsi(fg, tvd);
+  const pMW = hydrostaticPsi(mwI, tvd);
+  const pPP = hydrostaticPsi(pp, tvd);
+
+  switch (scenarioKey) {
+    case "kick":
+      return Math.min(pFG * 0.92, pMW + 250);
+    case "pressureTest":
+      return Math.min(pFG * 0.85, pMW * 1.2);
+    case "stimulation":
+      return pFG * 0.95;
+    case "evacuation":
+      return 0;
+    case "production":
+      return Math.max(pMW, pPP * 0.95);
+    case "cementing":
+      return pMW * 1.12;
+    default:
+      return pMW;
+  }
+}
+
+function thermalAxialKlbf(od, id, deltaTF) {
+  const area = (Math.PI / 4) * (od * od - id * id);
+  const E = 30e6;
+  return -(STEEL_ALPHA * deltaTF * E * area) / 1000;
+}
+
+function buoyedWeightKlbf(od, id, lengthFt, fluidPpg) {
+  const area = 0.7854 * (od * od - id * id);
+  const steelLbf = area * lengthFt * 0.283;
+  const buoy = area * lengthFt * (fluidPpg * 0.052);
+  return Math.max((steelLbf - buoy) / 1000, 0);
+}
+
+function axialForceAtDepth(tvd, string, inp) {
+  const pipe = state.catalog.find(p => p.id === string.pipeId);
+  if (!pipe) return 0;
+  const id = pipeIdFromWeight(pipe.od, pipe.wt);
+  const below = Math.max(string.shoe - tvd, 0);
+  let axial = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt);
+
+  if (string.type === "liner") {
+    const hang = string.hangOffKlbf ?? axial * 1.15;
+    if (tvd <= string.top + 50) axial += hang;
+    else if (tvd < string.top + 500) axial += hang * (1 - (tvd - string.top) / 500);
+  }
+  if (string.type === "tieback") {
+    axial += string.preTensionKlbf ?? 150;
+  }
+
+  const temp = interpolateProfile(state.profiles, tvd, "temp");
+  const refT = inp.refTempF ?? 70;
+  const dT = temp - refT;
+  const constrained = tvd <= (string.toc ?? string.top) ? 1.0 : 0.35;
+  axial += thermalAxialKlbf(pipe.od, id, dT) * constrained;
+
+  return axial;
+}
+
+function bodyYieldCompressionKlbf(od, id, yieldPsi) {
+  return bodyYieldTensionKlbf(od, id, yieldPsi);
+}
+
+function biaxialCollapseFactor(axialLbf, yieldPsi, od, id) {
+  const area = (Math.PI / 4) * (od * od - id * id);
+  const fy = 0.875 * yieldPsi * area / 1000;
+  if (axialLbf <= 0 || fy <= 0) return 1;
+  const f = axialLbf / fy;
+  if (f >= 1) return 0;
+  return Math.max(Math.sqrt(1 - 0.75 * f * f) - 0.5 * f, 0);
+}
+
+function biaxialBurstFactor(axialLbf, yieldPsi, od, id) {
+  const area = (Math.PI / 4) * (od * od - id * id);
+  const fy = 0.875 * yieldPsi * area / 1000;
+  if (axialLbf >= 0 || fy <= 0) return 1;
+  const f = Math.abs(axialLbf) / fy;
+  if (f >= 1) return 0;
+  return Math.max(Math.sqrt(1 - 0.75 * f * f) - 0.5 * f, 0);
+}
+
+function connectionLimits(pipeRatings, connName) {
+  const c = CONNECTIONS[connName] || CONNECTIONS.BTC;
+  return {
+    burst: pipeRatings.burst * c.burstF,
+    collapse: pipeRatings.collapse * c.collapseF,
+    tension: pipeRatings.tension * c.tensionF,
+    compression: pipeRatings.compression * c.compressionF
+  };
+}
+
+function apiTriaxialCheck(axialKlbf, pInt, pExt, ratings, connLimits, sf) {
+  const area = (Math.PI / 4) * (ratings.od * ratings.od - ratings.id * ratings.id);
+  const diffP = pInt - pExt;
+  const Fa = axialKlbf * 1000;
+  const Fy = 0.875 * ratings.yieldPsi * area;
+
+  const burstBase = Math.min(ratings.burst, connLimits.burst);
+  const collapseBase = Math.min(ratings.collapse, connLimits.collapse);
+  const burstAvail = burstBase * biaxialBurstFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
+  const collapseAvail = collapseBase * biaxialCollapseFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
+
+  const burstReq = Math.max(diffP, 0) * sf.burst;
+  const collapseReq = Math.max(-diffP, 0) * sf.collapse;
+  const burstUtil = burstAvail > 0 ? burstReq / burstAvail : 0;
+  const collapseUtil = collapseAvail > 0 ? collapseReq / collapseAvail : 0;
+
+  const tensionAvail = Math.min(ratings.tension, connLimits.tension);
+  const compAvail = Math.min(ratings.compression ?? ratings.tension, connLimits.compression);
+  const tensionReq = Math.max(axialKlbf, 0) * sf.tension;
+  const compReq = Math.max(-axialKlbf, 0) * sf.tension;
+  const tensionUtil = tensionAvail > 0 ? tensionReq / tensionAvail : 0;
+  const compUtil = compAvail > 0 ? compReq / compAvail : 0;
+
+  const Fe = Math.sqrt(Math.max(0, Fa * Fa - 0.75 * diffP * diffP * area * area));
+  const triUtil = Fy > 0 ? (Fe / Fy) * sf.triaxial : 0;
+
+  const util = Math.max(burstUtil, collapseUtil, tensionUtil, compUtil, triUtil);
+  let mode = "Triaxial";
+  if (util === burstUtil && burstUtil > 0) mode = "Burst";
+  else if (util === collapseUtil && collapseUtil > 0) mode = "Collapse";
+  else if (util === tensionUtil && tensionUtil > 0) mode = "Tension";
+  else if (util === compUtil && compUtil > 0) mode = "Compression";
+
+  return {
+    util, mode, burstUtil, collapseUtil, tensionUtil, compUtil, triUtil,
+    burstReq, collapseReq, tensionReq, compReq, triReq: triUtil,
+    burstAvail, collapseAvail, tensionAvail, compAvail, triAvail: 1
+  };
+}
+
+function sinusoidalBucklingKlbf(od, id, spanFt, dls = 0) {
+  if (spanFt <= 0) return Infinity;
+  const E = 30e6;
+  const I = (Math.PI / 64) * (od ** 4 - id ** 4);
+  const Fcr = (Math.PI * Math.PI * E * I) / (spanFt * spanFt) / 1000;
+  const dlsFactor = 1 + Math.pow(dls / 8, 2);
+  return Fcr / dlsFactor;
+}
+
+function depthPointsForString(string, stepFt) {
+  const pts = [];
+  const step = Math.max(stepFt, 250);
+  for (let d = string.top; d < string.shoe; d += step) pts.push(Math.round(d));
+  pts.push(string.shoe);
+  return [...new Set(pts)].sort((a, b) => a - b);
+}
+
+function calcPipeRatings(pipe, tempF, derateOn) {
+  const grade = GRADES[pipe.grade] || GRADES.L80;
+  const id = pipe.idCalc || pipeIdFromWeight(pipe.od, pipe.wt);
+  const derate = derateOn ? tempDeratingFactor(pipe.grade, tempF) : 1;
+  const y = grade.yield * derate;
+  const tension = bodyYieldTensionKlbf(pipe.od, id, y);
+  return {
+    od: pipe.od, id, wt: pipe.wt, grade: pipe.grade, yieldPsi: y, conn: pipe.conn,
+    burst: barlowBurst(pipe.od, id, y),
+    collapse: apiCollapsePressure(pipe.od, id, y),
+    tension,
+    compression: bodyYieldCompressionKlbf(pipe.od, id, y)
+  };
+}
+
+function utilStatus(u) {
+  if (u <= 0) return { cls: "ok", text: "N/A" };
+  if (u < 0.7) return { cls: "ok", text: "PASS" };
+  if (u < 0.85) return { cls: "ok", text: "OK" };
+  if (u < 1) return { cls: "warn", text: "MARGINAL" };
+  return { cls: "bad", text: "FAIL" };
+}
+
+function pill(util) {
+  const s = utilStatus(util);
+  return `<span class="pill ${s.cls}">${s.text}</span>`;
+}
+
+/* ===== STATE ===== */
+const STORAGE_KEY = "casingDesignProV4";
+let auditEntries = [];
+let lastAnalysis = null;
+
+const defaultState = () => ({
+  catalog: [
+    { id: "S", od: 20, wt: 94, grade: "K55", conn: "BTC" },
+    { id: "I", od: 13.375, wt: 68, grade: "L80", conn: "BTC" },
+    { id: "P", od: 9.625, wt: 53.5, grade: "L80", conn: "VAM TOP" },
+    { id: "L1", od: 7, wt: 32, grade: "L80", conn: "VAM TOP" },
+    { id: "TB", od: 9.625, wt: 53.5, grade: "P110", conn: "BTC" }
+  ],
+  strings: [
+    { id: "s1", label: "Surface Casing", type: "surface", top: 0, shoe: 3000, toc: 500, pipeId: "S", fluidInt: 8.6, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 3000, dls: 1 },
+    { id: "s2", label: "Intermediate", type: "intermediate", top: 0, shoe: 8000, toc: 1500, pipeId: "I", fluidInt: 10.5, fluidExt: 9.0, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 6500, dls: 2 },
+    { id: "s3", label: "Production", type: "production", top: 0, shoe: 11000, toc: 2000, pipeId: "P", fluidInt: 11.5, fluidExt: 9.5, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 9000, dls: 2 },
+    { id: "s4", label: "Drilling Liner", type: "liner", top: 10000, shoe: 12500, toc: 10500, pipeId: "L1", fluidInt: 12.0, fluidExt: 9.8, hangOffKlbf: 280, preTensionKlbf: 0, spanFt: 2500, dls: 4 },
+    { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 4200, dls: 2 }
+  ],
+  profiles: [
+    { tvd: 0, pp: 8.6, fg: 9.0, mwInt: 8.6, mwExt: 8.6, temp: 70 },
+    { tvd: 3000, pp: 9.0, fg: 12.5, mwInt: 9.5, mwExt: 8.6, temp: 120 },
+    { tvd: 8000, pp: 12.0, fg: 15.5, mwInt: 12.0, mwExt: 9.0, temp: 180 },
+    { tvd: 11000, pp: 13.5, fg: 16.8, mwInt: 13.5, mwExt: 9.5, temp: 220 },
+    { tvd: 12500, pp: 14.2, fg: 17.5, mwInt: 14.0, mwExt: 9.8, temp: 250 }
+  ],
+  loads: []
+});
+
+let state = defaultState();
+let counters = { pipe: 10, string: 10, load: 10, profile: 10 };
+
+function logAudit(msg) {
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
+  auditEntries.unshift(`[${ts}] ${msg}`);
+  if (auditEntries.length > 200) auditEntries.pop();
+  const el = document.getElementById("auditLog");
+  if (el) el.textContent = auditEntries.join("\n");
+}
+
+function getInputs() {
+  return {
+    wellName: document.getElementById("wellName").value.trim(),
+    fieldName: document.getElementById("fieldName").value.trim(),
+    engineer: document.getElementById("engineerName").value.trim(),
+    designCode: document.getElementById("designCode").value,
+    waterDepth: +document.getElementById("waterDepth").value || 0,
+    rigElev: +document.getElementById("rigElev").value || 0,
+    seawaterPpg: +document.getElementById("seawaterPpg").value || 8.6,
+    analysisStepFt: +document.getElementById("analysisStepFt").value || 1000,
+    refTempF: +document.getElementById("refTempF").value || 70,
+    sfBurst: +document.getElementById("sfBurst").value || 1,
+    sfCollapse: +document.getElementById("sfCollapse").value || 1,
+    sfTension: +document.getElementById("sfTension").value || 1,
+    sfTriaxial: +document.getElementById("sfTriaxial").value || 1,
+    sfBuckling: +document.getElementById("sfBuckling").value || 1,
+    tempDerating: document.getElementById("tempDerating").value === "on",
+    signoffStatus: document.getElementById("signoffStatus").value,
+    signoffNotes: document.getElementById("signoffNotes").value
+  };
+}
+
+function setInputs(inp) {
+  document.getElementById("wellName").value = inp.wellName || "";
+  document.getElementById("fieldName").value = inp.fieldName || "";
+  document.getElementById("engineerName").value = inp.engineer || "";
+  document.getElementById("designCode").value = inp.designCode || "api";
+  document.getElementById("waterDepth").value = inp.waterDepth ?? 0;
+  document.getElementById("rigElev").value = inp.rigElev ?? 75;
+  document.getElementById("seawaterPpg").value = inp.seawaterPpg ?? 8.6;
+  document.getElementById("analysisStepFt").value = inp.analysisStepFt ?? 1000;
+  document.getElementById("refTempF").value = inp.refTempF ?? 70;
+  document.getElementById("sfBurst").value = inp.sfBurst ?? 1.1;
+  document.getElementById("sfCollapse").value = inp.sfCollapse ?? 1;
+  document.getElementById("sfTension").value = inp.sfTension ?? 1.2;
+  document.getElementById("sfTriaxial").value = inp.sfTriaxial ?? 1.25;
+  document.getElementById("sfBuckling").value = inp.sfBuckling ?? 1.3;
+  document.getElementById("tempDerating").value = inp.tempDerating === false ? "off" : "on";
+  document.getElementById("signoffStatus").value = inp.signoffStatus || "draft";
+  document.getElementById("signoffNotes").value = inp.signoffNotes || "";
+}
+
+function serializeProject() {
+  return JSON.stringify({ version: 4, inputs: getInputs(), state, auditEntries }, null, 2);
+}
+
+function migrateState(st) {
+  st.strings = (st.strings || []).map(s => ({
+    hangOffKlbf: 0, preTensionKlbf: 0, spanFt: Math.max((s.shoe || 0) - (s.top || 0), 500), dls: 0,
+    ...s
+  }));
+  return st;
+}
+
+function loadProject(data) {
+  if (!data || !data.state) throw new Error("Invalid project file");
+  setInputs(data.inputs || {});
+  state = migrateState(data.state);
+  auditEntries = data.auditEntries || [];
+  logAudit(`Project loaded (v${data.version || "?"})`);
+  renderAll();
+}
+
+function autoSave() {
+  try {
+    localStorage.setItem(STORAGE_KEY, serializeProject());
+    document.getElementById("autosaveBadge").textContent = "Autosaved " + new Date().toLocaleTimeString();
+  } catch (e) { /* ignore */ }
+}
+
+/* ===== RENDER ===== */
+function gradeOptions(sel) {
+  return Object.keys(GRADES).map(g => `<option value="${g}" ${g === sel ? "selected" : ""}>${g}</option>`).join("");
+}
+
+function pipeOptions(sel) {
+  return state.catalog.map(p => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${p.id} · ${p.od}" ${p.wt}ppf ${p.grade}</option>`).join("");
+}
+
+function connOptions(sel) {
+  return Object.keys(CONNECTIONS).map(c => `<option value="${c}" ${c === sel ? "selected" : ""}>${c}</option>`).join("");
+}
+
+function renderCatalog() {
+  const inp = getInputs();
+  document.getElementById("catalogBody").innerHTML = state.catalog.map((p, i) => {
+    const r = calcPipeRatings(p, 200, inp.tempDerating);
+    p.idCalc = r.id;
+    const conn = connectionLimits(r, p.conn);
+    return `<tr>
+      <td><input value="${p.id}" data-cat="${i}" data-f="id" style="width:40px"/></td>
+      <td><input type="number" step="0.001" value="${p.od}" data-cat="${i}" data-f="od"/></td>
+      <td><input type="number" step="0.1" value="${p.wt}" data-cat="${i}" data-f="wt"/></td>
+      <td><select data-cat="${i}" data-f="grade">${gradeOptions(p.grade)}</select></td>
+      <td><select data-cat="${i}" data-f="conn">${connOptions(p.conn)}</select></td>
+      <td class="mono">${r.id.toFixed(3)}</td>
+      <td class="mono">${Math.round(r.burst)}</td>
+      <td class="mono">${Math.round(r.collapse)}</td>
+      <td class="mono">${Math.round(r.tension)}</td>
+      <td class="mono">${Math.round(conn.tension)}</td>
+      <td><button class="small danger" data-del-cat="${i}">✕</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderStrings() {
+  document.getElementById("stringsBody").innerHTML = state.strings.map((s, i) => `<tr>
+    <td><input value="${s.label}" data-str="${i}" data-f="label" style="width:90px"/></td>
+    <td><select data-str="${i}" data-f="type">
+      ${["surface","intermediate","production","liner","tieback","conductor"].map(t => `<option value="${t}" ${s.type===t?"selected":""}>${t}</option>`).join("")}
+    </select></td>
+    <td><input type="number" value="${s.top}" data-str="${i}" data-f="top" style="width:55px"/></td>
+    <td><input type="number" value="${s.shoe}" data-str="${i}" data-f="shoe" style="width:55px"/></td>
+    <td><input type="number" value="${s.toc}" data-str="${i}" data-f="toc" style="width:55px"/></td>
+    <td><select data-str="${i}" data-f="pipeId">${pipeOptions(s.pipeId)}</select></td>
+    <td><input type="number" step="0.1" value="${s.fluidInt}" data-str="${i}" data-f="fluidInt" style="width:50px"/></td>
+    <td><input type="number" step="0.1" value="${s.fluidExt}" data-str="${i}" data-f="fluidExt" style="width:50px"/></td>
+    <td><input type="number" value="${s.hangOffKlbf ?? 0}" data-str="${i}" data-f="hangOffKlbf" style="width:50px"/></td>
+    <td><input type="number" value="${s.preTensionKlbf ?? 0}" data-str="${i}" data-f="preTensionKlbf" style="width:50px"/></td>
+    <td><input type="number" value="${s.spanFt ?? 3000}" data-str="${i}" data-f="spanFt" style="width:55px"/></td>
+    <td><input type="number" step="0.5" value="${s.dls ?? 0}" data-str="${i}" data-f="dls" style="width:45px"/></td>
+    <td><button class="small danger" data-del-str="${i}">✕</button></td>
+  </tr>`).join("");
+  drawSchematic();
+}
+
+function renderProfiles() {
+  document.getElementById("profileBody").innerHTML = state.profiles.map((p, i) => `<tr>
+    <td><input type="number" value="${p.tvd}" data-prof="${i}" data-f="tvd"/></td>
+    <td><input type="number" step="0.1" value="${p.pp}" data-prof="${i}" data-f="pp"/></td>
+    <td><input type="number" step="0.1" value="${p.fg}" data-prof="${i}" data-f="fg"/></td>
+    <td><input type="number" step="0.1" value="${p.mwInt}" data-prof="${i}" data-f="mwInt"/></td>
+    <td><input type="number" step="0.1" value="${p.mwExt}" data-prof="${i}" data-f="mwExt"/></td>
+    <td><input type="number" value="${p.temp}" data-prof="${i}" data-f="temp"/></td>
+    <td><button class="small danger" data-del-prof="${i}">✕</button></td>
+  </tr>`).join("");
+  drawPressureChart();
+}
+
+function renderLoads() {
+  document.getElementById("loadsBody").innerHTML = state.loads.map((l, i) => `<tr>
+    <td><input value="${l.name}" data-load="${i}" data-f="name" style="width:120px"/></td>
+    <td><select data-load="${i}" data-f="stringId">${state.strings.map(s => `<option value="${s.id}" ${l.stringId===s.id?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input type="number" value="${l.depth}" data-load="${i}" data-f="depth" style="width:55px"/></td>
+    <td><input type="number" value="${Math.round(l.pInt)}" data-load="${i}" data-f="pInt" style="width:60px"/></td>
+    <td><input type="number" value="${Math.round(l.pExt)}" data-load="${i}" data-f="pExt" style="width:60px"/></td>
+    <td><input type="number" step="0.1" value="${l.axial.toFixed(1)}" data-load="${i}" data-f="axial" style="width:55px"/></td>
+    <td><input type="number" value="${Math.round(l.temp)}" data-load="${i}" data-f="temp" style="width:50px"/></td>
+    <td><select data-load="${i}" data-f="scenario">${Object.entries(SCENARIOS).map(([k,v]) => `<option value="${k}" ${l.scenario===k?"selected":""}>${k}</option>`).join("")}</select></td>
+    <td class="muted">${l.zone || ""}</td>
+    <td><button class="small danger" data-del-load="${i}">✕</button></td>
+  </tr>`).join("");
+}
+
+function renderResults() {
+  const body = document.getElementById("resultsBody");
+  const banner = document.getElementById("analysisBanner");
+  const gov = document.getElementById("governingCard");
+  if (!lastAnalysis || !lastAnalysis.rows.length) {
+    body.innerHTML = "";
+    banner.innerHTML = "";
+    gov.textContent = "Run analysis to see governing load case.";
+    return;
+  }
+  body.innerHTML = lastAnalysis.rows
+    .sort((a, b) => b.util - a.util)
+    .slice(0, 500)
+    .map(r => `<tr>
+    <td>${r.string}</td><td>${r.loadName}</td><td>${r.mode}</td>
+    <td class="mono">${r.unit === "ratio" ? (r.required * 100).toFixed(1) + "%" : Math.round(r.required) + " " + r.unit}</td>
+    <td class="mono">${r.unit === "ratio" ? "100%" : Math.round(r.available) + " " + r.unit}</td>
+    <td><strong>${(r.util * 100).toFixed(1)}%</strong></td><td>${pill(r.util)}</td>
+  </tr>`).join("");
+  if (lastAnalysis.rows.length > 500) {
+    body.innerHTML += `<tr><td colspan="7" class="muted">Showing top 500 of ${lastAnalysis.rows.length} checks (sorted by utilization)</td></tr>`;
+  }
+  const b = lastAnalysis.banner;
+  banner.innerHTML = `<div class="status-banner ${b.cls}">${b.text}</div>`;
+  gov.innerHTML = `<strong>${lastAnalysis.governing.string}</strong> · ${lastAnalysis.governing.loadName} · ${lastAnalysis.governing.mode}<br>
+    Utilization <strong>${(lastAnalysis.governing.util * 100).toFixed(1)}%</strong> · Depth ${lastAnalysis.governing.depth} ft · ${lastAnalysis.governing.detail}`;
+  drawUtilChart();
+  updateReportPreview();
+}
+
+function renderAll() {
+  renderCatalog();
+  renderStrings();
+  renderProfiles();
+  if (!state.loads.length) generateLoadCases();
+  else renderLoads();
+  renderResults();
+  document.getElementById("auditLog").textContent = auditEntries.join("\n");
+}
+
+/* ===== LOAD GENERATION & ANALYSIS ===== */
+function generateLoadCases() {
+  const inp = getInputs();
+  const step = inp.analysisStepFt || 1000;
+  const loads = [];
+
+  for (const s of state.strings) {
+    const depths = depthPointsForString(s, step);
+    for (const [key, sc] of Object.entries(SCENARIOS)) {
+      for (const tvd of depths) {
+        const pInt = internalPressureAtDepth(tvd, s, key, inp);
+        const pExt = externalPressureAtDepth(tvd, s, key, inp);
+        const axial = axialForceAtDepth(tvd, s, inp);
+        const temp = interpolateProfile(state.profiles, tvd, "temp");
+        const zone = externalZone(tvd, s);
+        loads.push({
+          id: `lc_${s.id}_${key}_${tvd}`,
+          name: `${s.label} — ${sc.label}`,
+          stringId: s.id,
+          depth: tvd,
+          pInt, pExt, axial, temp,
+          scenario: key,
+          zone
+        });
+      }
+    }
+  }
+  state.loads = loads;
+  renderLoads();
+  logAudit(`Generated ${loads.length} depth-wise load points (step ${step} ft)`);
+}
+
+function runAnalysis() {
+  const inp = getInputs();
+  if (!state.strings.length) { alert("Add at least one casing string."); return; }
+  if (!state.loads.length) generateLoadCases();
+
+  const sf = {
+    burst: inp.sfBurst, collapse: inp.sfCollapse,
+    tension: inp.sfTension, triaxial: inp.sfTriaxial, buckling: inp.sfBuckling
+  };
+
+  const rows = [];
+  const depthChart = [];
+  let maxUtil = 0;
+  let governing = null;
+  let failures = 0;
+  let marginals = 0;
+
+  for (const load of state.loads) {
+    const str = state.strings.find(s => s.id === load.stringId);
+    const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
+    if (!str || !pipeDef) continue;
+
+    const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating);
+    const conn = connectionLimits(ratings, pipeDef.conn);
+    const tri = apiTriaxialCheck(load.axial, load.pInt, load.pExt, ratings, conn, sf);
+
+    const span = str.spanFt ?? Math.max(str.shoe - str.top, 500);
+    const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, str.dls ?? 0) / sf.buckling;
+    const buckReq = Math.max(load.axial, 0);
+    const buckUtil = buckAvail > 0 && buckAvail < Infinity ? buckReq / buckAvail : 0;
+
+    const util = Math.max(tri.util, buckUtil);
+    let mode = tri.mode;
+    if (buckUtil > tri.util) mode = "Buckling";
+
+    const required = mode === "Buckling" ? buckReq : (tri.mode === "Burst" ? tri.burstReq : tri.mode === "Collapse" ? tri.collapseReq : tri.mode === "Tension" ? tri.tensionReq : tri.mode === "Compression" ? tri.compReq : tri.triReq);
+    const available = mode === "Buckling" ? buckAvail : (tri.mode === "Burst" ? tri.burstAvail : tri.mode === "Collapse" ? tri.collapseAvail : tri.mode === "Tension" ? tri.tensionAvail : tri.mode === "Compression" ? tri.compAvail : 1);
+    const unit = mode === "Buckling" ? "klbf" : (tri.mode === "Triaxial" ? "ratio" : "psi");
+
+    rows.push({
+      string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
+      required, available, util, unit, depth: load.depth,
+      zone: load.zone, scenario: load.scenario
+    });
+    depthChart.push({ depth: load.depth, util, string: str.label, scenario: load.scenario });
+
+    if (util >= 1) failures++;
+    else if (util >= 0.85) marginals++;
+    if (util > maxUtil) {
+      maxUtil = util;
+      governing = {
+        string: str.label, loadName: load.name, mode, util, depth: load.depth,
+        detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · ${load.zone} annulus · ${load.temp.toFixed(0)}°F`
+      };
+    }
+  }
+
+  let banner;
+  if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
+  else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
+  else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
+
+  lastAnalysis = {
+    rows, depthChart, banner,
+    governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "" },
+    timestamp: new Date().toISOString()
+  };
+  renderResults();
+  logAudit(`v4 analysis: ${rows.length} depth-wise checks, max util ${(maxUtil * 100).toFixed(1)}%`);
+  autoSave();
+  document.querySelector('[data-tab="analysis"]').click();
+}
+
+/* ===== CHARTS ===== */
+function drawPressureChart() {
+  const c = document.getElementById("pressureChart");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  if (!state.profiles.length) return;
+  const maxD = Math.max(...state.profiles.map(p => p.tvd), 1);
+  const maxP = Math.max(...state.profiles.flatMap(p => [hydrostaticPsi(p.pp, p.tvd), hydrostaticPsi(p.fg, p.tvd), hydrostaticPsi(p.mwInt, p.tvd)]), 1000);
+  const px = v => 50 + (v / maxP) * (w - 70);
+  const py = d => 20 + (d / maxD) * (h - 40);
+  const drawLine = (fn, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    state.profiles.sort((a,b)=>a.tvd-b.tvd).forEach((p,i) => {
+      const x = px(fn(p)), y = py(p.tvd);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  };
+  drawLine(p => hydrostaticPsi(p.pp, p.tvd), "#ef4444");
+  drawLine(p => hydrostaticPsi(p.fg, p.tvd), "#f59e0b");
+  drawLine(p => hydrostaticPsi(p.mwInt, p.tvd), "#00b4d8");
+  ctx.fillStyle = "#8b9ab0"; ctx.font = "10px system-ui";
+  ctx.fillText("PP", w-80, 18); ctx.fillStyle = "#ef4444"; ctx.fillText("■", w-95, 18);
+  ctx.fillStyle = "#8b9ab0"; ctx.fillText("FG", w-80, 32); ctx.fillStyle = "#f59e0b"; ctx.fillText("■", w-95, 32);
+  ctx.fillStyle = "#8b9ab0"; ctx.fillText("MW", w-80, 46); ctx.fillStyle = "#00b4d8"; ctx.fillText("■", w-95, 46);
+}
+
+function drawSchematic() {
+  const c = document.getElementById("schematicChart");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  const maxD = Math.max(...state.strings.map(s => s.shoe), 1);
+  const cx = w * 0.35, top = 25, bot = h - 25;
+  [...state.strings].sort((a,b)=>a.shoe-b.shoe).forEach(s => {
+    const pipe = state.catalog.find(p => p.id === s.pipeId);
+    const y0 = top + (s.top / maxD) * (bot - top);
+    const y1 = top + (s.shoe / maxD) * (bot - top);
+    const hw = 8 + (pipe?.od || 7) * 1.2;
+    ctx.fillStyle = (TYPE_COLORS[s.type] || "#00b4d8") + "33";
+    ctx.strokeStyle = TYPE_COLORS[s.type] || "#00b4d8";
+    ctx.lineWidth = 2;
+    ctx.fillRect(cx - hw, y0, hw * 2, y1 - y0);
+    ctx.strokeRect(cx - hw, y0, hw * 2, y1 - y0);
+    ctx.fillStyle = "#e8edf5"; ctx.font = "9px system-ui";
+    ctx.fillText(`${s.label} (${s.shoe} ft)`, cx + hw + 8, y1 - 4);
+    if (s.toc > s.top && s.toc < s.shoe) {
+      const yToc = top + (s.toc / maxD) * (bot - top);
+      ctx.strokeStyle = "#f59e0b"; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(cx - hw - 6, yToc); ctx.lineTo(cx + hw + 6, yToc); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  });
+}
+
+function drawUtilChart() {
+  const c = document.getElementById("utilChart");
+  if (!c || !lastAnalysis?.depthChart?.length) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+
+  const byString = {};
+  lastAnalysis.depthChart.forEach(p => {
+    const k = p.string;
+    if (!byString[k]) byString[k] = [];
+    byString[k].push(p);
+  });
+  const colors = ["#00b4d8", "#ff6b35", "#10b981", "#f59e0b", "#a78bfa"];
+  let ci = 0;
+  const maxD = Math.max(...lastAnalysis.depthChart.map(p => p.depth), 1);
+  const top = 20, bot = h - 30;
+
+  Object.entries(byString).forEach(([name, pts]) => {
+    const color = colors[ci++ % colors.length];
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    pts.sort((a, b) => a.depth - b.depth).forEach((p, i) => {
+      const x = 45 + (p.util / 1.2) * (w - 65);
+      const y = top + (p.depth / maxD) * (bot - top);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = color; ctx.font = "9px system-ui";
+    const last = pts[pts.length - 1];
+    ctx.fillText(name.slice(0, 12), 45 + (last.util / 1.2) * (w - 65) + 4, top + (last.depth / maxD) * (bot - top));
+  });
+
+  const x100 = 45 + (1 / 1.2) * (w - 65);
+  ctx.strokeStyle = "#ef4444"; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(x100, top); ctx.lineTo(x100, bot); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#8b9ab0"; ctx.font="10px system-ui";
+  ctx.fillText("100%", x100 + 3, top + 10);
+  ctx.fillText("TVD→", 8, bot + 12);
+}
+
+/* ===== EXPORT ===== */
+function updateReportPreview() {
+  const inp = getInputs();
+  if (!lastAnalysis) return;
+  const lines = [
+    `CASING DESIGN PRO v4 — ENGINEERING REPORT`,
+    `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
+    `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
+    ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
+    `Governing: ${lastAnalysis.governing.string} — ${lastAnalysis.governing.loadName} — ${lastAnalysis.governing.mode} @ ${(lastAnalysis.governing.util*100).toFixed(1)}%`,
+    ``, `Safety Factors: Burst ${inp.sfBurst}× Collapse ${inp.sfCollapse}× Tension ${inp.sfTension}× Triaxial ${inp.sfTriaxial}×`,
+    ``, `--- Results (${lastAnalysis.rows.length} checks) ---`
+  ];
+  lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
+  lines.push("", "v4 engine: depth-wise loads, TOC external, FG scenarios, API TR 5C3 triaxial w/ biaxial reduction, connections, thermal axial, buckling span.");
+  document.getElementById("reportPreview").textContent = lines.join("\n");
+}
+
+function exportCsv() {
+  if (!lastAnalysis) { alert("Run analysis first."); return; }
+  const hdr = "String,Load,Mode,Required,Available,Utilization,Unit,Depth\n";
+  const rows = lastAnalysis.rows.map(r => `"${r.string}","${r.loadName}","${r.mode}",${r.required},${r.available},${(r.util*100).toFixed(1)}%,${r.unit},${r.depth}`).join("\n");
+  downloadBlob(new Blob(["\uFEFF" + hdr + rows], { type: "text/csv" }), `casing_design_${getInputs().wellName || "well"}.csv`);
+}
+
+function exportHtmlReport() {
+  if (!lastAnalysis) { alert("Run analysis first."); return; }
+  const inp = getInputs();
+  const rows = lastAnalysis.rows.map(r => `<tr><td>${r.string}</td><td>${r.loadName}</td><td>${r.mode}</td><td>${Math.round(r.required)}</td><td>${Math.round(r.available)}</td><td>${(r.util*100).toFixed(1)}%</td><td>${pill(r.util)}</td></tr>`).join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Casing Design Report — ${inp.wellName}</title>
+    <style>body{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}
+    h1{color:#0077b6}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:0.4rem;font-size:0.85rem}th{background:#f0f4f8}
+    .banner{padding:0.75rem;border-radius:8px;margin:1rem 0;font-weight:600}.pass{background:#d1fae5}.warn{background:#fef3c7}.fail{background:#fee2e2}</style></head><body>
+    <h1>Casing Design Pro v4 — Engineering Report</h1>
+    <p><strong>Well:</strong> ${inp.wellName} &nbsp; <strong>Field:</strong> ${inp.fieldName}<br>
+    <strong>Engineer:</strong> ${inp.engineer} &nbsp; <strong>Date:</strong> ${new Date().toISOString().slice(0,10)}<br>
+    <strong>Sign-off:</strong> ${inp.signoffStatus}</p>
+    <div class="banner ${lastAnalysis.banner.cls}">${lastAnalysis.banner.text}</div>
+    <p><strong>Governing:</strong> ${lastAnalysis.governing.string} — ${lastAnalysis.governing.loadName} — ${lastAnalysis.governing.mode} (${(lastAnalysis.governing.util*100).toFixed(1)}%)</p>
+    <table><thead><tr><th>String</th><th>Load</th><th>Mode</th><th>Required</th><th>Available</th><th>Util</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v4. Verify with company standards before drilling approval.</p>
+    </body></html>`;
+  downloadBlob(new Blob([html], { type: "text/html" }), `casing_report_${inp.wellName || "well"}.html`);
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ===== EVENTS ===== */
+function bindEvents() {
+  document.getElementById("tabNav").addEventListener("click", e => {
+    const tab = e.target.closest(".tab");
+    if (!tab) return;
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${tab.dataset.tab}`));
+  });
+
+  document.getElementById("btnRunAll").onclick = runAnalysis;
+  document.getElementById("btnGenLoads").onclick = generateLoadCases;
+  document.getElementById("btnRecalcRatings").onclick = () => { renderCatalog(); logAudit("Ratings recalculated"); };
+  document.getElementById("btnExportCsv").onclick = exportCsv;
+  document.getElementById("btnExportHtml").onclick = exportHtmlReport;
+  document.getElementById("btnPrint").onclick = () => window.print();
+
+  document.getElementById("btnSaveProject").onclick = () => {
+    downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
+    logAudit("Project exported to JSON");
+  };
+  document.getElementById("btnLoadProject").onclick = () => document.getElementById("fileInput").click();
+  document.getElementById("fileInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch(err) { alert(err.message); } };
+    r.readAsText(f);
+    e.target.value = "";
+  };
+  document.getElementById("btnDemo").onclick = () => { state = defaultState(); setInputs({ wellName:"AD-B-01H", fieldName:"Demo Field", engineer:"Lead Drilling Engineer" }); logAudit("Demo well loaded"); renderAll(); };
+  document.getElementById("btnReset").onclick = () => { if (confirm("Reset all data?")) { state = defaultState(); lastAnalysis = null; auditEntries = []; logAudit("Reset to defaults"); renderAll(); } };
+
+  document.getElementById("btnAddCasing").onclick = () => { counters.pipe++; state.catalog.push({ id:`C${counters.pipe}`, od:7, wt:29, grade:"L80", conn:"BTC" }); renderCatalog(); };
+  document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:9000, dls:0 }); renderStrings(); };
+  document.getElementById("btnTypicalStrings").onclick = () => { state.strings = defaultState().strings; renderStrings(); logAudit("Typical 5-string set loaded"); };
+  document.getElementById("btnAddProfileRow").onclick = () => { counters.profile++; state.profiles.push({ tvd: counters.profile*2000, pp:9, fg:12, mwInt:9, mwExt:8.6, temp:100 }); renderProfiles(); };
+  document.getElementById("btnProfilePreset").onclick = () => {
+    state.profiles = defaultState().profiles;
+    document.getElementById("waterDepth").value = 1500;
+    document.getElementById("rigElev").value = 75;
+    document.getElementById("seawaterPpg").value = 8.6;
+    renderProfiles();
+    logAudit("Offshore pressure profile loaded (WD=1500 ft)");
+  };
+  document.getElementById("btnAddLoad").onclick = () => { counters.load++; const s = state.strings[0]; state.loads.push({ id:`custom${counters.load}`, name:`Custom ${counters.load}`, stringId:s?.id, depth:s?.shoe||10000, pInt:5000, pExt:3000, axial:400, temp:200, scenario:"production" }); renderLoads(); };
+
+  document.getElementById("catalogBody").addEventListener("input", onCatalogEdit);
+  document.getElementById("catalogBody").addEventListener("change", onCatalogEdit);
+  document.getElementById("stringsBody").addEventListener("input", onStringEdit);
+  document.getElementById("stringsBody").addEventListener("change", onStringEdit);
+  document.getElementById("profileBody").addEventListener("input", onProfileEdit);
+  document.getElementById("profileBody").addEventListener("change", onProfileEdit);
+  document.getElementById("loadsBody").addEventListener("input", onLoadEdit);
+  document.getElementById("loadsBody").addEventListener("change", onLoadEdit);
+
+  document.body.addEventListener("click", e => {
+    const dc = e.target.dataset.delCat; if (dc !== undefined) { state.catalog.splice(+dc, 1); renderCatalog(); return; }
+    const ds = e.target.dataset.delStr; if (ds !== undefined) { state.strings.splice(+ds, 1); renderStrings(); return; }
+    const dp = e.target.dataset.delProf; if (dp !== undefined) { state.profiles.splice(+dp, 1); renderProfiles(); return; }
+    const dl = e.target.dataset.delLoad; if (dl !== undefined) { state.loads.splice(+dl, 1); renderLoads(); return; }
+  });
+}
+
+function onCatalogEdit(e) {
+  const i = +e.target.dataset.cat, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const v = ["id","grade","conn"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.catalog[i][f] = v;
+  renderCatalog();
+}
+
+function onStringEdit(e) {
+  const i = +e.target.dataset.str, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const v = ["label","type","pipeId"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.strings[i][f] = v;
+  if (["label","type","pipeId"].includes(f)) drawSchematic();
+  else renderStrings();
+}
+
+function onProfileEdit(e) {
+  const i = +e.target.dataset.prof, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const v = parseFloat(e.target.value);
+  if (isNaN(v)) return;
+  state.profiles[i][f] = v;
+  renderProfiles();
+}
+
+function onLoadEdit(e) {
+  const i = +e.target.dataset.load, f = e.target.dataset.f;
+  if (isNaN(i) || !f) return;
+  const v = ["name","stringId","scenario"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.loads[i][f] = v;
+}
+
+function init() {
+  try {
+    let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV3");
+    if (saved) loadProject(JSON.parse(saved));
+    else { state = defaultState(); renderAll(); }
+  } catch { state = defaultState(); renderAll(); }
+  bindEvents();
+  logAudit("Casing Design Pro v4 initialized");
+  setInterval(autoSave, 30000);
+}
+
+init();
+</script>
+</body>
+</html>
