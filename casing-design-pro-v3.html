@@ -194,6 +194,17 @@
     .status-banner.fail { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.35); color: var(--bad); }
 
     canvas.chart { width: 100%; height: 280px; background: #060a0f; border: 1px solid var(--border); border-radius: 10px; display: block; }
+    canvas.util-chart { height: 380px; min-height: 320px; }
+    .chart-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 0.65rem; }
+    .chart-legend-item {
+      display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.5rem;
+      border-radius: 6px; background: var(--surface-3); border: 1px solid var(--border-light);
+      font-size: 0.72rem; color: var(--muted);
+    }
+    .chart-legend-item.governing { border-color: rgba(0,180,216,0.45); color: var(--text); font-weight: 600; }
+    .chart-legend-item .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .chart-caption { margin: 0 0 0.5rem; font-size: 0.72rem; color: var(--muted-2); line-height: 1.45; }
 
     .toolbar { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0.75rem; }
     .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.65rem; }
@@ -478,7 +489,11 @@
         <h3>Governing Case</h3>
         <div id="governingCard" class="governing-box muted">Run analysis to see governing load case.</div>
         <h3 style="margin-top:1.25rem">Utilization vs Depth</h3>
-        <canvas class="chart" id="utilChart" width="600" height="280"></canvas>
+        <p class="chart-caption" id="utilChartCaption">Run analysis to plot max utilization per string vs TVD.</p>
+        <div class="chart-wrap">
+          <canvas class="chart util-chart" id="utilChart"></canvas>
+          <div class="chart-legend" id="utilChartLegend"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1563,6 +1578,31 @@ function runAnalysis() {
 }
 
 /* ===== CHARTS ===== */
+function setupChartCanvas(canvas, cssH) {
+  const cssW = canvas.clientWidth || canvas.parentElement?.clientWidth || 600;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: cssW, h: cssH };
+}
+
+function niceDepthTicks(maxDepth) {
+  const step = maxDepth > 12000 ? 2000 : maxDepth > 6000 ? 1000 : maxDepth > 2500 ? 500 : 250;
+  const ticks = [];
+  for (let d = 0; d <= maxDepth; d += step) ticks.push(d);
+  if (ticks[ticks.length - 1] !== maxDepth) ticks.push(maxDepth);
+  return ticks;
+}
+
+function stringChartColor(label, index) {
+  const str = state.strings.find(s => s.label === label);
+  const fallback = ["#00b4d8", "#ff6b35", "#10b981", "#f59e0b", "#a78bfa", "#ec4899"];
+  return TYPE_COLORS[str?.type] || fallback[index % fallback.length];
+}
 function drawPressureChart() {
   const c = document.getElementById("pressureChart");
   if (!c) return;
@@ -1644,44 +1684,163 @@ function drawSchematic() {
 }
 
 function drawUtilChart() {
-  const c = document.getElementById("utilChart");
-  if (!c || !lastAnalysis?.depthChart?.length) return;
-  const ctx = c.getContext("2d");
-  const w = c.width, h = c.height;
-  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  const canvas = document.getElementById("utilChart");
+  const legendEl = document.getElementById("utilChartLegend");
+  const captionEl = document.getElementById("utilChartCaption");
+  if (!canvas) return;
+
+  const cssH = 380;
+  const { ctx, w, h } = setupChartCanvas(canvas, cssH);
+  const emptyMsg = "Run analysis to plot utilization vs depth";
+
+  if (!lastAnalysis?.depthChart?.length) {
+    ctx.fillStyle = "#060a0f";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#8b9ab0";
+    ctx.font = "12px Inter, system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(emptyMsg, w / 2, h / 2);
+    ctx.textAlign = "left";
+    if (legendEl) legendEl.innerHTML = "";
+    if (captionEl) captionEl.textContent = "Run analysis to plot max utilization per string vs TVD.";
+    return;
+  }
+
+  const envelope = new Map();
+  lastAnalysis.depthChart.forEach(p => {
+    const key = `${p.string}\0${p.depth}`;
+    const prev = envelope.get(key);
+    if (!prev || p.util > prev.util) envelope.set(key, p);
+  });
 
   const byString = {};
-  lastAnalysis.depthChart.forEach(p => {
-    const k = p.string;
-    if (!byString[k]) byString[k] = [];
-    byString[k].push(p);
+  envelope.forEach(p => {
+    if (!byString[p.string]) byString[p.string] = [];
+    byString[p.string].push(p);
   });
-  const colors = ["#00b4d8", "#ff6b35", "#10b981", "#f59e0b", "#a78bfa"];
-  let ci = 0;
-  const maxD = Math.max(...lastAnalysis.depthChart.map(p => p.depth), 1);
-  const top = 20, bot = h - 30;
 
-  Object.entries(byString).forEach(([name, pts]) => {
-    const color = colors[ci++ % colors.length];
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
-    pts.sort((a, b) => a.depth - b.depth).forEach((p, i) => {
-      const x = 45 + (p.util / 1.2) * (w - 65);
-      const y = top + (p.depth / maxD) * (bot - top);
+  const points = [...envelope.values()];
+  const maxDepth = Math.max(...points.map(p => p.depth), 1);
+  const governingString = lastAnalysis.governing?.string;
+  const offScale = points.filter(p => p.util > 1.5).length;
+  const xMax = 1.5;
+
+  const margin = { left: 58, right: 24, top: 34, bottom: 46 };
+  const plotW = w - margin.left - margin.right;
+  const plotH = h - margin.top - margin.bottom;
+  const xPos = util => margin.left + Math.min(util / xMax, 1) * plotW;
+  const yPos = depth => margin.top + (depth / maxDepth) * plotH;
+
+  ctx.fillStyle = "#060a0f";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#0a1018";
+  ctx.fillRect(margin.left, margin.top, plotW, plotH);
+
+  const x85 = xPos(0.85);
+  const x100 = xPos(1.0);
+  ctx.fillStyle = "rgba(245,158,11,0.08)";
+  ctx.fillRect(x85, margin.top, Math.max(x100 - x85, 0), plotH);
+  ctx.fillStyle = "rgba(239,68,68,0.08)";
+  ctx.fillRect(x100, margin.top, margin.left + plotW - x100, plotH);
+
+  const xTicks = [0, 0.5, 0.85, 1.0, 1.25, 1.5];
+  ctx.font = '10px "JetBrains Mono", monospace';
+  xTicks.forEach(t => {
+    const x = xPos(t);
+    ctx.strokeStyle = "rgba(42,53,72,0.95)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, margin.top);
+    ctx.lineTo(x, margin.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = t >= 1 ? (t > 1 ? "#ef4444" : "#f59e0b") : "#8b9ab0";
+    ctx.textAlign = "center";
+    ctx.fillText(`${Math.round(t * 100)}%`, x, margin.top - 10);
+  });
+
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x100, margin.top);
+  ctx.lineTo(x100, margin.top + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  niceDepthTicks(maxDepth).forEach(d => {
+    const y = yPos(d);
+    ctx.strokeStyle = "rgba(42,53,72,0.95)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + plotW, y);
+    ctx.stroke();
+    ctx.fillStyle = "#8b9ab0";
+    ctx.textAlign = "right";
+    ctx.fillText(`${d}`, margin.left - 8, y + 4);
+  });
+
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(margin.left, margin.top, plotW, plotH);
+
+  ctx.fillStyle = "#eef2f7";
+  ctx.font = "11px Inter, system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText("Utilization (%) →", margin.left + plotW / 2, h - 12);
+  ctx.save();
+  ctx.translate(16, margin.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("TVD (ft) →", 0, 0);
+  ctx.restore();
+  ctx.textAlign = "left";
+
+  const legendItems = [];
+  Object.entries(byString).forEach(([name, pts], index) => {
+    const color = stringChartColor(name, index);
+    const sorted = [...pts].sort((a, b) => a.depth - b.depth);
+    const isGov = name === governingString;
+    const peak = sorted.reduce((best, p) => (p.util > best.util ? p : best), sorted[0]);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGov ? 3.5 : 2;
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    sorted.forEach((p, i) => {
+      const x = xPos(p.util);
+      const y = yPos(p.depth);
       i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
     });
     ctx.stroke();
-    ctx.fillStyle = color; ctx.font = "9px system-ui";
-    const last = pts[pts.length - 1];
-    ctx.fillText(name.slice(0, 12), 45 + (last.util / 1.2) * (w - 65) + 4, top + (last.depth / maxD) * (bot - top));
+
+    const px = xPos(peak.util);
+    const py = yPos(peak.depth);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(px, py, isGov ? 5 : 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    if (peak.util > xMax) {
+      ctx.fillStyle = "#ef4444";
+      ctx.font = "bold 12px Inter, system-ui";
+      ctx.fillText("▶", margin.left + plotW + 4, py + 4);
+    }
+
+    legendItems.push({ name, color, maxU: Math.max(...sorted.map(p => p.util)), isGov });
   });
 
-  const x100 = 45 + (1 / 1.2) * (w - 65);
-  ctx.strokeStyle = "#ef4444"; ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(x100, top); ctx.lineTo(x100, bot); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = "#8b9ab0"; ctx.font="10px system-ui";
-  ctx.fillText("100%", x100 + 3, top + 10);
-  ctx.fillText("TVD→", 8, bot + 12);
+  if (legendEl) {
+    legendEl.innerHTML = legendItems.map(it => `
+      <span class="chart-legend-item ${it.isGov ? "governing" : ""}">
+        <span class="swatch" style="background:${it.color}"></span>
+        ${it.name}
+        <span class="mono">max ${(it.maxU * 100).toFixed(0)}%</span>
+      </span>`).join("");
+  }
+  if (captionEl) {
+    captionEl.textContent = offScale
+      ? `One line per string (max util at each depth). Axis capped at 150% for readability — ${offScale} point(s) exceed scale; see governing case.`
+      : "One line per string (max utilization at each depth across all scenarios). Amber zone: 85–100%; red zone: over rating.";
+  }
 }
 
 /* ===== EXPORT ===== */
@@ -1780,6 +1939,10 @@ function bindEvents() {
       runAnalysis();
     }
     if (e.key === "Escape") hideHelp();
+  });
+
+  window.addEventListener("resize", () => {
+    if (activeTab === "analysis") requestAnimationFrame(drawUtilChart);
   });
 
   document.getElementById("btnSaveProject").onclick = () => {
