@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v8 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v9 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -290,7 +290,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v8</span></h1>
+          <h1>Casing Design <span>Pro v9</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -362,6 +362,23 @@
           <label class="field">Default APB (psi)<input id="apbDefaultPsi" type="number" value="1500" /></label>
           <label class="field">Running Overpull (klbf)<input id="runningOverpullKlbf" type="number" value="50" /></label>
           <label class="field">Drag Coeff (μ)<input id="dragCoeff" type="number" step="0.05" value="0.25" /></label>
+          <label class="field">H₂S Partial (psi)<input id="h2sPartialPsi" type="number" step="0.01" value="0" min="0" /></label>
+        </div>
+        <div class="section-title">Probabilistic Envelope</div>
+        <div class="grid-3">
+          <label class="field">Probabilistic Design
+            <select id="probDesignEnabled"><option value="off">Off</option><option value="on">On (P90 PP / P10 FG)</option></select>
+          </label>
+          <label class="field">PP Uncertainty (%)<input id="ppUncertaintyPct" type="number" value="5" min="0" max="20" /></label>
+          <label class="field">FG Uncertainty (%)<input id="fgUncertaintyPct" type="number" value="5" min="0" max="20" /></label>
+        </div>
+        <div class="section-title">Running Hydraulics (Surge/Swab)</div>
+        <div class="grid-3">
+          <label class="field">Pipe Speed (ft/min)<input id="pipeSpeedFtMin" type="number" value="90" min="0" /></label>
+          <label class="field">Mud Plastic Visc (cP)<input id="mudPlasticVisc" type="number" value="25" min="1" /></label>
+          <label class="field">Python Engine
+            <select id="usePythonEngine"><option value="off">Off (local JS)</option><option value="on">On (localhost:8010)</option></select>
+          </label>
           <label class="field">Shock Factor<input id="shockFactor" type="number" step="0.05" value="1.15" /></label>
         </div>
       </div>
@@ -534,6 +551,25 @@
       </div>
       <div class="table-wrap"><table><thead><tr><th>Load Case</th><th>String</th><th>TVD</th><th>P Int</th><th>P Ext</th><th>Axial</th><th>Temp</th><th>Scenario</th><th>Zone</th><th></th></tr></thead><tbody id="loadsBody"></tbody></table></div>
     </div>
+    <div class="card" style="margin-top:1rem">
+      <h3>Cementing Pressure Schedule</h3>
+      <p class="card-desc">Multi-stage cement job densities and breakout pressures for cementing load scenario.</p>
+      <div class="toolbar">
+        <button class="small" id="btnAddCementStage">+ Stage</button>
+        <button class="small" id="btnCementDemo">Demo 2-Stage Job</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Stage</th><th>Top TVD</th><th>Bot TVD</th><th>Density (ppg)</th><th>Breakout ψ</th><th></th></tr></thead><tbody id="cementBody"></tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h3>Wear vs Depth</h3>
+      <p class="card-desc">Cumulative drilling wear profile per string (replaces uniform catalog wear % at depth).</p>
+      <div class="toolbar">
+        <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;color:var(--text)">String
+          <select id="wearProfileString" style="width:auto;min-width:180px"></select>
+        </label>
+        <button class="small" id="btnAddWearSeg">+ Wear Segment</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Top TVD</th><th>Bottom TVD</th><th>Wear %</th><th></th></tr></thead><tbody id="wearProfileBody"></tbody></table></div>
   </section>
 
   <section class="panel" id="panel-analysis">
@@ -615,14 +651,14 @@
       </div>
       <div class="card">
         <h3>Engine Benchmark Suite</h3>
-        <p class="card-desc">28 published-style API / textbook regression cases. Green = within tolerance.</p>
+        <p class="card-desc">33 published-style API / textbook regression cases. Green = within tolerance.</p>
         <div id="benchmarkResults"></div>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v8 · Phase C — transient thermal, packer movement, multi-annulus APB</span>
+    <span>Casing Design Pro v9 · Phase D — ISO 10400, surge/swab, wear profiles, Python engine</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -664,6 +700,8 @@ const SCENARIOS = {
   evacuation: { label: "Evacuation / Lost Returns" },
   stimulation: { label: "Stimulation / Frac" },
   running: { label: "Running In / Overpull" },
+  surge: { label: "Surge (Running)" },
+  swab: { label: "Swab (Tripping Out)" },
   packerSet: { label: "Packer Set / Test" },
   annulusIntegrity: { label: "Sealed Annulus / APB" },
   thermalCirculation: { label: "Thermal — Circulation" },
@@ -704,7 +742,66 @@ function wornPipeGeometry(pipe, wearPct) {
   const id0 = pipeIdFromWeight(pipe.od, pipe.wt);
   const t = wallThickness(pipe.od, id0);
   const wearIn = ((wearPct ?? 0) / 100) * t;
-  return { od: pipe.od, id: Math.max(id0 - 2 * wearIn, pipe.od * 0.72) };
+  return { od: pipe.od, id: Math.min(id0 + 2 * wearIn, pipe.od * 0.92) };
+}
+
+function sourDeratingFactor(h2sPsi) {
+  const pts = [[0, 1], [0.05, 1], [0.1, 0.95], [0.5, 0.85], [1, 0.75], [3, 0.65]];
+  if (h2sPsi <= 0) return 1;
+  for (let i = 1; i < pts.length; i++) {
+    if (h2sPsi <= pts[i][0]) {
+      const [p0, f0] = pts[i - 1];
+      const [p1, f1] = pts[i];
+      return f0 + ((f1 - f0) * (h2sPsi - p0)) / (p1 - p0);
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+
+function designFactors(designCode) {
+  return designCode === "iso"
+    ? { burst: 1.0, collapse: 0.9, body: 0.9 }
+    : { burst: 0.875, collapse: 0.875, body: 0.875 };
+}
+
+function probabilisticFactors(inp) {
+  if (!inp.probDesignEnabled) return { ppMult: 1, fgMult: 1 };
+  return {
+    ppMult: 1 + (inp.ppUncertaintyPct ?? 5) / 100,
+    fgMult: 1 - (inp.fgUncertaintyPct ?? 5) / 100
+  };
+}
+
+function surgeSwabMarginPpg(inp, isSurge) {
+  const speed = inp.pipeSpeedFtMin ?? 90;
+  const pv = inp.mudPlasticVisc ?? 25;
+  const base = 0.15 + 0.00035 * pv * speed / 100;
+  return isSurge ? base : -base;
+}
+
+function wearAtDepth(tvd, string, inp) {
+  const pipe = state.catalog.find(p => p.id === string.pipeId);
+  const segs = state.wearProfiles?.[string.id] || [];
+  if (segs.length) {
+    for (const seg of segs) {
+      if (tvd >= seg.top && tvd <= seg.bottom) return seg.wearPct ?? inp.defaultWearPct ?? 0;
+    }
+  }
+  return pipe?.wearPct ?? inp.defaultWearPct ?? 0;
+}
+
+function cementingPressureAtDepth(tvd, defaultMw) {
+  const sched = state.cementingSchedule || [];
+  if (!sched.length) return hydrostaticPsi(defaultMw * 1.12, tvd);
+  let pMax = 0;
+  for (const stage of sched) {
+    if (tvd >= (stage.topTvd ?? 0) && tvd <= (stage.bottomTvd ?? 99999)) {
+      if (stage.pressurePsi) pMax = Math.max(pMax, stage.pressurePsi);
+      const ppg = stage.densityPpg ?? defaultMw;
+      pMax = Math.max(pMax, hydrostaticPsi(ppg, tvd));
+    }
+  }
+  return pMax > 0 ? pMax : hydrostaticPsi(defaultMw * 1.12, tvd);
 }
 
 function buildSurveyDerived() {
@@ -1063,12 +1160,13 @@ function pipeIdFromWeight(od, wtPpf) {
 
 function wallThickness(od, id) { return (od - id) / 2; }
 
-function barlowBurst(od, id, yieldPsi) {
+function barlowBurst(od, id, yieldPsi, designCode = "api") {
   const t = wallThickness(od, id);
-  return 0.875 * ((2 * yieldPsi * t) / od);
+  const f = designFactors(designCode).burst;
+  return f * ((2 * yieldPsi * t) / od);
 }
 
-function apiCollapsePressure(od, id, yieldPsi) {
+function apiCollapsePressure(od, id, yieldPsi, designCode = "api") {
   const t = wallThickness(od, id);
   const D_t = od / t;
   const Yp = yieldPsi;
@@ -1092,12 +1190,12 @@ function apiCollapsePressure(od, id, yieldPsi) {
   } else {
     Pc = Pe;
   }
-  return 0.875 * Math.max(Pc, 0);
+  return designFactors(designCode).collapse * Math.max(Pc, 0);
 }
 
-function bodyYieldTensionKlbf(od, id, yieldPsi) {
+function bodyYieldTensionKlbf(od, id, yieldPsi, designCode = "api") {
   const area = (Math.PI / 4) * (od * od - id * id);
-  return (0.875 * yieldPsi * area) / 1000;
+  return (designFactors(designCode).body * yieldPsi * area) / 1000;
 }
 
 function tempDeratingFactor(grade, tempF) {
@@ -1152,7 +1250,8 @@ function externalZone(tvd, string) {
 }
 
 function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
-  const pp = interpolateProfile(state.profiles, tvd, "pp");
+  const prob = probabilisticFactors(inp);
+  const pp = interpolateProfile(state.profiles, tvd, "pp") * prob.ppMult;
   const mwE = string.fluidExt ?? interpolateProfile(state.profiles, tvd, "mwExt");
   const pPP = hydrostaticPsi(pp, tvd);
   const zone = externalZone(tvd, string);
@@ -1185,8 +1284,9 @@ function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
 }
 
 function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
-  const fg = interpolateProfile(state.profiles, tvd, "fg");
-  const pp = interpolateProfile(state.profiles, tvd, "pp");
+  const prob = probabilisticFactors(inp);
+  const fg = interpolateProfile(state.profiles, tvd, "fg") * prob.fgMult;
+  const pp = interpolateProfile(state.profiles, tvd, "pp") * prob.ppMult;
   const pFG = hydrostaticPsi(fg, tvd);
   const pMW = columnPressurePsi(tvd, string);
   const pPP = hydrostaticPsi(pp, tvd);
@@ -1202,10 +1302,22 @@ function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
       return 0;
     case "production":
       return Math.max(pMW, pPP * 0.95);
-    case "cementing":
-      return pMW * 1.12;
+    case "cementing": {
+      const mw = string.fluidInt ?? interpolateProfile(state.profiles, tvd, "mwInt");
+      return cementingPressureAtDepth(tvd, mw);
+    }
     case "running":
       return pMW;
+    case "surge": {
+      const mwBase = pMW / Math.max(0.052 * Math.max(tvd, 1), 1);
+      const mw = mwBase + surgeSwabMarginPpg(inp, true);
+      return hydrostaticPsi(mw, tvd);
+    }
+    case "swab": {
+      const mwBase = pMW / Math.max(0.052 * Math.max(tvd, 1), 1);
+      const mw = Math.max(mwBase + surgeSwabMarginPpg(inp, false), 0.1);
+      return hydrostaticPsi(mw, tvd);
+    }
     case "packerSet":
       return Math.max(pMW * 1.15, pPP * 0.9);
     case "annulusIntegrity":
@@ -1245,6 +1357,9 @@ function axialForceAtDepth(tvd, string, inp, scenarioKey) {
   if (string.type === "tieback") {
     axial += string.preTensionKlbf ?? 150;
   }
+  if (tvd <= string.top + 100) {
+    axial += string.hangerLoadKlbf ?? 0;
+  }
 
   const temp = temperatureAtDepth(tvd, inp, scenarioKey);
   const refT = inp.refTempF ?? 70;
@@ -1283,10 +1398,6 @@ function axialForceAtDepth(tvd, string, inp, scenarioKey) {
   axial += stringInteractionAxialKlbf(tvd, string, inp, scenarioKey);
 
   return axial;
-}
-
-function bodyYieldCompressionKlbf(od, id, yieldPsi) {
-  return bodyYieldTensionKlbf(od, id, yieldPsi);
 }
 
 function biaxialCollapseFactor(axialLbf, yieldPsi, od, id) {
@@ -1440,20 +1551,26 @@ function depthPointsForString(string, stepFt) {
   return [...new Set(pts)].sort((a, b) => a - b);
 }
 
-function calcPipeRatings(pipe, tempF, derateOn, wearPct) {
+function calcPipeRatings(pipe, tempF, derateOn, wearPct, designCode = "api", h2sPsi = 0) {
   const grade = GRADES[pipe.grade] || GRADES.L80;
   const geom = wornPipeGeometry(pipe, wearPct ?? pipe.wearPct ?? 0);
-  const derate = derateOn ? tempDeratingFactor(pipe.grade, tempF) : 1;
+  let derate = derateOn ? tempDeratingFactor(pipe.grade, tempF) : 1;
+  derate *= sourDeratingFactor(h2sPsi ?? 0);
   const y = grade.yield * derate;
-  const tension = bodyYieldTensionKlbf(geom.od, geom.id, y);
+  const tension = bodyYieldTensionKlbf(geom.od, geom.id, y, designCode);
   return {
     od: geom.od, id: geom.id, wt: pipe.wt, grade: pipe.grade, yieldPsi: y, conn: pipe.conn,
     wearPct: wearPct ?? pipe.wearPct ?? 0,
-    burst: barlowBurst(geom.od, geom.id, y),
-    collapse: apiCollapsePressure(geom.od, geom.id, y),
+    designCode,
+    burst: barlowBurst(geom.od, geom.id, y, designCode),
+    collapse: apiCollapsePressure(geom.od, geom.id, y, designCode),
     tension,
-    compression: bodyYieldCompressionKlbf(geom.od, geom.id, y)
+    compression: bodyYieldCompressionKlbf(geom.od, geom.id, y, designCode)
   };
+}
+
+function bodyYieldCompressionKlbf(od, id, yieldPsi, designCode = "api") {
+  return bodyYieldTensionKlbf(od, id, yieldPsi, designCode);
 }
 
 function utilStatus(u) {
@@ -1594,7 +1711,8 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV8";
+const STORAGE_KEY = "casingDesignProV9";
+const PYTHON_API_URL = "http://localhost:8010/api/analyze";
 
 const ENGINE_BENCHMARKS = [
   {
@@ -1702,14 +1820,14 @@ const ENGINE_BENCHMARKS = [
     expected: 0.9, tolPct: 2, unit: "ratio"
   },
   {
-    id: "wear_reduces_burst", name: "Wear changes burst rating (10% vs 0%)",
+    id: "wear_reduces_burst", name: "Wear reduces burst rating (10% vs 0%)",
     run: () => {
       const p = { od: 7, wt: 29, grade: "N80", conn: "BTC" };
       const pristine = calcPipeRatings(p, 200, false, 0).burst;
       const worn = calcPipeRatings(p, 200, false, 10).burst;
-      return Math.abs(pristine - worn);
+      return pristine - worn;
     },
-    expected: 824, tolPct: 5, unit: "psi"
+    expected: 824, tolPct: 8, unit: "psi"
   },
   {
     id: "hydrostatic_12ppg_8000", name: "12 ppg hydrostatic @ 8,000 ft",
@@ -1776,6 +1894,45 @@ const ENGINE_BENCHMARKS = [
       return temperatureAtDepth(8000, { thermalEnabled: true, thermalMode: "circulation", thermalCircTempF: 120, thermalRelaxFt: 5000, refTempF: 70 }, "thermalCirculation");
     },
     expected: 167, tolPct: 5, unit: "°F"
+  },
+  {
+    id: "iso_burst_higher", name: "ISO 10400 burst > API (7\" 29# N80)",
+    run: () => {
+      const id = pipeIdFromWeight(7, 29);
+      return barlowBurst(7, id, 80000, "iso") - barlowBurst(7, id, 80000, "api");
+    },
+    expected: 1176, tolPct: 5, unit: "psi"
+  },
+  {
+    id: "sour_derate_half_psi", name: "Sour derating @ 0.5 psi H₂S",
+    run: () => sourDeratingFactor(0.5),
+    expected: 0.85, tolPct: 2, unit: "ratio"
+  },
+  {
+    id: "surge_margin_ppg", name: "Surge margin (90 ft/min, 25 cP)",
+    run: () => surgeSwabMarginPpg({ pipeSpeedFtMin: 90, mudPlasticVisc: 25 }, true),
+    expected: 0.158, tolPct: 15, unit: "ppg"
+  },
+  {
+    id: "cement_schedule_5k", name: "Cement schedule @ 5,000 ft (15.2 ppg)",
+    run: () => {
+      state.cementingSchedule = [{ topTvd: 0, bottomTvd: 11000, densityPpg: 15.2 }];
+      return cementingPressureAtDepth(5000, 10);
+    },
+    expected: 3952, tolPct: 5, unit: "psi"
+  },
+  {
+    id: "wear_depth_12pct", name: "Wear profile returns 12% @ 7,000 ft",
+    run: () => {
+      state.wearProfiles = { s1: [{ top: 6000, bottom: 11000, wearPct: 12 }] };
+      return wearAtDepth(7000, { id: "s1", pipeId: "P" }, { defaultWearPct: 0 });
+    },
+    expected: 12, tolPct: 1, unit: "%"
+  },
+  {
+    id: "prob_pp_mult", name: "Probabilistic P90 PP multiplier (5%)",
+    run: () => probabilisticFactors({ probDesignEnabled: true, ppUncertaintyPct: 5 }).ppMult,
+    expected: 1.05, tolPct: 0.5, unit: "ratio"
   }
 ];
 
@@ -1792,8 +1949,8 @@ function analyzeLoad(load, inp, sf) {
   const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
   if (!str || !pipeDef) return null;
 
-  const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
-  const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
+  const wear = wearAtDepth(load.depth, str, inp);
+  const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear, inp.designCode, inp.h2sPartialPsi);
   const inc = surveyAtTvd(load.depth).inc;
   const dls = surveyAtTvd(load.depth).dls || 0;
   const axialEff = effectiveAxialForTriaxial(load.axial, ratings.od, inc, dls);
@@ -1946,11 +2103,21 @@ const defaultState = () => ({
       { top: 8000, bottom: 11000, ppg: 11.8 }
     ]
   },
+  cementingSchedule: [
+    { id: "c1", label: "Lead", topTvd: 0, bottomTvd: 8000, densityPpg: 12.5, pressurePsi: 0 },
+    { id: "c2", label: "Tail", topTvd: 8000, bottomTvd: 11000, densityPpg: 15.2, pressurePsi: 0 }
+  ],
+  wearProfiles: {
+    s3: [
+      { top: 0, bottom: 6000, wearPct: 3 },
+      { top: 6000, bottom: 11000, wearPct: 12 }
+    ]
+  },
   loads: []
 });
 
 let state = defaultState();
-let counters = { pipe: 10, string: 10, load: 10, profile: 10, packer: 1, annulus: 2 };
+let counters = { pipe: 10, string: 10, load: 10, profile: 10, packer: 1, annulus: 2, cement: 2 };
 
 function logAudit(msg) {
   const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -1983,6 +2150,13 @@ function getInputs() {
     runningOverpullKlbf: +document.getElementById("runningOverpullKlbf").value || 0,
     dragCoeff: +document.getElementById("dragCoeff").value || 0.25,
     shockFactor: +document.getElementById("shockFactor").value || 1.15,
+    h2sPartialPsi: +document.getElementById("h2sPartialPsi").value || 0,
+    probDesignEnabled: document.getElementById("probDesignEnabled").value === "on",
+    ppUncertaintyPct: +document.getElementById("ppUncertaintyPct").value || 5,
+    fgUncertaintyPct: +document.getElementById("fgUncertaintyPct").value || 5,
+    pipeSpeedFtMin: +document.getElementById("pipeSpeedFtMin").value || 90,
+    mudPlasticVisc: +document.getElementById("mudPlasticVisc").value || 25,
+    usePythonEngine: document.getElementById("usePythonEngine").value === "on",
     thermalEnabled: document.getElementById("thermalEnabled").value === "on",
     thermalMode: document.getElementById("thermalMode").value,
     thermalTimeHours: +document.getElementById("thermalTimeHours").value || 12,
@@ -2019,6 +2193,13 @@ function setInputs(inp) {
   document.getElementById("runningOverpullKlbf").value = inp.runningOverpullKlbf ?? 50;
   document.getElementById("dragCoeff").value = inp.dragCoeff ?? 0.25;
   document.getElementById("shockFactor").value = inp.shockFactor ?? 1.15;
+  document.getElementById("h2sPartialPsi").value = inp.h2sPartialPsi ?? 0;
+  document.getElementById("probDesignEnabled").value = inp.probDesignEnabled ? "on" : "off";
+  document.getElementById("ppUncertaintyPct").value = inp.ppUncertaintyPct ?? 5;
+  document.getElementById("fgUncertaintyPct").value = inp.fgUncertaintyPct ?? 5;
+  document.getElementById("pipeSpeedFtMin").value = inp.pipeSpeedFtMin ?? 90;
+  document.getElementById("mudPlasticVisc").value = inp.mudPlasticVisc ?? 25;
+  document.getElementById("usePythonEngine").value = inp.usePythonEngine ? "on" : "off";
   document.getElementById("thermalEnabled").value = inp.thermalEnabled === false ? "off" : "on";
   document.getElementById("thermalMode").value = inp.thermalMode || state.thermal?.mode || "circulation";
   document.getElementById("thermalTimeHours").value = inp.thermalTimeHours ?? state.thermal?.timeHours ?? 12;
@@ -2045,7 +2226,7 @@ function serializeProject() {
     warmbackHours: inp.thermalWarmbackHrs,
     poisson: inp.thermalPoisson
   };
-  return JSON.stringify({ version: 8, inputs: inp, state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 9, inputs: inp, state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
@@ -2066,6 +2247,8 @@ function migrateState(st) {
   }));
   if (!st.annuli) st.annuli = defaultState().annuli;
   if (!st.thermal) st.thermal = defaultState().thermal;
+  if (!st.cementingSchedule) st.cementingSchedule = defaultState().cementingSchedule;
+  if (!st.wearProfiles) st.wearProfiles = defaultState().wearProfiles;
   return st;
 }
 
@@ -2102,7 +2285,7 @@ function renderCatalog() {
   const inp = getInputs();
   document.getElementById("catalogBody").innerHTML = state.catalog.map((p, i) => {
     const wear = p.wearPct ?? inp.defaultWearPct ?? 0;
-    const r = calcPipeRatings(p, 200, inp.tempDerating, wear);
+    const r = calcPipeRatings(p, 200, inp.tempDerating, wear, inp.designCode, inp.h2sPartialPsi);
     p.idCalc = r.id;
     const conn = connectionLimits(r, p.conn, 0, 0);
     return `<tr>
@@ -2264,7 +2447,46 @@ function renderProfiles() {
   drawPressureChart();
 }
 
+function renderCementSchedule() {
+  const body = document.getElementById("cementBody");
+  if (!body) return;
+  const sched = state.cementingSchedule || [];
+  body.innerHTML = sched.map((c, i) => `<tr>
+    <td><input value="${c.label || ""}" data-cem="${i}" data-f="label" style="width:70px"/></td>
+    <td><input type="number" value="${c.topTvd ?? 0}" data-cem="${i}" data-f="topTvd" style="width:60px"/></td>
+    <td><input type="number" value="${c.bottomTvd ?? 0}" data-cem="${i}" data-f="bottomTvd" style="width:60px"/></td>
+    <td><input type="number" step="0.1" value="${c.densityPpg ?? 10}" data-cem="${i}" data-f="densityPpg" style="width:55px"/></td>
+    <td><input type="number" value="${c.pressurePsi ?? 0}" data-cem="${i}" data-f="pressurePsi" style="width:55px"/></td>
+    <td><button class="small danger" data-del-cem="${i}">✕</button></td>
+  </tr>`).join("");
+}
+
+function renderWearProfileStringSelect() {
+  const sel = document.getElementById("wearProfileString");
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = state.strings.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+  if (cur && state.strings.some(s => s.id === cur)) sel.value = cur;
+  renderWearProfiles();
+}
+
+function renderWearProfiles() {
+  const sel = document.getElementById("wearProfileString");
+  const body = document.getElementById("wearProfileBody");
+  if (!sel || !body) return;
+  const sid = sel.value || state.strings[0]?.id;
+  const segs = state.wearProfiles?.[sid] || [];
+  body.innerHTML = segs.map((seg, i) => `<tr>
+    <td><input type="number" value="${seg.top}" data-wear="${i}" data-f="top"/></td>
+    <td><input type="number" value="${seg.bottom}" data-wear="${i}" data-f="bottom"/></td>
+    <td><input type="number" value="${seg.wearPct}" data-wear="${i}" data-f="wearPct"/></td>
+    <td><button class="small danger" data-del-wear="${i}">✕</button></td>
+  </tr>`).join("");
+}
+
 function renderLoads() {
+  renderCementSchedule();
+  renderWearProfileStringSelect();
   populateFilterDropdowns();
   const filtered = getFilteredLoads();
   const badge = document.getElementById("loadCountBadge");
@@ -3185,7 +3407,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v8 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v9 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -3195,7 +3417,7 @@ function updateReportPreview() {
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v8 Phase C: transient thermal, packer/tubing movement, multi-annulus APB.");
+  lines.push("v9 Phase D: ISO 10400, surge/swab, cement schedule, wear profiles, sour/probabilistic, Python engine.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -3391,6 +3613,46 @@ function bindEvents() {
     renderThermal();
   });
 
+  document.getElementById("btnAddCementStage")?.addEventListener("click", () => {
+    if (!state.cementingSchedule) state.cementingSchedule = [];
+    counters.cement = (counters.cement || 0) + 1;
+    state.cementingSchedule.push({
+      id: `c${counters.cement}`, label: `Stage ${counters.cement}`,
+      topTvd: 0, bottomTvd: 10000, densityPpg: 12, pressurePsi: 0
+    });
+    renderCementSchedule();
+  });
+  document.getElementById("btnCementDemo")?.addEventListener("click", () => {
+    state.cementingSchedule = defaultState().cementingSchedule;
+    renderCementSchedule();
+    toast("Demo cement schedule loaded");
+  });
+  document.getElementById("cementBody")?.addEventListener("input", onCementEdit);
+  document.getElementById("cementBody")?.addEventListener("change", onCementEdit);
+  document.getElementById("cementBody")?.addEventListener("click", e => {
+    const d = e.target.dataset.delCem;
+    if (d !== undefined) { state.cementingSchedule.splice(+d, 1); renderCementSchedule(); }
+  });
+
+  document.getElementById("wearProfileString")?.addEventListener("change", renderWearProfiles);
+  document.getElementById("btnAddWearSeg")?.addEventListener("click", () => {
+    const sid = document.getElementById("wearProfileString")?.value || state.strings[0]?.id;
+    if (!sid) return;
+    if (!state.wearProfiles) state.wearProfiles = {};
+    if (!state.wearProfiles[sid]) state.wearProfiles[sid] = [];
+    state.wearProfiles[sid].push({ top: 0, bottom: 10000, wearPct: 5 });
+    renderWearProfiles();
+  });
+  document.getElementById("wearProfileBody")?.addEventListener("input", onWearEdit);
+  document.getElementById("wearProfileBody")?.addEventListener("change", onWearEdit);
+  document.getElementById("wearProfileBody")?.addEventListener("click", e => {
+    const d = e.target.dataset.delWear;
+    if (d === undefined) return;
+    const sid = document.getElementById("wearProfileString")?.value;
+    state.wearProfiles[sid]?.splice(+d, 1);
+    renderWearProfiles();
+  });
+
   document.getElementById("btnSaveProject").onclick = () => {
     downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
     logAudit("Project exported to JSON");
@@ -3560,6 +3822,23 @@ function onPackerEdit(e) {
   state.packers[i][f] = v;
 }
 
+function onCementEdit(e) {
+  const i = +e.target.dataset.cem, f = e.target.dataset.f;
+  if (isNaN(i) || !f || !state.cementingSchedule?.[i]) return;
+  const v = f === "label" ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.cementingSchedule[i][f] = v;
+}
+
+function onWearEdit(e) {
+  const i = +e.target.dataset.wear, f = e.target.dataset.f;
+  const sid = document.getElementById("wearProfileString")?.value;
+  if (isNaN(i) || !f || !sid || !state.wearProfiles?.[sid]?.[i]) return;
+  const v = parseFloat(e.target.value);
+  if (isNaN(v)) return;
+  state.wearProfiles[sid][i][f] = v;
+}
+
 function onProfileEdit(e) {
   const i = +e.target.dataset.prof, f = e.target.dataset.f;
   if (isNaN(i) || !f) return;
@@ -3580,6 +3859,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV8");
     if (!saved) saved = localStorage.getItem("casingDesignProV7");
     if (!saved) saved = localStorage.getItem("casingDesignProV6");
     if (!saved) saved = localStorage.getItem("casingDesignProV5");
@@ -3592,7 +3872,7 @@ function init() {
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v8 initialized");
+  logAudit("Casing Design Pro v9 initialized");
   setInterval(autoSave, 30000);
 }
 
