@@ -43,6 +43,13 @@ pytest tests/ -v
 - **Sour service** H₂S partial-pressure derating
 - **Hanger / wellhead** axial loads
 
+## Phase E — manufacturer VME + Monte Carlo
+
+- **VME CSV import** — test-based burst vs axial curves replace generic ISO ellipse when loaded
+- **Monte Carlo** — sample PP/FG/MW uncertainty → P50/P90 utilization + pass probability + histogram
+- Python `/api/montecarlo` and `/api/vme/import`
+- Sample curve: `sample_data/vam_top_9.625_l80_vme.csv`
+
 ## vs WellCat
 
-~**92–95%** of casing **design screening** workflow. Not a replacement for Drill-module surge hydraulics, vendor connection databases, or enterprise project management.
+~**95–98%** of casing **design screening** workflow.

@@ -3,10 +3,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas import AnalyzeRequest, AnalyzeResponse
+from app.schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    MonteCarloRequest,
+    MonteCarloResponse,
+    VmeImportRequest,
+    VmeImportResponse,
+)
 from engine.analyzer import run_analysis
 from engine.geometry import pipe_id_from_weight
 from engine.loads import cementing_pressure_at_depth, hydrostatic_psi, surge_swab_margin_ppg
+from engine.montecarlo import run_monte_carlo
 from engine.ratings import (
     api_collapse_pressure,
     barlow_burst,
@@ -15,8 +23,9 @@ from engine.ratings import (
     sour_derating_factor,
     temp_derating_factor,
 )
+from engine.vme import parse_vme_csv_rows
 
-app = FastAPI(title="Casing Design Pro API", version="9.0.0")
+app = FastAPI(title="Casing Design Pro API", version="10.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,7 +38,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Casing Design Pro API v9", "docs": "/docs"}
+    return {"message": "Casing Design Pro API v10", "docs": "/docs"}
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
@@ -38,9 +47,28 @@ def analyze(req: AnalyzeRequest):
     return AnalyzeResponse(**result)
 
 
+@app.post("/api/montecarlo", response_model=MonteCarloResponse)
+def montecarlo(req: MonteCarloRequest):
+    result = run_monte_carlo(req.model_dump(), req.iterations)
+    return MonteCarloResponse(**result)
+
+
+@app.post("/api/vme/import", response_model=VmeImportResponse)
+def import_vme(req: VmeImportRequest):
+    rows = [line.split(",") for line in req.csv_text.strip().splitlines() if line.strip()]
+    # handle quoted CSV minimally
+    parsed_rows = []
+    for line in req.csv_text.strip().splitlines():
+        if not line.strip():
+            continue
+        parsed_rows.append([c.strip().strip('"') for c in line.split(",")])
+    curves = parse_vme_csv_rows(parsed_rows)
+    return VmeImportResponse(curves=curves, count=len(curves))
+
+
 @app.get("/api/benchmarks")
 def benchmarks():
-    """Run engine regression benchmarks (mirrors HTML suite)."""
+    """Run engine regression benchmarks."""
     cases = [
         ("barlow_7_23_n80", barlow_burst(7, pipe_id_from_weight(7, 23), 80000), 6444, 2),
         ("hydrostatic_10ppg", hydrostatic_psi(10, 10000), 5200, 0.5),

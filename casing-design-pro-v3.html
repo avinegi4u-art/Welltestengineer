@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v9 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v10 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -290,7 +290,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v9</span></h1>
+          <h1>Casing Design <span>Pro v10</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -371,9 +371,11 @@
           </label>
           <label class="field">PP Uncertainty (%)<input id="ppUncertaintyPct" type="number" value="5" min="0" max="20" /></label>
           <label class="field">FG Uncertainty (%)<input id="fgUncertaintyPct" type="number" value="5" min="0" max="20" /></label>
+          <label class="field">MW Uncertainty (%)<input id="mwUncertaintyPct" type="number" value="2" min="0" max="10" /></label>
         </div>
-        <div class="section-title">Running Hydraulics (Surge/Swab)</div>
+        <div class="section-title">Monte Carlo</div>
         <div class="grid-3">
+          <label class="field">MC Iterations<input id="mcIterations" type="number" value="500" min="50" max="5000" step="50" /></label>
           <label class="field">Pipe Speed (ft/min)<input id="pipeSpeedFtMin" type="number" value="90" min="0" /></label>
           <label class="field">Mud Plastic Visc (cP)<input id="mudPlasticVisc" type="number" value="25" min="1" /></label>
           <label class="field">Python Engine
@@ -433,7 +435,13 @@
         <input type="file" id="catalogCsvInput" accept=".csv,text/csv" hidden />
         <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID calc</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>VME T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
         <h3 style="margin-top:1rem">Connection VME Envelope</h3>
-        <p class="card-desc">ISO burst–tension interaction for selected pipe (first catalog row). Pb vs axial load.</p>
+        <p class="card-desc">ISO burst–tension interaction or manufacturer CSV curve. Import test-based VME points (axial klbf vs burst psi).</p>
+        <div class="toolbar">
+          <button class="small" id="btnImportVme">⬆ Import VME CSV</button>
+          <button class="small" id="btnVmeDemo">Load VAM TOP Demo</button>
+        </div>
+        <input type="file" id="vmeCsvInput" accept=".csv,text/csv" hidden />
+        <div class="table-wrap" style="max-height:140px;margin-bottom:0.5rem"><table><thead><tr><th>Curve ID</th><th>Label</th><th>Conn</th><th>OD</th><th>Pts</th><th>Pb0</th><th>Ft0</th><th></th></tr></thead><tbody id="vmeCurvesBody"></tbody></table></div>
         <canvas class="chart" id="vmeChart" style="height:220px"></canvas>
       </div>
       <div class="card">
@@ -622,6 +630,19 @@
           <canvas class="chart util-chart" id="ratingLineChart"></canvas>
           <div class="chart-legend" id="ratingLineLegend"></div>
         </div>
+        <h3 style="margin-top:1.25rem">Monte Carlo — Utilization Distribution</h3>
+        <p class="card-desc" id="mcCaption">Probabilistic screening: sample PP/FG/MW uncertainty → P10/P50/P90 max utilization and pass probability.</p>
+        <div class="toolbar">
+          <button class="small primary" id="btnRunMonteCarlo">▶ Run Monte Carlo</button>
+          <span class="pill info" id="mcStatusBadge">Not run</span>
+        </div>
+        <div class="grid-4" id="mcKpiRow" style="margin-top:0.5rem;display:none">
+          <div class="kpi accent"><div class="val" id="mcP50">—</div><div class="lbl">P50 Util</div></div>
+          <div class="kpi warn"><div class="val" id="mcP90">—</div><div class="lbl">P90 Util</div></div>
+          <div class="kpi" id="mcPassKpi"><div class="val" id="mcPassProb">—</div><div class="lbl">Pass Probability</div></div>
+          <div class="kpi"><div class="val" id="mcIters">—</div><div class="lbl">Iterations</div></div>
+        </div>
+        <canvas class="chart" id="mcHistogram" style="height:180px;margin-top:0.75rem"></canvas>
       </div>
     </div>
   </section>
@@ -651,14 +672,14 @@
       </div>
       <div class="card">
         <h3>Engine Benchmark Suite</h3>
-        <p class="card-desc">33 published-style API / textbook regression cases. Green = within tolerance.</p>
+        <p class="card-desc">35 published-style API / textbook regression cases. Green = within tolerance.</p>
         <div id="benchmarkResults"></div>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v9 · Phase D — ISO 10400, surge/swab, wear profiles, Python engine</span>
+    <span>Casing Design Pro v10 · Phase E — manufacturer VME CSV + Monte Carlo</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -1433,7 +1454,73 @@ function isoEllipseTensionAllowance(ft0Klbf, pb0Psi, diffP) {
   return ft0Klbf * Math.sqrt(Math.max(0, 1 - r * r));
 }
 
-function connectionVmeLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0) {
+function isoEllipseTensionAllowance(ft0Klbf, pb0Psi, diffP) {
+  if (ft0Klbf <= 0 || pb0Psi <= 0) return 0;
+  const p = Math.max(diffP, 0);
+  if (p <= 0) return ft0Klbf;
+  const r = Math.min(p / pb0Psi, 1);
+  return ft0Klbf * Math.sqrt(Math.max(0, 1 - r * r));
+}
+
+function normalizeVmePoints(points) {
+  const sorted = [...(points || [])].sort((a, b) => a.axialKlbf - b.axialKlbf);
+  return sorted.map(p => ({ axialKlbf: +p.axialKlbf, burstPsi: +p.burstPsi }));
+}
+
+function vmeCurveEnvelope(points) {
+  const pts = normalizeVmePoints(points);
+  if (!pts.length) return { connBurst0: 0, connTension0: 0 };
+  const burst0 = Math.max(...pts.filter(p => p.axialKlbf <= 0.01).map(p => p.burstPsi), pts[0].burstPsi);
+  const tension0 = Math.max(...pts.map(p => p.axialKlbf));
+  return { connBurst0: burst0, connTension0: tension0 };
+}
+
+function interpolateBurstAtAxial(points, axialKlbf) {
+  const pts = normalizeVmePoints(points);
+  if (!pts.length) return 0;
+  if (axialKlbf <= pts[0].axialKlbf) return pts[0].burstPsi;
+  if (axialKlbf >= pts[pts.length - 1].axialKlbf) return pts[pts.length - 1].burstPsi;
+  for (let i = 1; i < pts.length; i++) {
+    if (axialKlbf <= pts[i].axialKlbf) {
+      const f = (axialKlbf - pts[i - 1].axialKlbf) / (pts[i].axialKlbf - pts[i - 1].axialKlbf);
+      return pts[i - 1].burstPsi + f * (pts[i].burstPsi - pts[i - 1].burstPsi);
+    }
+  }
+  return pts[pts.length - 1].burstPsi;
+}
+
+function getVmeCurveForPipe(pipe) {
+  const curves = state.vmeCurves || {};
+  if (pipe?.vmeCurveId && curves[pipe.vmeCurveId]) return curves[pipe.vmeCurveId];
+  const key = `${pipe?.conn}_${pipe?.od}_${pipe?.wt}_${pipe?.grade}`.replace(/\s/g, "_");
+  if (curves[key]) return curves[key];
+  return curves[pipe?.conn] || null;
+}
+
+function connectionVmeLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0, pipe = null) {
+  const curve = pipe ? getVmeCurveForPipe(pipe) : (state.vmeCurves || {})[connName];
+  if (curve?.points?.length) {
+    const env = vmeCurveEnvelope(curve.points);
+    const connBurst0 = curve.connBurst0 ?? env.connBurst0;
+    const connTension0 = curve.connTension0 ?? env.connTension0;
+    const burstBody = pipeRatings.burst * biaxialBurstFactor(axialKlbf, pipeRatings.yieldPsi, pipeRatings.od, pipeRatings.id);
+    const collapseBody = pipeRatings.collapse * biaxialCollapseFactor(axialKlbf, pipeRatings.yieldPsi, pipeRatings.od, pipeRatings.id);
+    const burstVme = interpolateBurstAtAxial(curve.points, Math.max(axialKlbf, 0));
+    const tensionVme = isoEllipseTensionAllowance(connTension0, connBurst0, diffP);
+    return {
+      burst: Math.min(burstBody, burstVme),
+      collapse: collapseBody,
+      tension: Math.min(pipeRatings.tension, tensionVme),
+      compression: Math.min(pipeRatings.compression ?? pipeRatings.tension, connTension0 * 0.55),
+      vme: {
+        label: curve.label || curve.manufacturer || "Manufacturer VME",
+        source: "manufacturer_csv",
+        connBurst0, connTension0, burstVme, tensionVme,
+        pointCount: curve.points.length
+      }
+    };
+  }
+
   const vme = CONNECTION_VME[connName] || CONNECTION_VME.BTC;
   const connBurst0 = pipeRatings.burst * vme.burstEff;
   const connCollapse0 = pipeRatings.collapse * vme.collapseEff;
@@ -1459,12 +1546,18 @@ function connectionVmeLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0) {
   };
 }
 
-function connectionLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0) {
-  return connectionVmeLimits(pipeRatings, connName, axialKlbf, diffP);
+function connectionLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0, pipe = null) {
+  return connectionVmeLimits(pipeRatings, connName, axialKlbf, diffP, pipe);
 }
 
-function vmeEllipsePoints(pipeRatings, connName, steps = 36) {
-  const lim = connectionVmeLimits(pipeRatings, connName, 0, 0);
+function vmeEllipsePoints(pipeRatings, connName, steps = 36, pipe = null) {
+  const curve = pipe ? getVmeCurveForPipe(pipe) : null;
+  if (curve?.points?.length) {
+    const pts = normalizeVmePoints(curve.points);
+    const env = vmeCurveEnvelope(pts);
+    return { pts: pts.map(p => ({ axial: p.axialKlbf, burst: p.burstPsi })), ft0: env.connTension0, pb0: env.connBurst0, label: curve.label || "Manufacturer VME" };
+  }
+  const lim = connectionVmeLimits(pipeRatings, connName, 0, 0, pipe);
   const ft0 = lim.vme.connTension0;
   const pb0 = lim.vme.connBurst0;
   const pts = [];
@@ -1711,8 +1804,9 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV9";
+const STORAGE_KEY = "casingDesignProV10";
 const PYTHON_API_URL = "http://localhost:8010/api/analyze";
+const PYTHON_MC_URL = "http://localhost:8010/api/montecarlo";
 
 const ENGINE_BENCHMARKS = [
   {
@@ -1933,6 +2027,18 @@ const ENGINE_BENCHMARKS = [
     id: "prob_pp_mult", name: "Probabilistic P90 PP multiplier (5%)",
     run: () => probabilisticFactors({ probDesignEnabled: true, ppUncertaintyPct: 5 }).ppMult,
     expected: 1.05, tolPct: 0.5, unit: "ratio"
+  },
+  {
+    id: "vme_curve_interpolate", name: "Manufacturer VME burst @ 200 klbf",
+    run: () => interpolateBurstAtAxial([
+      { axialKlbf: 0, burstPsi: 10000 }, { axialKlbf: 200, burstPsi: 8500 }, { axialKlbf: 400, burstPsi: 6000 }
+    ], 200),
+    expected: 8500, tolPct: 1, unit: "psi"
+  },
+  {
+    id: "mc_percentile_median", name: "Monte Carlo percentile P50",
+    run: () => percentileOf([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], 50),
+    expected: 0.55, tolPct: 5, unit: "util"
   }
 ];
 
@@ -1954,7 +2060,7 @@ function analyzeLoad(load, inp, sf) {
   const inc = surveyAtTvd(load.depth).inc;
   const dls = surveyAtTvd(load.depth).dls || 0;
   const axialEff = effectiveAxialForTriaxial(load.axial, ratings.od, inc, dls);
-  const conn = connectionLimits(ratings, pipeDef.conn, axialEff, load.pInt - load.pExt);
+  const conn = connectionLimits(ratings, pipeDef.conn, axialEff, load.pInt - load.pExt, pipeDef);
   const tri = apiTriaxialCheck(axialEff, load.pInt, load.pExt, ratings, conn, sf);
   const buck = bucklingCheck(axialEff, ratings, str, load, inp, sf);
 
@@ -2113,6 +2219,7 @@ const defaultState = () => ({
       { top: 6000, bottom: 11000, wearPct: 12 }
     ]
   },
+  vmeCurves: {},
   loads: []
 });
 
@@ -2153,7 +2260,9 @@ function getInputs() {
     h2sPartialPsi: +document.getElementById("h2sPartialPsi").value || 0,
     probDesignEnabled: document.getElementById("probDesignEnabled").value === "on",
     ppUncertaintyPct: +document.getElementById("ppUncertaintyPct").value || 5,
+    mcIterations: +document.getElementById("mcIterations").value || 500,
     fgUncertaintyPct: +document.getElementById("fgUncertaintyPct").value || 5,
+    mwUncertaintyPct: +document.getElementById("mwUncertaintyPct").value || 2,
     pipeSpeedFtMin: +document.getElementById("pipeSpeedFtMin").value || 90,
     mudPlasticVisc: +document.getElementById("mudPlasticVisc").value || 25,
     usePythonEngine: document.getElementById("usePythonEngine").value === "on",
@@ -2197,6 +2306,8 @@ function setInputs(inp) {
   document.getElementById("probDesignEnabled").value = inp.probDesignEnabled ? "on" : "off";
   document.getElementById("ppUncertaintyPct").value = inp.ppUncertaintyPct ?? 5;
   document.getElementById("fgUncertaintyPct").value = inp.fgUncertaintyPct ?? 5;
+  document.getElementById("mwUncertaintyPct").value = inp.mwUncertaintyPct ?? 2;
+  document.getElementById("mcIterations").value = inp.mcIterations ?? 500;
   document.getElementById("pipeSpeedFtMin").value = inp.pipeSpeedFtMin ?? 90;
   document.getElementById("mudPlasticVisc").value = inp.mudPlasticVisc ?? 25;
   document.getElementById("usePythonEngine").value = inp.usePythonEngine ? "on" : "off";
@@ -2226,7 +2337,7 @@ function serializeProject() {
     warmbackHours: inp.thermalWarmbackHrs,
     poisson: inp.thermalPoisson
   };
-  return JSON.stringify({ version: 9, inputs: inp, state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 10, inputs: inp, state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
@@ -2249,6 +2360,7 @@ function migrateState(st) {
   if (!st.thermal) st.thermal = defaultState().thermal;
   if (!st.cementingSchedule) st.cementingSchedule = defaultState().cementingSchedule;
   if (!st.wearProfiles) st.wearProfiles = defaultState().wearProfiles;
+  if (!st.vmeCurves) st.vmeCurves = {};
   return st;
 }
 
@@ -2304,6 +2416,7 @@ function renderCatalog() {
     </tr>`;
   }).join("");
   drawVmeChart();
+  renderVmeCurves();
 }
 
 function renderStrings() {
@@ -2640,6 +2753,263 @@ function generateLoadCases(render = true) {
     logAudit(`Generated ${loads.length} depth-wise load points (step ${step} ft)`);
     toast(`Generated ${loads.length} load cases`);
   }
+}
+
+function mcRandn() {
+  const u1 = Math.max(Math.random(), 1e-12);
+  const u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function perturbProfilesMC(profiles, inp) {
+  const ppS = (inp.ppUncertaintyPct ?? 5) / 100;
+  const fgS = (inp.fgUncertaintyPct ?? 5) / 100;
+  const mwS = (inp.mwUncertaintyPct ?? 2) / 100;
+  return profiles.map(p => ({
+    ...p,
+    pp: Math.max(p.pp * (1 + mcRandn() * ppS), 0.1),
+    fg: Math.max(p.fg * (1 + mcRandn() * fgS), 0.1),
+    mwInt: Math.max((p.mwInt ?? 8.6) * (1 + mcRandn() * mwS), 0.1),
+    mwExt: Math.max((p.mwExt ?? 8.6) * (1 + mcRandn() * mwS), 0.1)
+  }));
+}
+
+function percentileOf(sorted, p) {
+  if (!sorted.length) return 0;
+  const k = (sorted.length - 1) * (p / 100);
+  const f = Math.floor(k);
+  const c = Math.min(f + 1, sorted.length - 1);
+  return sorted[f] + (k - f) * (sorted[c] - sorted[f]);
+}
+
+function computeAnalysisCore(inp, profilesOverride = null) {
+  const profilesBackup = state.profiles;
+  if (profilesOverride) state.profiles = profilesOverride;
+  generateLoadCases(false);
+  const mcInp = { ...inp, probDesignEnabled: false };
+  const sf = {
+    burst: mcInp.sfBurst, collapse: mcInp.sfCollapse,
+    tension: mcInp.sfTension, triaxial: mcInp.sfTriaxial, buckling: mcInp.sfBuckling
+  };
+  const rows = [];
+  let maxUtil = 0;
+  let governing = null;
+  for (const load of state.loads) {
+    const result = analyzeLoad(load, mcInp, sf);
+    if (!result) continue;
+    rows.push(result);
+    if (result.util > maxUtil) {
+      maxUtil = result.util;
+      governing = result;
+    }
+  }
+  if (profilesOverride) state.profiles = profilesBackup;
+  return { rows, maxUtil, governing };
+}
+
+let lastMonteCarlo = null;
+
+function runMonteCarloLocal(iterations) {
+  const inp = getInputs();
+  const utils = [];
+  let failures = 0;
+  for (let i = 0; i < iterations; i++) {
+    const trialProfiles = perturbProfilesMC(state.profiles, inp);
+    const { maxUtil } = computeAnalysisCore(inp, trialProfiles);
+    utils.push(maxUtil);
+    if (maxUtil >= 1) failures++;
+  }
+  utils.sort((a, b) => a - b);
+  return {
+    iterations,
+    p10: percentileOf(utils, 10),
+    p50: percentileOf(utils, 50),
+    p90: percentileOf(utils, 90),
+    p95: percentileOf(utils, 95),
+    mean: utils.reduce((a, b) => a + b, 0) / (utils.length || 1),
+    max: utils[utils.length - 1] ?? 0,
+    pass_probability: 1 - failures / iterations,
+    failure_count: failures,
+    histogram: utils
+  };
+}
+
+async function runMonteCarloViaApi(iterations) {
+  const payload = { inputs: getInputs(), state, iterations };
+  const res = await fetch(PYTHON_MC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Monte Carlo API error ${res.status}`);
+  return res.json();
+}
+
+function renderMonteCarloResults(mc) {
+  lastMonteCarlo = mc;
+  const row = document.getElementById("mcKpiRow");
+  if (row) row.style.display = "grid";
+  document.getElementById("mcP50").textContent = `${(mc.p50 * 100).toFixed(1)}%`;
+  document.getElementById("mcP90").textContent = `${(mc.p90 * 100).toFixed(1)}%`;
+  document.getElementById("mcPassProb").textContent = `${(mc.pass_probability * 100).toFixed(1)}%`;
+  document.getElementById("mcIters").textContent = mc.iterations;
+  const passKpi = document.getElementById("mcPassKpi");
+  if (passKpi) passKpi.className = `kpi ${mc.pass_probability >= 0.9 ? "good" : mc.pass_probability >= 0.75 ? "warn" : "bad"}`;
+  const badge = document.getElementById("mcStatusBadge");
+  if (badge) {
+    badge.textContent = `P90 ${(mc.p90 * 100).toFixed(1)}% · ${(mc.pass_probability * 100).toFixed(0)}% pass`;
+    badge.className = `pill ${mc.p90 < 1 ? "ok" : "bad"}`;
+  }
+  drawMcHistogram(mc.histogram || []);
+}
+
+function drawMcHistogram(utils) {
+  const canvas = document.getElementById("mcHistogram");
+  if (!canvas || !utils?.length) return;
+  const cssH = 180;
+  const { ctx, w, h } = setupChartCanvas(canvas, cssH);
+  ctx.fillStyle = "#060a0f";
+  ctx.fillRect(0, 0, w, h);
+  const bins = 20;
+  const maxU = Math.max(...utils, 1);
+  const counts = Array(bins).fill(0);
+  utils.forEach(u => {
+    const idx = Math.min(Math.floor((u / maxU) * bins), bins - 1);
+    counts[idx]++;
+  });
+  const maxC = Math.max(...counts, 1);
+  const margin = { left: 40, right: 12, top: 20, bottom: 32 };
+  const plotW = w - margin.left - margin.right;
+  const plotH = h - margin.top - margin.bottom;
+  const bw = plotW / bins;
+  counts.forEach((c, i) => {
+    const bh = (c / maxC) * plotH;
+    const x = margin.left + i * bw;
+    const y = margin.top + plotH - bh;
+    ctx.fillStyle = i * maxU / bins >= 1 ? "rgba(239,68,68,0.7)" : "rgba(0,180,216,0.65)";
+    ctx.fillRect(x + 1, y, bw - 2, bh);
+  });
+  ctx.strokeStyle = "#ef4444";
+  ctx.setLineDash([4, 3]);
+  const x100 = margin.left + (1 / maxU) * plotW;
+  if (x100 <= margin.left + plotW) {
+    ctx.beginPath();
+    ctx.moveTo(x100, margin.top);
+    ctx.lineTo(x100, margin.top + plotH);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#8b9ab0";
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillText("Max utilization distribution", margin.left, 14);
+  ctx.fillText("Util →", margin.left + plotW / 2 - 16, h - 8);
+}
+
+function runMonteCarlo() {
+  const inp = getInputs();
+  const iterations = Math.min(Math.max(inp.mcIterations || 500, 50), 5000);
+  if (!state.strings.length) { toast("Add strings before Monte Carlo.", "error"); return; }
+  setGlobalStatus("running", "Monte Carlo…");
+  showLoading(true);
+  const done = async () => {
+    try {
+      let mc;
+      if (inp.usePythonEngine) {
+        try { mc = await runMonteCarloViaApi(iterations); }
+        catch { toast("Python MC unavailable — using local engine", "error"); mc = runMonteCarloLocal(iterations); }
+      } else {
+        mc = runMonteCarloLocal(iterations);
+      }
+      renderMonteCarloResults(mc);
+      logAudit(`Monte Carlo: ${iterations} iters, P90=${(mc.p90 * 100).toFixed(1)}%, pass=${(mc.pass_probability * 100).toFixed(0)}%`);
+      toast(`Monte Carlo complete — P90 ${(mc.p90 * 100).toFixed(1)}%`, mc.p90 >= 1 ? "error" : "success");
+    } catch (err) {
+      toast(err.message || "Monte Carlo failed", "error");
+    } finally {
+      showLoading(false);
+      setGlobalStatus("idle", "Ready");
+    }
+  };
+  setTimeout(() => { done(); }, 30);
+}
+
+function importVmeCsv(text) {
+  const rows = parseCsvRows(text);
+  if (!rows.length) return;
+  const hdr = rows[0].map(h => h.toLowerCase().replace(/\s/g, "_"));
+  const start = hdr.some(h => /axial|burst|fa|pb/.test(h)) ? 1 : 0;
+  if (!state.vmeCurves) state.vmeCurves = {};
+  const groups = {};
+  for (let i = start; i < rows.length; i++) {
+    const r = rows[i];
+    const col = n => { const idx = hdr.indexOf(n); return idx >= 0 ? r[idx] : ""; };
+    const conn = col("connection") || col("conn") || col("curve_id") || "imported";
+    const gid = col("curve_id") || `${conn}_${col("od") || "x"}_${col("ppf") || col("wt") || "x"}`;
+    if (!groups[gid]) {
+      groups[gid] = {
+        id: gid.replace(/\s/g, "_"),
+        label: col("label") || `${col("manufacturer") || ""} ${conn}`.trim(),
+        manufacturer: col("manufacturer") || col("mfr"),
+        connection: conn,
+        od: parseFloat(col("od")) || null,
+        wt: parseFloat(col("ppf") || col("wt")) || null,
+        grade: col("grade"),
+        points: []
+      };
+    }
+    const axial = parseFloat(col("axial_klbf") || col("axial") || col("fa") || 0);
+    const burst = parseFloat(col("burst_psi") || col("burst") || col("pb") || 0);
+    groups[gid].points.push({ axialKlbf: axial, burstPsi: burst });
+  }
+  Object.values(groups).forEach(c => {
+    c.points = normalizeVmePoints(c.points);
+    const env = vmeCurveEnvelope(c.points);
+    c.connBurst0 = env.connBurst0;
+    c.connTension0 = env.connTension0;
+    state.vmeCurves[c.id] = c;
+  });
+  renderVmeCurves();
+  drawVmeChart();
+  logAudit(`Imported ${Object.keys(groups).length} VME curve(s)`);
+  toast(`Imported ${Object.keys(groups).length} VME curve(s)`);
+}
+
+function demoVmeCurve() {
+  if (!state.vmeCurves) state.vmeCurves = {};
+  const pts = [
+    { axialKlbf: 0, burstPsi: 10200 }, { axialKlbf: 100, burstPsi: 9800 },
+    { axialKlbf: 200, burstPsi: 9200 }, { axialKlbf: 300, burstPsi: 8400 },
+    { axialKlbf: 400, burstPsi: 7200 }, { axialKlbf: 500, burstPsi: 5200 },
+    { axialKlbf: 580, burstPsi: 2500 }
+  ];
+  const env = vmeCurveEnvelope(pts);
+  state.vmeCurves.VAM_TOP_9_625_L80 = {
+    id: "VAM_TOP_9_625_L80", label: "VAM TOP 9.625 L80 (demo)",
+    manufacturer: "VAM", connection: "VAM TOP", od: 9.625, wt: 53.5, grade: "L80",
+    points: pts, connBurst0: env.connBurst0, connTension0: env.connTension0
+  };
+  const prod = state.catalog.find(p => p.id === "P");
+  if (prod) prod.vmeCurveId = "VAM_TOP_9_625_L80";
+  renderVmeCurves();
+  renderCatalog();
+  drawVmeChart();
+  toast("VAM TOP demo VME loaded");
+}
+
+function renderVmeCurves() {
+  const body = document.getElementById("vmeCurvesBody");
+  if (!body) return;
+  const curves = Object.values(state.vmeCurves || {});
+  body.innerHTML = curves.map((c, i) => `<tr>
+    <td class="mono" style="font-size:0.7rem">${c.id}</td>
+    <td>${c.label || "—"}</td>
+    <td>${c.connection || "—"}</td>
+    <td class="mono">${c.od ?? "—"}</td>
+    <td class="mono">${c.points?.length ?? 0}</td>
+    <td class="mono">${Math.round(c.connBurst0 ?? 0)}</td>
+    <td class="mono">${Math.round(c.connTension0 ?? 0)}</td>
+    <td><button class="small danger" data-del-vme="${c.id}">✕</button></td>
+  </tr>`).join("") || `<tr><td colspan="8" class="muted">Import manufacturer VME CSV or load demo curve.</td></tr>`;
 }
 
 function runAnalysis() {
@@ -3179,7 +3549,7 @@ function drawVmeChart() {
   const p = state.catalog[0];
   const inp = getInputs();
   const r = calcPipeRatings(p, 200, inp.tempDerating, p.wearPct ?? 0);
-  const { pts, ft0, pb0, label } = vmeEllipsePoints(r, p.conn);
+  const { pts, ft0, pb0, label } = vmeEllipsePoints(r, p.conn, 36, p);
   const cssH = 220;
   const { ctx, w, h } = setupChartCanvas(canvas, cssH);
   ctx.fillStyle = "#060a0f";
@@ -3407,7 +3777,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v9 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v10 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -3417,7 +3787,7 @@ function updateReportPreview() {
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v9 Phase D: ISO 10400, surge/swab, cement schedule, wear profiles, sour/probabilistic, Python engine.");
+  lines.push("v10 Phase E: manufacturer VME CSV curves + Monte Carlo P10/P50/P90.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -3653,6 +4023,21 @@ function bindEvents() {
     renderWearProfiles();
   });
 
+  document.getElementById("btnImportVme")?.addEventListener("click", () => document.getElementById("vmeCsvInput").click());
+  document.getElementById("vmeCsvInput")?.addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { importVmeCsv(r.result); } catch (err) { toast(err.message, "error"); } };
+    r.readAsText(f);
+    e.target.value = "";
+  });
+  document.getElementById("btnVmeDemo")?.addEventListener("click", demoVmeCurve);
+  document.getElementById("vmeCurvesBody")?.addEventListener("click", e => {
+    const id = e.target.dataset.delVme;
+    if (id && state.vmeCurves) { delete state.vmeCurves[id]; renderVmeCurves(); drawVmeChart(); }
+  });
+  document.getElementById("btnRunMonteCarlo")?.addEventListener("click", runMonteCarlo);
+
   document.getElementById("btnSaveProject").onclick = () => {
     downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
     logAudit("Project exported to JSON");
@@ -3859,6 +4244,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV9");
     if (!saved) saved = localStorage.getItem("casingDesignProV8");
     if (!saved) saved = localStorage.getItem("casingDesignProV7");
     if (!saved) saved = localStorage.getItem("casingDesignProV6");
@@ -3872,7 +4258,7 @@ function init() {
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v9 initialized");
+  logAudit("Casing Design Pro v10 initialized");
   setInterval(autoSave, 30000);
 }
 
