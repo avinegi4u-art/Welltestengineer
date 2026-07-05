@@ -1,4 +1,4 @@
-# Casing Design Pro — Python Engine (v11)
+# Casing Design Pro — Python Engine (v12)
 
 WellCat-class **casing design** screening engine with validated Python backend and browser frontend.
 
@@ -6,8 +6,8 @@ WellCat-class **casing design** screening engine with validated Python backend a
 
 | Layer | Role |
 |-------|------|
-| `casing-design-pro-v3.html` | Single-file UI (v11) — works offline with embedded JS engine |
-| `backend/engine/` | Canonical Python engine — full axial/pressure parity with JS (Phase F1) |
+| `casing-design-pro-v3.html` | Single-file UI (v12) — works offline with embedded JS engine |
+| `backend/engine/` | Canonical Python engine — full parity with JS (F1 loads + F2 buckling/VME) |
 | `backend/app/main.py` | FastAPI — `/api/analyze`, `/api/montecarlo`, `/api/benchmarks` |
 
 HTML remains the primary interface (no build step). The Python API is optional; when **Use Python Engine** is enabled, **Run Analysis** and Monte Carlo call the backend.
@@ -57,20 +57,25 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
+## Phase F2 — buckling, VME, Monte Carlo alignment
+
+- **Buckling** — Dawson–Paslay sinusoidal/helical + Euler span (matches JS `bucklingCheck`)
+- **Connection VME** — generic API efficiencies + manufacturer CSV curves from `state.vmeCurves`
+- **Survey bending** — effective axial for triaxial via DLS/inc
+- **Monte Carlo histogram** — Python `/api/montecarlo` returns `histogram` array for UI chart
+
 ## Phase F1 — Python engine parity
 
 - **Run Analysis** wired to `POST /api/analyze` when Python engine is on (fallback to local JS)
-- Full **axial load** model: buoyed weight, liner/tieback/hanger, thermal, ballooning, packer, running drag
-- Full **pressure** model: cemented/open hole, offshore mudline, APB, sealed annuli, fluid segments, thermal scenarios
-- **12 new parity tests** in `tests/test_loads_parity.py`
+- Full **axial load** and **pressure** models ported from JS
+- **12 parity tests** in `tests/test_loads_parity.py`
 
 ## Phase E — manufacturer VME + Monte Carlo
 
-- **VME CSV import** — test-based burst vs axial curves replace generic ISO ellipse when loaded
-- **Monte Carlo** — sample PP/FG/MW uncertainty → P50/P90 utilization + pass probability + histogram
-- Python `/api/montecarlo` and `/api/vme/import`
+- **VME CSV import** — test-based burst vs axial curves
+- **Monte Carlo** — P10/P50/P90 utilization + pass probability
 - Sample curve: `sample_data/vam_top_9.625_l80_vme.csv`
 
 ## vs WellCat
 
-~**95–98%** of casing **design screening** workflow (JS engine). Python backend now matches JS for axial/pressure loads; buckling/VME-in-Python remain Phase F2.
+~**95–98%** of casing **design screening** workflow. Python backend now matches JS for loads, buckling, and connection VME when the toggle is on.

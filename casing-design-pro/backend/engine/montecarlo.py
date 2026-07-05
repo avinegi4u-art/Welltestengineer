@@ -74,4 +74,5 @@ def run_monte_carlo(payload: dict[str, Any], iterations: int = 500) -> dict[str,
         "max": utils[-1] if utils else 0,
         "pass_probability": 1.0 - failures / iterations if iterations else 0,
         "failure_count": failures,
+        "histogram": utils,
     }

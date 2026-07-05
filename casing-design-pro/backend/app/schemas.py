@@ -40,6 +40,7 @@ class MonteCarloResponse(BaseModel):
     max: float
     pass_probability: float
     failure_count: int
+    histogram: list[float] | None = None
 
 
 class VmeImportRequest(BaseModel):

@@ -25,7 +25,7 @@ from engine.ratings import (
 )
 from engine.vme import parse_vme_csv_rows
 
-app = FastAPI(title="Casing Design Pro API", version="11.0.0")
+app = FastAPI(title="Casing Design Pro API", version="12.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +38,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Casing Design Pro API v11", "docs": "/docs"}
+    return {"message": "Casing Design Pro API v12", "docs": "/docs"}
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
