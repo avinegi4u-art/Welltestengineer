@@ -18,15 +18,39 @@ HTML remains the primary interface (no build step). The Python API is optional f
 Open `casing-design-pro-v3.html` in Chrome/Edge/Firefox.
 
 ### With Python API
+
+**Important:** Run these in **Command Prompt** or **PowerShell** — not inside the Python `>>>` prompt. If you see `>>>`, type `exit()` first.
+
+**Windows (Command Prompt or PowerShell):**
+```bat
+cd path\to\Welltestengineer\casing-design-pro\backend
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
+```
+Or double-click / run: `casing-design-pro\start-backend.bat`
+
+**Mac / Linux:**
 ```bash
 chmod +x casing-design-pro/start-backend.sh
 ./casing-design-pro/start-backend.sh
 ```
+
 API: http://localhost:8010/docs
 
 In the app, enable **Use Python Engine** on the Project tab (calls `http://localhost:8010/api/analyze`).
 
 ### Tests
+
+Run in **Command Prompt / PowerShell / bash** (not the Python `>>>` prompt):
+
+**Windows:**
+```bat
+cd casing-design-pro\backend
+python -m pip install -r requirements.txt
+python -m pytest tests/ -v
+```
+
+**Mac / Linux:**
 ```bash
 cd casing-design-pro/backend
 pip install -r requirements.txt
