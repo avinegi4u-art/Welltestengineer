@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v7 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v8 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -290,7 +290,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v7</span></h1>
+          <h1>Casing Design <span>Pro v8</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -308,9 +308,10 @@
     <div class="wf-step" data-goto="profiles">② Profiles</div>
     <div class="wf-step" data-goto="strings">③ Strings</div>
     <div class="wf-step" data-goto="survey">④ Survey</div>
-    <div class="wf-step" data-goto="loads">⑤ Loads</div>
-    <div class="wf-step" data-goto="analysis">⑥ Analysis</div>
-    <div class="wf-step" data-goto="reports">⑦ Report</div>
+    <div class="wf-step" data-goto="thermal">⑤ Thermal</div>
+    <div class="wf-step" data-goto="loads">⑥ Loads</div>
+    <div class="wf-step" data-goto="analysis">⑦ Analysis</div>
+    <div class="wf-step" data-goto="reports">⑧ Report</div>
   </div>
 
   <nav class="tabs" id="tabNav">
@@ -318,6 +319,7 @@
     <button class="tab" data-tab="profiles">Profiles</button>
     <button class="tab" data-tab="strings">Strings</button>
     <button class="tab" data-tab="survey">Survey</button>
+    <button class="tab" data-tab="thermal">Thermal</button>
     <button class="tab" data-tab="loads">Loads</button>
     <button class="tab" data-tab="analysis">Analysis</button>
     <button class="tab" data-tab="reports">Report</button>
@@ -467,6 +469,56 @@
     </div>
   </section>
 
+  <section class="panel" id="panel-thermal">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Transient Thermal Scenarios</h3>
+        <p class="card-desc">Circulation, shut-in warmback, hot production, and cold injection temperature profiles feed axial thermal loads and annulus APB heating.</p>
+        <div class="grid-3">
+          <label class="field">Thermal Module
+            <select id="thermalEnabled"><option value="on">Enabled</option><option value="off">Geothermal only</option></select>
+          </label>
+          <label class="field">Scenario Mode
+            <select id="thermalMode">
+              <option value="circulation">Circulation (cold mud)</option>
+              <option value="shutin">Shut-in warmback</option>
+              <option value="production">Hot production</option>
+              <option value="injection">Cold injection</option>
+            </select>
+          </label>
+          <label class="field">Time (hours)<input id="thermalTimeHours" type="number" value="12" min="0" step="1" /></label>
+          <label class="field">Circulating Temp (°F)<input id="thermalCircTempF" type="number" value="120" /></label>
+          <label class="field">Production BHT (°F)<input id="thermalProdTempF" type="number" value="285" /></label>
+          <label class="field">Injection Temp (°F)<input id="thermalInjTempF" type="number" value="95" /></label>
+          <label class="field">Relaxation Depth (ft)<input id="thermalRelaxFt" type="number" value="5000" min="500" step="500" /></label>
+          <label class="field">Warmback τ (hours)<input id="thermalWarmbackHrs" type="number" value="48" min="1" /></label>
+          <label class="field">Poisson's ν<input id="thermalPoisson" type="number" step="0.01" value="0.30" min="0.2" max="0.35" /></label>
+        </div>
+        <div class="toolbar" style="margin-top:0.75rem">
+          <button class="small" id="btnThermalPresetCirc">Circulation preset</button>
+          <button class="small" id="btnThermalPresetShutin">Shut-in preset</button>
+          <button class="small" id="btnThermalPresetProd">Production preset</button>
+        </div>
+        <h3 style="margin-top:1rem">Sealed Annuli (Multi-string APB)</h3>
+        <p class="card-desc">Trapped annulus pressure from thermal expansion (P₂/P₁ = T₂/T₁) plus optional volume compliance.</p>
+        <div class="toolbar">
+          <button class="small" id="btnAddAnnulus">+ Add Annulus</button>
+          <button class="small" id="btnAnnulusDemo">Demo A/B Annuli</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Inner</th><th>Outer</th><th>Top</th><th>Bot</th><th>P₀ ψ</th><th>T₀ °F</th><th>Vol bbl</th><th>C ψ/bbl</th><th></th></tr></thead><tbody id="annuliBody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Temperature vs Depth</h3>
+        <canvas class="chart" id="thermalChart" width="600" height="280"></canvas>
+        <h3 style="margin-top:1rem">APB Pressure vs Depth</h3>
+        <canvas class="chart" id="apbChart" width="600" height="220"></canvas>
+        <h3 style="margin-top:1rem">Packer / Tubing Movement</h3>
+        <p class="card-desc">Seal-bore stroke, ballooning, and piston loads at packers (simplified Tube module).</p>
+        <div class="table-wrap"><table><thead><tr><th>Packer</th><th>String</th><th>Depth</th><th>Stroke in</th><th>Seal ID</th><th>Anchor</th><th>ΔT °F</th><th>Balloon klbf</th><th>Move in</th></tr></thead><tbody id="packerMovementBody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="panel-loads">
     <div class="card">
       <h3>Load Case Matrix</h3>
@@ -563,14 +615,14 @@
       </div>
       <div class="card">
         <h3>Engine Benchmark Suite</h3>
-        <p class="card-desc">22 published-style API / textbook regression cases. Green = within tolerance.</p>
+        <p class="card-desc">28 published-style API / textbook regression cases. Green = within tolerance.</p>
         <div id="benchmarkResults"></div>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v7 · Phase B — VME + rating lines</span>
+    <span>Casing Design Pro v8 · Phase C — transient thermal, packer movement, multi-annulus APB</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -613,8 +665,22 @@ const SCENARIOS = {
   stimulation: { label: "Stimulation / Frac" },
   running: { label: "Running In / Overpull" },
   packerSet: { label: "Packer Set / Test" },
-  annulusIntegrity: { label: "Sealed Annulus / APB" }
+  annulusIntegrity: { label: "Sealed Annulus / APB" },
+  thermalCirculation: { label: "Thermal — Circulation" },
+  thermalShutin: { label: "Thermal — Shut-in" },
+  thermalProduction: { label: "Thermal — Hot Production" },
+  thermalInjection: { label: "Thermal — Cold Injection" },
+  tubingMovement: { label: "Tubing / Packer Movement" }
 };
+
+const THERMAL_MODE_FOR_SCENARIO = {
+  thermalCirculation: "circulation",
+  thermalShutin: "shutin",
+  thermalProduction: "production",
+  thermalInjection: "injection"
+};
+
+const POISSON_STEEL = 0.3;
 
 const CONNECTION_VME = {
   BTC: { burstEff: 1.0, collapseEff: 1.0, tensionEff: 0.55, compressionEff: 0.55, label: "API BTC" },
@@ -734,6 +800,184 @@ function packersOnString(stringId) {
 function packerNearDepth(tvd, stringId) {
   const tol = 300;
   return packersOnString(stringId).find(p => Math.abs(p.depth - tvd) <= tol);
+}
+
+function geothermalTempAtDepth(tvd) {
+  return interpolateProfile(state.profiles, tvd, "temp");
+}
+
+function thermalSettings(inp) {
+  const th = state.thermal || {};
+  return {
+    enabled: th.enabled !== false && inp.thermalEnabled !== false,
+    mode: th.mode || inp.thermalMode || "circulation",
+    timeHours: th.timeHours ?? inp.thermalTimeHours ?? 12,
+    circulatingTempF: th.circulatingTempF ?? inp.thermalCircTempF ?? 120,
+    productionTempF: th.productionTempF ?? inp.thermalProdTempF ?? 285,
+    injectionTempF: th.injectionTempF ?? inp.thermalInjTempF ?? 95,
+    relaxDepthFt: th.relaxDepthFt ?? inp.thermalRelaxFt ?? 5000,
+    warmbackHours: th.warmbackHours ?? inp.thermalWarmbackHrs ?? 48,
+    poisson: th.poisson ?? inp.thermalPoisson ?? POISSON_STEEL
+  };
+}
+
+function temperatureAtDepth(tvd, inp, scenarioKey) {
+  const geo = geothermalTempAtDepth(tvd);
+  const th = thermalSettings(inp);
+  let mode = th.mode;
+  if (scenarioKey && THERMAL_MODE_FOR_SCENARIO[scenarioKey]) {
+    mode = THERMAL_MODE_FOR_SCENARIO[scenarioKey];
+  } else if (scenarioKey === "tubingMovement") {
+    mode = "production";
+  }
+  if (!th.enabled && !THERMAL_MODE_FOR_SCENARIO[scenarioKey] && scenarioKey !== "tubingMovement") {
+    return geo;
+  }
+  const relax = Math.max(th.relaxDepthFt, 500);
+  const frac = 1 - Math.exp(-tvd / relax);
+  switch (mode) {
+    case "circulation": {
+      const tCirc = th.circulatingTempF;
+      return tCirc + (geo - tCirc) * frac;
+    }
+    case "shutin": {
+      const tCirc = th.circulatingTempF;
+      const warm = Math.min(1, th.timeHours / Math.max(th.warmbackHours, 1));
+      const tCircProf = tCirc + (geo - tCirc) * frac;
+      return tCircProf + warm * (geo - tCircProf);
+    }
+    case "production": {
+      const tBh = th.productionTempF;
+      const maxShoe = Math.max(...state.strings.map(s => s.shoe), tvd, 1);
+      const prodFrac = Math.min(1, tvd / (maxShoe * 0.88));
+      return geo + prodFrac * (tBh - geo);
+    }
+    case "injection": {
+      const tInj = th.injectionTempF;
+      return tInj + (geo - tInj) * frac * 0.35;
+    }
+    default:
+      return geo;
+  }
+}
+
+function annulusAtDepth(tvd, stringId) {
+  return (state.annuli || []).find(a =>
+    (a.innerStringId === stringId || a.outerStringId === stringId) &&
+    tvd >= (a.topTvd ?? 0) && tvd <= (a.bottomTvd ?? 99999)
+  );
+}
+
+function annuliOnInnerString(stringId) {
+  return (state.annuli || []).filter(a => a.innerStringId === stringId);
+}
+
+function apbPressureFromTemperature(initialPsi, initialTempF, currentTempF) {
+  const T1 = (initialTempF ?? 70) + 459.67;
+  const T2 = (currentTempF ?? 70) + 459.67;
+  if (T1 <= 0) return initialPsi;
+  return Math.max(initialPsi * (T2 / T1), 0);
+}
+
+function annulusPressurePsi(annulus, tvd, inp, scenarioKey) {
+  const temp = temperatureAtDepth(tvd, inp, scenarioKey);
+  const p0 = annulus.initialPressurePsi ?? annulus.trappedPressurePsi ?? 0;
+  const t0 = annulus.initialTempF ?? inp.refTempF ?? 70;
+  let p = apbPressureFromTemperature(p0, t0, temp);
+  const compliance = annulus.complianceBblPerPsi;
+  if (compliance > 0 && annulus.volumeBbl > 0) {
+    const dT = temp - t0;
+    const beta = annulus.fluidExpPerF ?? 0.00045;
+    const dV = annulus.volumeBbl * beta * dT;
+    p += dV / compliance;
+  }
+  return p;
+}
+
+function annulusExternalPressureAtDepth(tvd, string, inp, scenarioKey) {
+  const ann = annulusAtDepth(tvd, string.id);
+  if (!ann || ann.sealed === false) return null;
+  if (string.id === ann.innerStringId) {
+    return annulusPressurePsi(ann, tvd, inp, scenarioKey);
+  }
+  return null;
+}
+
+function innerAreaSqIn(id) { return (Math.PI / 4) * id * id; }
+function outerAreaSqIn(od) { return (Math.PI / 4) * od * od; }
+
+function ballooningAxialKlbf(od, id, pInt, pExt, refPInt, refPExt, nu, freeLengthFt) {
+  const dPi = pInt - refPInt;
+  const dPe = pExt - refPExt;
+  const Ai = innerAreaSqIn(id);
+  const Ao = outerAreaSqIn(od);
+  const factor = (2 * nu) / (1 - nu);
+  const forceLbf = -factor * (dPi * Ai - dPe * Ao);
+  const lengthScale = Math.min(Math.max(freeLengthFt ?? 1, 1) / 1000, 1.5);
+  return (forceLbf / 1000) * lengthScale;
+}
+
+function pistonForceKlbf(od, id, pInt, pExt, refPInt, refPExt, sealIdIn) {
+  const dPi = pInt - refPInt;
+  const dPe = pExt - refPExt;
+  const aSeal = innerAreaSqIn(sealIdIn ?? id);
+  const aMetal = outerAreaSqIn(od) - innerAreaSqIn(id);
+  return ((dPi * aSeal - dPe * aMetal) / 1000);
+}
+
+function referencePressuresAtInstall(tvd, string, inp) {
+  return {
+    pInt: columnPressurePsi(tvd, string),
+    pExt: offshoreExternalPsi(tvd, string.fluidExt ?? interpolateProfile(state.profiles, tvd, "mwExt"), inp)
+  };
+}
+
+function constrainedLengthFt(tvd, string) {
+  const pk = packersOnString(string.id).find(p => p.depth <= tvd);
+  const anchor = pk ? pk.depth : (string.toc ?? string.top);
+  return Math.max(tvd - anchor, 0);
+}
+
+function packerThermalMovementIn(deltaTF, freeLengthFt, alpha) {
+  return (alpha ?? STEEL_ALPHA) * deltaTF * Math.max(freeLengthFt, 0);
+}
+
+function packerMovementSummary(packer, inp, scenarioKey) {
+  const str = state.strings.find(s => s.id === packer.stringId);
+  const pipe = str ? state.catalog.find(p => p.id === str.pipeId) : null;
+  if (!str || !pipe) return null;
+  const id = pipeIdFromWeight(pipe.od, pipe.wt);
+  const depth = packer.depth;
+  const temp = temperatureAtDepth(depth, inp, scenarioKey);
+  const refT = inp.refTempF ?? 70;
+  const deltaT = temp - refT;
+  const refP = referencePressuresAtInstall(depth, str, inp);
+  const pInt = internalPressureAtDepth(depth, str, scenarioKey || "production", inp);
+  const pExt = externalPressureAtDepth(depth, str, scenarioKey || "production", inp);
+  const nu = thermalSettings(inp).poisson;
+  const freeLen = constrainedLengthFt(depth, str);
+  const balloon = ballooningAxialKlbf(pipe.od, id, pInt, pExt, refP.pInt, refP.pExt, nu, freeLen);
+  const piston = pistonForceKlbf(pipe.od, id, pInt, pExt, refP.pInt, refP.pExt, packer.sealIdIn ?? id);
+  const stroke = packer.sealStrokeIn ?? 12;
+  const moveIn = packerThermalMovementIn(deltaT, freeLen, STEEL_ALPHA);
+  const anchored = (packer.anchorType || "fixed") === "fixed";
+  const netMove = anchored ? Math.max(Math.min(moveIn, stroke), -stroke) : moveIn;
+  return { deltaT, balloon, piston, moveIn: netMove, stroke, temp, pInt, pExt };
+}
+
+function stringInteractionAxialKlbf(tvd, string, inp, scenarioKey) {
+  let xfer = 0;
+  for (const pk of state.packers || []) {
+    if (Math.abs(pk.depth - tvd) > 300) continue;
+    const inner = state.strings.find(s => s.id === pk.stringId);
+    if (!inner) continue;
+    const ann = annulusAtDepth(tvd, inner.id);
+    if (!ann || ann.outerStringId !== string.id) continue;
+    const summary = packerMovementSummary(pk, inp, scenarioKey);
+    if (!summary) continue;
+    xfer += (pk.setDownKlbf ?? 0) + summary.balloon + summary.piston;
+  }
+  return xfer;
 }
 
 function buoyedWeightKlbf(od, id, lengthFt, fluidPpg, wtPpf) {
@@ -930,7 +1174,9 @@ function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
     const apb = string.apbPsi ?? inp.apbDefaultPsi ?? 0;
     pExt = Math.max(pExt, apb);
   }
-  if (scenarioKey === "annulusIntegrity") {
+  const annP = annulusExternalPressureAtDepth(tvd, string, inp, scenarioKey);
+  if (annP != null) pExt = Math.max(pExt, annP);
+  if (scenarioKey === "annulusIntegrity" || scenarioKey === "tubingMovement") {
     const pk = packerNearDepth(tvd, string.id);
     const annPsi = pk?.annulusPsi ?? string.apbPsi ?? inp.apbDefaultPsi ?? 0;
     pExt = Math.max(pExt, annPsi, pPP * 0.7);
@@ -964,6 +1210,15 @@ function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
       return Math.max(pMW * 1.15, pPP * 0.9);
     case "annulusIntegrity":
       return pMW;
+    case "thermalCirculation":
+    case "thermalShutin":
+      return pMW;
+    case "thermalProduction":
+      return Math.max(pMW, pPP * 0.98);
+    case "thermalInjection":
+      return pMW * 1.08;
+    case "tubingMovement":
+      return Math.max(pMW, pPP * 0.95);
     default:
       return pMW;
   }
@@ -991,11 +1246,20 @@ function axialForceAtDepth(tvd, string, inp, scenarioKey) {
     axial += string.preTensionKlbf ?? 150;
   }
 
-  const temp = interpolateProfile(state.profiles, tvd, "temp");
+  const temp = temperatureAtDepth(tvd, inp, scenarioKey);
   const refT = inp.refTempF ?? 70;
   const dT = temp - refT;
   const constrained = tvd <= (string.toc ?? string.top) ? 1.0 : 0.35;
   axial += thermalAxialKlbf(pipe.od, id, dT) * constrained;
+
+  const refP = referencePressuresAtInstall(tvd, string, inp);
+  const pInt = internalPressureAtDepth(tvd, string, scenarioKey, inp);
+  const pExt = externalPressureAtDepth(tvd, string, scenarioKey, inp);
+  const nu = thermalSettings(inp).poisson;
+  const freeLen = constrainedLengthFt(tvd, string);
+  if (scenarioKey === "tubingMovement" || THERMAL_MODE_FOR_SCENARIO[scenarioKey] || thermalSettings(inp).enabled) {
+    axial += ballooningAxialKlbf(pipe.od, id, pInt, pExt, refP.pInt, refP.pExt, nu, freeLen);
+  }
 
   if (scenarioKey === "running") {
     const overpull = inp.runningOverpullKlbf ?? 50;
@@ -1006,12 +1270,17 @@ function axialForceAtDepth(tvd, string, inp, scenarioKey) {
 
   const pk = packerNearDepth(tvd, string.id);
   if (pk) {
+    const summary = packerMovementSummary(pk, inp, scenarioKey);
     if (scenarioKey === "packerSet") {
       axial += pk.setDownKlbf ?? 0;
-    } else if (scenarioKey === "production" || scenarioKey === "annulusIntegrity") {
-      axial += (pk.setDownKlbf ?? 0) * 0.5;
+    } else if (scenarioKey === "tubingMovement") {
+      axial += (pk.setDownKlbf ?? 0) + (summary?.balloon ?? 0) + (summary?.piston ?? 0);
+    } else if (scenarioKey === "production" || scenarioKey === "annulusIntegrity" || scenarioKey === "thermalProduction") {
+      axial += (pk.setDownKlbf ?? 0) * 0.5 + (summary?.balloon ?? 0) * 0.5;
     }
   }
+
+  axial += stringInteractionAxialKlbf(tvd, string, inp, scenarioKey);
 
   return axial;
 }
@@ -1229,13 +1498,14 @@ function switchTab(tabId) {
   if (tabId === "profiles") requestAnimationFrame(drawPressureChart);
   if (tabId === "strings") requestAnimationFrame(() => { drawSchematic(); drawVmeChart(); });
   if (tabId === "survey") requestAnimationFrame(drawSurveyChart);
+  if (tabId === "thermal") requestAnimationFrame(() => { drawThermalChart(); drawApbChart(); renderPackerMovement(); });
   if (tabId === "analysis") {
     requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); drawRatingLineChart(); });
   }
 }
 
 function updateWorkflow() {
-  const order = ["project", "profiles", "strings", "survey", "loads", "analysis", "reports"];
+  const order = ["project", "profiles", "strings", "survey", "thermal", "loads", "analysis", "reports"];
   const idx = order.indexOf(activeTab);
   document.querySelectorAll(".wf-step").forEach(el => {
     const gi = order.indexOf(el.dataset.goto);
@@ -1324,7 +1594,7 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV7";
+const STORAGE_KEY = "casingDesignProV8";
 
 const ENGINE_BENCHMARKS = [
   {
@@ -1471,6 +1741,41 @@ const ENGINE_BENCHMARKS = [
     id: "offshore_external_mudline", name: "Offshore external @ 3,000 ft (WD=1500)",
     run: () => offshoreExternalPsi(3000, 9.0, { waterDepth: 1500, rigElev: 75, seawaterPpg: 8.6 }),
     expected: 1371, tolPct: 3, unit: "psi"
+  },
+  {
+    id: "thermal_expansion_200f", name: "Thermal axial expansion (ΔT = +200°F, 7\" 29#)",
+    run: () => Math.abs(thermalAxialKlbf(7, pipeIdFromWeight(7, 29), 200)),
+    expected: 332, tolPct: 5, unit: "klbf"
+  },
+  {
+    id: "apb_temp_ratio", name: "APB pressure ratio (T₂/T₁, 70→220°F)",
+    run: () => apbPressureFromTemperature(1200, 70, 220),
+    expected: 1540, tolPct: 2, unit: "psi"
+  },
+  {
+    id: "ballooning_dp3000", name: "Ballooning @ ΔP_int=3000 psi (7\" pipe)",
+    run: () => {
+      const id = pipeIdFromWeight(7, 29);
+      return Math.abs(ballooningAxialKlbf(7, id, 3000, 0, 0, 0, 0.3, 1000));
+    },
+    expected: 77, tolPct: 8, unit: "klbf"
+  },
+  {
+    id: "piston_force_packer", name: "Piston force @ ΔP_int=500 psi (9.625\" pipe)",
+    run: () => {
+      const id = pipeIdFromWeight(9.625, 53.5);
+      return Math.abs(pistonForceKlbf(9.625, id, 3500, 3000, 3000, 3000, id));
+    },
+    expected: 28.5, tolPct: 10, unit: "klbf"
+  },
+  {
+    id: "thermal_circ_temp", name: "Circulation temp @ 8,000 ft (relax 5000)",
+    run: () => {
+      state.thermal = { enabled: true, mode: "circulation", circulatingTempF: 120, relaxDepthFt: 5000 };
+      state.profiles = [{ tvd: 0, temp: 70 }, { tvd: 11000, temp: 220 }];
+      return temperatureAtDepth(8000, { thermalEnabled: true, thermalMode: "circulation", thermalCircTempF: 120, thermalRelaxFt: 5000, refTempF: 70 }, "thermalCirculation");
+    },
+    expected: 167, tolPct: 5, unit: "°F"
   }
 ];
 
@@ -1489,10 +1794,10 @@ function analyzeLoad(load, inp, sf) {
 
   const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
   const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
-  const conn = connectionLimits(ratings, pipeDef.conn, axialEff, load.pInt - load.pExt);
   const inc = surveyAtTvd(load.depth).inc;
   const dls = surveyAtTvd(load.depth).dls || 0;
   const axialEff = effectiveAxialForTriaxial(load.axial, ratings.od, inc, dls);
+  const conn = connectionLimits(ratings, pipeDef.conn, axialEff, load.pInt - load.pExt);
   const tri = apiTriaxialCheck(axialEff, load.pInt, load.pExt, ratings, conn, sf);
   const buck = bucklingCheck(axialEff, ratings, str, load, inp, sf);
 
@@ -1604,8 +1909,23 @@ const defaultState = () => ({
     { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 60, radialClearance: 0.5, apbSealed: false, apbPsi: 0 }
   ],
   packers: [
-    { id: "pk1", stringId: "s3", label: "Production Packer", depth: 10800, setDownKlbf: 35, annulusPsi: 1200 }
+    { id: "pk1", stringId: "s3", label: "Production Packer", depth: 10800, setDownKlbf: 35, annulusPsi: 1200, sealStrokeIn: 12, sealIdIn: 4.25, anchorType: "fixed" }
   ],
+  annuli: [
+    { id: "a1", label: "Prod A-annulus", innerStringId: "s3", outerStringId: "s2", topTvd: 2000, bottomTvd: 10800, initialPressurePsi: 1200, initialTempF: 70, volumeBbl: 85, complianceBblPerPsi: 0.02, fluidExpPerF: 0.00045, sealed: true },
+    { id: "a2", label: "Prod B-annulus", innerStringId: "s3", outerStringId: "s2", topTvd: 10800, bottomTvd: 11000, initialPressurePsi: 800, initialTempF: 70, volumeBbl: 12, complianceBblPerPsi: 0.008, fluidExpPerF: 0.00045, sealed: true }
+  ],
+  thermal: {
+    enabled: true,
+    mode: "production",
+    timeHours: 24,
+    circulatingTempF: 120,
+    productionTempF: 285,
+    injectionTempF: 95,
+    relaxDepthFt: 5000,
+    warmbackHours: 48,
+    poisson: 0.3
+  },
   profiles: [
     { tvd: 0, pp: 8.6, fg: 9.0, mwInt: 8.6, mwExt: 8.6, temp: 70 },
     { tvd: 3000, pp: 9.0, fg: 12.5, mwInt: 9.5, mwExt: 8.6, temp: 120 },
@@ -1630,7 +1950,7 @@ const defaultState = () => ({
 });
 
 let state = defaultState();
-let counters = { pipe: 10, string: 10, load: 10, profile: 10, packer: 1 };
+let counters = { pipe: 10, string: 10, load: 10, profile: 10, packer: 1, annulus: 2 };
 
 function logAudit(msg) {
   const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -1663,6 +1983,15 @@ function getInputs() {
     runningOverpullKlbf: +document.getElementById("runningOverpullKlbf").value || 0,
     dragCoeff: +document.getElementById("dragCoeff").value || 0.25,
     shockFactor: +document.getElementById("shockFactor").value || 1.15,
+    thermalEnabled: document.getElementById("thermalEnabled").value === "on",
+    thermalMode: document.getElementById("thermalMode").value,
+    thermalTimeHours: +document.getElementById("thermalTimeHours").value || 12,
+    thermalCircTempF: +document.getElementById("thermalCircTempF").value || 120,
+    thermalProdTempF: +document.getElementById("thermalProdTempF").value || 285,
+    thermalInjTempF: +document.getElementById("thermalInjTempF").value || 95,
+    thermalRelaxFt: +document.getElementById("thermalRelaxFt").value || 5000,
+    thermalWarmbackHrs: +document.getElementById("thermalWarmbackHrs").value || 48,
+    thermalPoisson: +document.getElementById("thermalPoisson").value || 0.3,
     signoffStatus: document.getElementById("signoffStatus").value,
     signoffNotes: document.getElementById("signoffNotes").value
   };
@@ -1690,12 +2019,33 @@ function setInputs(inp) {
   document.getElementById("runningOverpullKlbf").value = inp.runningOverpullKlbf ?? 50;
   document.getElementById("dragCoeff").value = inp.dragCoeff ?? 0.25;
   document.getElementById("shockFactor").value = inp.shockFactor ?? 1.15;
+  document.getElementById("thermalEnabled").value = inp.thermalEnabled === false ? "off" : "on";
+  document.getElementById("thermalMode").value = inp.thermalMode || state.thermal?.mode || "circulation";
+  document.getElementById("thermalTimeHours").value = inp.thermalTimeHours ?? state.thermal?.timeHours ?? 12;
+  document.getElementById("thermalCircTempF").value = inp.thermalCircTempF ?? state.thermal?.circulatingTempF ?? 120;
+  document.getElementById("thermalProdTempF").value = inp.thermalProdTempF ?? state.thermal?.productionTempF ?? 285;
+  document.getElementById("thermalInjTempF").value = inp.thermalInjTempF ?? state.thermal?.injectionTempF ?? 95;
+  document.getElementById("thermalRelaxFt").value = inp.thermalRelaxFt ?? state.thermal?.relaxDepthFt ?? 5000;
+  document.getElementById("thermalWarmbackHrs").value = inp.thermalWarmbackHrs ?? state.thermal?.warmbackHours ?? 48;
+  document.getElementById("thermalPoisson").value = inp.thermalPoisson ?? state.thermal?.poisson ?? 0.3;
   document.getElementById("signoffStatus").value = inp.signoffStatus || "draft";
   document.getElementById("signoffNotes").value = inp.signoffNotes || "";
 }
 
 function serializeProject() {
-  return JSON.stringify({ version: 7, inputs: getInputs(), state, auditEntries }, null, 2);
+  const inp = getInputs();
+  state.thermal = {
+    enabled: inp.thermalEnabled,
+    mode: inp.thermalMode,
+    timeHours: inp.thermalTimeHours,
+    circulatingTempF: inp.thermalCircTempF,
+    productionTempF: inp.thermalProdTempF,
+    injectionTempF: inp.thermalInjTempF,
+    relaxDepthFt: inp.thermalRelaxFt,
+    warmbackHours: inp.thermalWarmbackHrs,
+    poisson: inp.thermalPoisson
+  };
+  return JSON.stringify({ version: 8, inputs: inp, state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
@@ -1711,6 +2061,11 @@ function migrateState(st) {
   if (!st.survey) st.survey = defaultState().survey;
   if (!st.fluidSegments) st.fluidSegments = {};
   if (!st.packers) st.packers = defaultState().packers;
+  st.packers = st.packers.map(p => ({
+    sealStrokeIn: 12, sealIdIn: 4.25, anchorType: "fixed", ...p
+  }));
+  if (!st.annuli) st.annuli = defaultState().annuli;
+  if (!st.thermal) st.thermal = defaultState().thermal;
   return st;
 }
 
@@ -1805,6 +2160,56 @@ function renderPackers() {
     <td><input type="number" value="${p.annulusPsi ?? 0}" data-pk="${i}" data-f="annulusPsi" style="width:60px"/></td>
     <td><button class="small danger" data-del-pk="${i}">✕</button></td>
   </tr>`).join("");
+  renderPackerMovement();
+}
+
+function renderAnnuli() {
+  const body = document.getElementById("annuliBody");
+  if (!body) return;
+  const annuli = state.annuli || [];
+  body.innerHTML = annuli.map((a, i) => `<tr>
+    <td><input value="${a.label || ""}" data-ann="${i}" data-f="label" style="width:90px"/></td>
+    <td><select data-ann="${i}" data-f="innerStringId">${state.strings.map(s => `<option value="${s.id}" ${s.id===a.innerStringId?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><select data-ann="${i}" data-f="outerStringId">${state.strings.map(s => `<option value="${s.id}" ${s.id===a.outerStringId?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input type="number" value="${a.topTvd ?? 0}" data-ann="${i}" data-f="topTvd" style="width:55px"/></td>
+    <td><input type="number" value="${a.bottomTvd ?? 0}" data-ann="${i}" data-f="bottomTvd" style="width:55px"/></td>
+    <td><input type="number" value="${a.initialPressurePsi ?? 0}" data-ann="${i}" data-f="initialPressurePsi" style="width:50px"/></td>
+    <td><input type="number" value="${a.initialTempF ?? 70}" data-ann="${i}" data-f="initialTempF" style="width:50px"/></td>
+    <td><input type="number" value="${a.volumeBbl ?? 0}" data-ann="${i}" data-f="volumeBbl" style="width:45px"/></td>
+    <td><input type="number" step="0.001" value="${a.complianceBblPerPsi ?? 0}" data-ann="${i}" data-f="complianceBblPerPsi" style="width:50px"/></td>
+    <td><button class="small danger" data-del-ann="${i}">✕</button></td>
+  </tr>`).join("");
+  drawApbChart();
+}
+
+function renderPackerMovement() {
+  const body = document.getElementById("packerMovementBody");
+  if (!body) return;
+  const inp = getInputs();
+  const scenario = inp.thermalMode === "production" ? "thermalProduction" : "tubingMovement";
+  body.innerHTML = (state.packers || []).map(pk => {
+    const str = state.strings.find(s => s.id === pk.stringId);
+    const s = packerMovementSummary(pk, inp, scenario);
+    if (!s) return "";
+    return `<tr>
+      <td>${pk.label || "—"}</td>
+      <td>${str?.label || "—"}</td>
+      <td class="mono">${pk.depth}</td>
+      <td class="mono">${pk.sealStrokeIn ?? 12}</td>
+      <td class="mono">${(pk.sealIdIn ?? 4.25).toFixed(2)}</td>
+      <td>${pk.anchorType || "fixed"}</td>
+      <td class="mono">${s.deltaT.toFixed(0)}</td>
+      <td class="mono">${s.balloon.toFixed(1)}</td>
+      <td class="mono">${s.moveIn.toFixed(2)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="9" class="muted">Add packers on Strings tab to see movement screening.</td></tr>`;
+}
+
+function renderThermal() {
+  renderAnnuli();
+  renderPackerMovement();
+  drawThermalChart();
+  drawApbChart();
 }
 
 function renderSurvey() {
@@ -1955,6 +2360,7 @@ function renderAll() {
   renderStrings();
   renderProfiles();
   renderSurvey();
+  renderThermal();
   if (!state.loads.length) generateLoadCases(false);
   else renderLoads();
   renderResults();
@@ -1967,19 +2373,32 @@ function renderAll() {
 }
 
 /* ===== LOAD GENERATION & ANALYSIS ===== */
+function scenariosForLoadGeneration(inp) {
+  const keys = Object.keys(SCENARIOS);
+  const th = thermalSettings(inp);
+  const thermalKeys = Object.keys(THERMAL_MODE_FOR_SCENARIO);
+  let active = keys.filter(k => !thermalKeys.includes(k));
+  if (th.enabled) active = active.concat(thermalKeys);
+  if ((state.packers || []).length) active.push("tubingMovement");
+  return [...new Set(active)];
+}
+
 function generateLoadCases(render = true) {
   const inp = getInputs();
   const step = inp.analysisStepFt || 1000;
   const loads = [];
+  const scenarioKeys = scenariosForLoadGeneration(inp);
 
   for (const s of state.strings) {
     const depths = depthPointsForString(s, step);
-    for (const [key, sc] of Object.entries(SCENARIOS)) {
+    for (const key of scenarioKeys) {
+      const sc = SCENARIOS[key];
+      if (!sc) continue;
       for (const tvd of depths) {
         const pInt = internalPressureAtDepth(tvd, s, key, inp);
         const pExt = externalPressureAtDepth(tvd, s, key, inp);
         const axial = axialForceAtDepth(tvd, s, inp, key);
-        const temp = interpolateProfile(state.profiles, tvd, "temp");
+        const temp = temperatureAtDepth(tvd, inp, key);
         const zone = externalZone(tvd, s);
         loads.push({
           id: `lc_${s.id}_${key}_${tvd}`,
@@ -2132,6 +2551,77 @@ function drawPressureChart() {
   ctx.fillText("PP", w-80, 18); ctx.fillStyle = "#ef4444"; ctx.fillText("■", w-95, 18);
   ctx.fillStyle = "#8b9ab0"; ctx.fillText("FG", w-80, 32); ctx.fillStyle = "#f59e0b"; ctx.fillText("■", w-95, 32);
   ctx.fillStyle = "#8b9ab0"; ctx.fillText("MW", w-80, 46); ctx.fillStyle = "#00b4d8"; ctx.fillText("■", w-95, 46);
+}
+
+function drawThermalChart() {
+  const c = document.getElementById("thermalChart");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  const inp = getInputs();
+  const maxD = Math.max(...state.profiles.map(p => p.tvd), ...state.strings.map(s => s.shoe), 1);
+  const depths = [];
+  for (let d = 0; d <= maxD; d += Math.max(Math.round(maxD / 25), 250)) depths.push(d);
+  if (depths[depths.length - 1] !== maxD) depths.push(maxD);
+  const temps = depths.map(d => temperatureAtDepth(d, inp, inp.thermalMode));
+  const geo = depths.map(d => geothermalTempAtDepth(d));
+  const maxT = Math.max(...temps, ...geo, 100);
+  const px = t => 50 + (t / maxT) * (w - 70);
+  const py = d => 20 + (d / maxD) * (h - 40);
+  const drawLine = (arr, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    depths.forEach((d, i) => {
+      const x = px(arr[i]), y = py(d);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  drawLine(geo, "#8b9ab0", [4, 4]);
+  drawLine(temps, "#ff6b35");
+  ctx.fillStyle = "#8b9ab0"; ctx.font = "10px system-ui";
+  ctx.fillText("Geothermal", w - 95, 18);
+  ctx.fillStyle = "#ff6b35"; ctx.fillText("Transient", w - 95, 32);
+  ctx.fillStyle = "#8b9ab0"; ctx.fillText("T (°F) →", w / 2 - 20, h - 6);
+}
+
+function drawApbChart() {
+  const c = document.getElementById("apbChart");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.fillStyle = "#05070b"; ctx.fillRect(0, 0, w, h);
+  const annuli = state.annuli || [];
+  if (!annuli.length) {
+    ctx.fillStyle = "#8b9ab0"; ctx.font = "11px system-ui"; ctx.textAlign = "center";
+    ctx.fillText("Add sealed annuli to plot APB vs depth", w / 2, h / 2);
+    ctx.textAlign = "left";
+    return;
+  }
+  const inp = getInputs();
+  const maxD = Math.max(...annuli.map(a => a.bottomTvd), 1);
+  const maxP = Math.max(...annuli.flatMap(a => {
+    const pts = [a.topTvd, a.bottomTvd];
+    return pts.map(d => annulusPressurePsi(a, d, inp, inp.thermalMode));
+  }), 500);
+  const colors = ["#00b4d8", "#f59e0b", "#10b981", "#a78bfa"];
+  annuli.forEach((a, idx) => {
+    const p0 = annulusPressurePsi(a, a.topTvd, inp, inp.thermalMode);
+    const p1 = annulusPressurePsi(a, a.bottomTvd, inp, inp.thermalMode);
+    const px = p => 50 + (p / maxP) * (w - 70);
+    const py = d => 20 + (d / maxD) * (h - 40);
+    ctx.strokeStyle = colors[idx % colors.length]; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px(p0), py(a.topTvd));
+    ctx.lineTo(px(p1), py(a.bottomTvd));
+    ctx.stroke();
+    ctx.fillStyle = colors[idx % colors.length]; ctx.font = "9px system-ui";
+    ctx.fillText(a.label || `Annulus ${idx + 1}`, px(p1) + 4, py(a.bottomTvd));
+  });
+  ctx.fillStyle = "#8b9ab0"; ctx.font = "10px system-ui";
+  ctx.fillText("APB ψ →", w / 2 - 20, h - 6);
 }
 
 function drawSurveyChart() {
@@ -2695,7 +3185,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v7 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v8 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -2705,7 +3195,7 @@ function updateReportPreview() {
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v7 Phase B: connection VME curves, rating vs load lines, 22 regression cases.");
+  lines.push("v8 Phase C: transient thermal, packer/tubing movement, multi-annulus APB.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -2842,13 +3332,64 @@ function bindEvents() {
     state.packers.push({
       id: `pk${counters.packer}`, stringId: state.strings[0]?.id || "s1",
       label: `Packer ${counters.packer}`, depth: state.strings[0]?.shoe || 10000,
-      setDownKlbf: 30, annulusPsi: 1000
+      setDownKlbf: 30, annulusPsi: 1000, sealStrokeIn: 12, sealIdIn: 4.25, anchorType: "fixed"
     });
     renderPackers();
   };
 
   document.getElementById("packersBody")?.addEventListener("input", onPackerEdit);
   document.getElementById("packersBody")?.addEventListener("change", onPackerEdit);
+
+  document.getElementById("annuliBody")?.addEventListener("input", onAnnulusEdit);
+  document.getElementById("annuliBody")?.addEventListener("change", onAnnulusEdit);
+  document.getElementById("annuliBody")?.addEventListener("click", e => {
+    const d = e.target.dataset.delAnn;
+    if (d !== undefined) { state.annuli.splice(+d, 1); renderAnnuli(); }
+  });
+
+  ["thermalEnabled", "thermalMode", "thermalTimeHours", "thermalCircTempF", "thermalProdTempF",
+    "thermalInjTempF", "thermalRelaxFt", "thermalWarmbackHrs", "thermalPoisson"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => { renderThermal(); generateLoadCases(false); });
+    document.getElementById(id)?.addEventListener("input", () => { renderThermal(); });
+  });
+
+  document.getElementById("btnAddAnnulus")?.addEventListener("click", () => {
+    counters.annulus = (counters.annulus || 0) + 1;
+    if (!state.annuli) state.annuli = [];
+    const inner = state.strings[state.strings.length - 1];
+    const outer = state.strings[state.strings.length - 2] || state.strings[0];
+    state.annuli.push({
+      id: `ann${counters.annulus}`, label: `Annulus ${counters.annulus}`,
+      innerStringId: inner?.id || "s3", outerStringId: outer?.id || "s2",
+      topTvd: inner?.toc ?? 0, bottomTvd: inner?.shoe ?? 10000,
+      initialPressurePsi: 1000, initialTempF: 70, volumeBbl: 50,
+      complianceBblPerPsi: 0.015, fluidExpPerF: 0.00045, sealed: true
+    });
+    renderAnnuli();
+  });
+
+  document.getElementById("btnAnnulusDemo")?.addEventListener("click", () => {
+    state.annuli = defaultState().annuli;
+    renderAnnuli();
+    toast("Demo A/B annuli loaded");
+  });
+
+  document.getElementById("btnThermalPresetCirc")?.addEventListener("click", () => {
+    document.getElementById("thermalMode").value = "circulation";
+    document.getElementById("thermalTimeHours").value = 6;
+    document.getElementById("thermalCircTempF").value = 110;
+    renderThermal();
+  });
+  document.getElementById("btnThermalPresetShutin")?.addEventListener("click", () => {
+    document.getElementById("thermalMode").value = "shutin";
+    document.getElementById("thermalTimeHours").value = 24;
+    renderThermal();
+  });
+  document.getElementById("btnThermalPresetProd")?.addEventListener("click", () => {
+    document.getElementById("thermalMode").value = "production";
+    document.getElementById("thermalProdTempF").value = 300;
+    renderThermal();
+  });
 
   document.getElementById("btnSaveProject").onclick = () => {
     downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
@@ -3002,6 +3543,15 @@ function onFluidSegEdit(e) {
   state.fluidSegments[sid][i][f] = v;
 }
 
+function onAnnulusEdit(e) {
+  const i = +e.target.dataset.ann, f = e.target.dataset.f;
+  if (isNaN(i) || !f || !state.annuli?.[i]) return;
+  const v = ["label", "innerStringId", "outerStringId"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.annuli[i][f] = v;
+  drawApbChart();
+}
+
 function onPackerEdit(e) {
   const i = +e.target.dataset.pk, f = e.target.dataset.f;
   if (isNaN(i) || !f || !state.packers?.[i]) return;
@@ -3030,6 +3580,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV7");
     if (!saved) saved = localStorage.getItem("casingDesignProV6");
     if (!saved) saved = localStorage.getItem("casingDesignProV5");
     if (!saved) saved = localStorage.getItem("casingDesignProV4");
@@ -3041,7 +3592,7 @@ function init() {
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v7 initialized");
+  logAudit("Casing Design Pro v8 initialized");
   setInterval(autoSave, 30000);
 }
 
