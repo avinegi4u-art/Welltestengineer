@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v5 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v6 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -205,6 +205,10 @@
     .chart-legend-item.governing { border-color: rgba(0,180,216,0.45); color: var(--text); font-weight: 600; }
     .chart-legend-item .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
     .chart-caption { margin: 0 0 0.5rem; font-size: 0.72rem; color: var(--muted-2); line-height: 1.45; }
+    .design-line-tab.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .bench-row { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-light); font-size: 0.72rem; }
+    .bench-row.pass { color: var(--good); }
+    .bench-row.fail { color: var(--bad); }
 
     .toolbar { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0.75rem; }
     .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.65rem; }
@@ -285,7 +289,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v5</span></h1>
+          <h1>Casing Design <span>Pro v6</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -403,8 +407,10 @@
         <h3>Casing Catalog — API Ratings from Pipe Properties</h3>
         <div class="toolbar">
           <button class="small" id="btnAddCasing">+ Add Pipe</button>
+          <button class="small" id="btnImportCatalog">⬆ Import CSV</button>
           <button class="small" id="btnRecalcRatings">↻ Recalculate All Ratings</button>
         </div>
+        <input type="file" id="catalogCsvInput" accept=".csv,text/csv" hidden />
         <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID calc</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
       </div>
       <div class="card">
@@ -413,7 +419,13 @@
           <button class="small" id="btnAddString">+ Add String</button>
           <button class="small" id="btnTypicalStrings">Typical 5-String Set</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Type</th><th>Top</th><th>Shoe</th><th>TOC</th><th>Pipe</th><th>Fl Int</th><th>Fl Ext</th><th>Hang</th><th>PreTen</th><th>Span</th><th>APB?</th><th>APB ψ</th><th></th></tr></thead><tbody id="stringsBody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Label</th><th>Type</th><th>Top</th><th>Shoe</th><th>TOC</th><th>Pipe</th><th>Fl Int</th><th>Fl Ext</th><th>Hang</th><th>PreTen</th><th>Span</th><th>Clr</th><th>APB?</th><th>APB ψ</th><th></th></tr></thead><tbody id="stringsBody"></tbody></table></div>
+        <h3 style="margin-top:1rem">Packers</h3>
+        <p class="card-desc">Packer set-down and sealed annulus pressures for packer/annulus load scenarios.</p>
+        <div class="toolbar">
+          <button class="small" id="btnAddPacker">+ Add Packer</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Label</th><th>String</th><th>Depth</th><th>Set-down</th><th>Annulus ψ</th><th></th></tr></thead><tbody id="packersBody"></tbody></table></div>
         <canvas class="chart" id="schematicChart" width="600" height="280" style="margin-top:0.75rem"></canvas>
       </div>
     </div>
@@ -426,8 +438,10 @@
         <p class="card-desc">DLS from survey overrides manual string DLS for buckling. TVD computed via minimum curvature.</p>
         <div class="toolbar">
           <button class="small" id="btnAddSurvey">+ Survey Point</button>
+          <button class="small" id="btnImportSurvey">⬆ Import CSV</button>
           <button class="small" id="btnSurveyDeviated">Load Deviated Demo</button>
         </div>
+        <input type="file" id="surveyCsvInput" accept=".csv,text/csv" hidden />
         <div class="table-wrap"><table><thead><tr><th>MD (ft)</th><th>Inc (°)</th><th>Azi (°)</th><th>TVD calc</th><th>DLS</th><th></th></tr></thead><tbody id="surveyBody"></tbody></table></div>
       </div>
       <div class="card">
@@ -494,6 +508,17 @@
           <canvas class="chart util-chart" id="utilChart"></canvas>
           <div class="chart-legend" id="utilChartLegend"></div>
         </div>
+        <h3 style="margin-top:1.25rem">Design Lines vs Depth</h3>
+        <p class="chart-caption" id="designLineCaption">Separate burst, collapse, and axial utilization envelopes per string.</p>
+        <div class="toolbar" id="designLineTabs">
+          <button class="small design-line-tab active" data-line="burst">Burst</button>
+          <button class="small design-line-tab" data-line="collapse">Collapse</button>
+          <button class="small design-line-tab" data-line="axial">Axial</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas class="chart util-chart" id="designLineChart"></canvas>
+          <div class="chart-legend" id="designLineLegend"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -506,6 +531,7 @@
           <button id="btnExportCsv">⬇ CSV Results</button>
           <button id="btnExportHtml">⬇ HTML Report</button>
           <button id="btnPrint">🖨 Print</button>
+          <button class="small" id="btnRunBenchmarks">↻ Run Engine Benchmarks</button>
         </div>
         <div id="reportPreview" class="muted" style="margin-top:0.75rem; white-space:pre-wrap; font-size:0.78rem"></div>
       </div>
@@ -514,10 +540,22 @@
         <div class="audit" id="auditLog"></div>
       </div>
     </div>
+    <div class="grid-2" style="margin-top:1rem">
+      <div class="card">
+        <h3>Calculation Validation — Governing Case</h3>
+        <p class="card-desc">Formulas, inputs, and intermediate values for the governing check (WellCat-style auditability).</p>
+        <div class="audit" id="validationReport" style="max-height:360px;white-space:pre-wrap"></div>
+      </div>
+      <div class="card">
+        <h3>Engine Benchmark Suite</h3>
+        <p class="card-desc">10 published-style API checks run on every analysis. Green = within tolerance.</p>
+        <div id="benchmarkResults"></div>
+      </div>
+    </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v5 · Local-first · API 5CT / TR 5C3</span>
+    <span>Casing Design Pro v6 · Local-first · API 5CT / TR 5C3</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -558,7 +596,9 @@ const SCENARIOS = {
   kick: { label: "Kick / Well Control" },
   evacuation: { label: "Evacuation / Lost Returns" },
   stimulation: { label: "Stimulation / Frac" },
-  running: { label: "Running In / Overpull" }
+  running: { label: "Running In / Overpull" },
+  packerSet: { label: "Packer Set / Test" },
+  annulusIntegrity: { label: "Sealed Annulus / APB" }
 };
 
 const CONNECTIONS = {
@@ -661,10 +701,88 @@ function runningDragKlbf(tvd, string, inp) {
   if (!pipe) return 0;
   const id = pipeIdFromWeight(pipe.od, pipe.wt);
   const below = Math.max(string.shoe - tvd, 0);
-  const weight = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt);
+  const weight = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt, pipe.wt);
   const inc = surveyAtTvd(tvd).inc;
   const mu = inp.dragCoeff ?? 0.25;
   return weight * mu * Math.sin(inc * DEG);
+}
+
+function packersOnString(stringId) {
+  return (state.packers || []).filter(p => p.stringId === stringId);
+}
+
+function packerNearDepth(tvd, stringId) {
+  const tol = 300;
+  return packersOnString(stringId).find(p => Math.abs(p.depth - tvd) <= tol);
+}
+
+function buoyedWeightKlbf(od, id, lengthFt, fluidPpg, wtPpf) {
+  const airLbfPerFt = wtPpf ?? (0.7854 * (od * od - id * id) * 0.283);
+  const buoyancyFactor = Math.max(1 - (fluidPpg / 65.5), 0.12);
+  return Math.max(airLbfPerFt * lengthFt * buoyancyFactor / 1000, 0);
+}
+
+function buoyedWeightPerFtLbf(od, id, fluidPpg, wtPpf) {
+  return buoyedWeightKlbf(od, id, 1, fluidPpg, wtPpf) * 1000;
+}
+
+function bendingEquivalentAxialKlbf(od, incDeg, dls) {
+  if (dls <= 0 || incDeg <= 0) return 0;
+  const E = 30e6;
+  const inc = incDeg * DEG;
+  return (E * od * dls * Math.sin(inc)) / (2 * 57300);
+}
+
+function effectiveAxialForTriaxial(axialKlbf, od, incDeg, dls) {
+  const bend = bendingEquivalentAxialKlbf(od, incDeg, dls);
+  return axialKlbf >= 0 ? axialKlbf + bend : axialKlbf - bend;
+}
+
+function dawsonPaslaySinusoidalKlbf(od, id, incDeg, fluidPpg, radialClearanceIn, wtPpf) {
+  const E = 30e6;
+  const I = (Math.PI / 64) * (od ** 4 - id ** 4);
+  const w = buoyedWeightPerFtLbf(od, id, fluidPpg, wtPpf);
+  const theta = incDeg * DEG;
+  const r = Math.max(radialClearanceIn ?? 0.5, 0.125);
+  if (w <= 0 || Math.sin(theta) < 0.001) return Infinity;
+  return (2 * Math.sqrt(E * I * w * Math.sin(theta) / r)) / 1000;
+}
+
+function dawsonPaslayHelicalKlbf(od, id, incDeg, fluidPpg, radialClearanceIn, wtPpf) {
+  const fs = dawsonPaslaySinusoidalKlbf(od, id, incDeg, fluidPpg, radialClearanceIn, wtPpf);
+  return fs === Infinity ? Infinity : fs * Math.SQRT2;
+}
+
+function bucklingCheck(axialKlbf, ratings, string, load, inp, sf) {
+  const inc = surveyAtTvd(load.depth).inc;
+  const dls = surveyAtTvd(load.depth).dls || 0;
+  const compKlbf = Math.max(-axialKlbf, 0);
+  const fluidPpg = string.fluidInt ?? 9;
+  const rClear = string.radialClearance ?? 0.5;
+  const span = Math.min(Math.max(string.spanFt ?? 60, 20), 200);
+  const wtPpf = ratings.wt;
+
+  if (compKlbf <= 0) {
+    return {
+      util: 0, mode: "Buckling", required: 0, available: Infinity,
+      sinAvail: Infinity, helAvail: Infinity, compKlbf: 0, inc, dls, span
+    };
+  }
+
+  const sinAvailDp = dawsonPaslaySinusoidalKlbf(ratings.od, ratings.id, inc, fluidPpg, rClear, wtPpf);
+  const helAvailDp = dawsonPaslayHelicalKlbf(ratings.od, ratings.id, inc, fluidPpg, rClear, wtPpf);
+  const sinAvailEuler = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, dls);
+
+  const sinAvail = ((inc > 5 ? sinAvailDp : Math.min(sinAvailDp, sinAvailEuler)) / sf.buckling);
+  const helAvail = ((inc > 5 ? helAvailDp : Math.min(helAvailDp, sinAvailEuler * Math.SQRT2)) / sf.buckling);
+
+  const sinUtil = sinAvail > 0 && sinAvail < Infinity ? compKlbf / sinAvail : 0;
+  const helUtil = helAvail > 0 && helAvail < Infinity ? compKlbf / helAvail : 0;
+
+  if (helUtil >= sinUtil && helUtil > 0) {
+    return { util: helUtil, mode: "Helical Buckling", required: compKlbf, available: helAvail, sinAvail, helAvail, sinUtil, helUtil, compKlbf, inc, dls, span };
+  }
+  return { util: sinUtil, mode: "Sinusoidal Buckling", required: compKlbf, available: sinAvail, sinAvail, helAvail, sinUtil, helUtil, compKlbf, inc, dls, span };
 }
 
 const TYPE_COLORS = {
@@ -701,10 +819,15 @@ function apiCollapsePressure(od, id, yieldPsi) {
   const Pp = Yp * (C / D_t - G);
   const Pe = 46.95e6 / (D_t * (D_t - 1) ** 2);
   let Pc;
-  if (D_t < 12.5) Pc = Pyp;
-  else if (D_t < 15) Pc = Math.min(Pyp, Pp);
-  else if (D_t < 25) Pc = Math.min(Pp, Pe);
-  else Pc = Pe;
+  if (D_t < (Yp / E) * Math.pow(3 * B / (2 + B), 3) * Math.pow(YpE, B / (2 + B)) * (2 + B) / (3 * B)) {
+    Pc = Pyp;
+  } else if (D_t < 15) {
+    Pc = Math.min(Pyp, Math.max(Pp, 0));
+  } else if (D_t < 25) {
+    Pc = Pp > 0 ? Math.min(Pp, Pe) : Pe;
+  } else {
+    Pc = Pe;
+  }
   return 0.875 * Math.max(Pc, 0);
 }
 
@@ -787,6 +910,11 @@ function externalPressureAtDepth(tvd, string, scenarioKey, inp) {
     const apb = string.apbPsi ?? inp.apbDefaultPsi ?? 0;
     pExt = Math.max(pExt, apb);
   }
+  if (scenarioKey === "annulusIntegrity") {
+    const pk = packerNearDepth(tvd, string.id);
+    const annPsi = pk?.annulusPsi ?? string.apbPsi ?? inp.apbDefaultPsi ?? 0;
+    pExt = Math.max(pExt, annPsi, pPP * 0.7);
+  }
   return pExt;
 }
 
@@ -812,6 +940,10 @@ function internalPressureAtDepth(tvd, string, scenarioKey, inp) {
       return pMW * 1.12;
     case "running":
       return pMW;
+    case "packerSet":
+      return Math.max(pMW * 1.15, pPP * 0.9);
+    case "annulusIntegrity":
+      return pMW;
     default:
       return pMW;
   }
@@ -823,19 +955,12 @@ function thermalAxialKlbf(od, id, deltaTF) {
   return -(STEEL_ALPHA * deltaTF * E * area) / 1000;
 }
 
-function buoyedWeightKlbf(od, id, lengthFt, fluidPpg) {
-  const area = 0.7854 * (od * od - id * id);
-  const steelLbf = area * lengthFt * 0.283;
-  const buoy = area * lengthFt * (fluidPpg * 0.052);
-  return Math.max((steelLbf - buoy) / 1000, 0);
-}
-
 function axialForceAtDepth(tvd, string, inp, scenarioKey) {
   const pipe = state.catalog.find(p => p.id === string.pipeId);
   if (!pipe) return 0;
   const id = pipeIdFromWeight(pipe.od, pipe.wt);
   const below = Math.max(string.shoe - tvd, 0);
-  let axial = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt);
+  let axial = buoyedWeightKlbf(pipe.od, id, below, string.fluidInt, pipe.wt);
 
   if (string.type === "liner") {
     const hang = string.hangOffKlbf ?? axial * 1.15;
@@ -857,6 +982,15 @@ function axialForceAtDepth(tvd, string, inp, scenarioKey) {
     const drag = runningDragKlbf(tvd, string, inp);
     const shock = inp.shockFactor ?? 1.15;
     axial = (axial + overpull + drag) * shock;
+  }
+
+  const pk = packerNearDepth(tvd, string.id);
+  if (pk) {
+    if (scenarioKey === "packerSet") {
+      axial += pk.setDownKlbf ?? 0;
+    } else if (scenarioKey === "production" || scenarioKey === "annulusIntegrity") {
+      axial += (pk.setDownKlbf ?? 0) * 0.5;
+    }
   }
 
   return axial;
@@ -902,8 +1036,10 @@ function apiTriaxialCheck(axialKlbf, pInt, pExt, ratings, connLimits, sf) {
 
   const burstBase = Math.min(ratings.burst, connLimits.burst);
   const collapseBase = Math.min(ratings.collapse, connLimits.collapse);
-  const burstAvail = burstBase * biaxialBurstFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
-  const collapseAvail = collapseBase * biaxialCollapseFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
+  const burstBiax = biaxialBurstFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
+  const collapseBiax = biaxialCollapseFactor(axialKlbf, ratings.yieldPsi, ratings.od, ratings.id);
+  const burstAvail = burstBase * burstBiax;
+  const collapseAvail = collapseBase * collapseBiax;
 
   const burstReq = Math.max(diffP, 0) * sf.burst;
   const collapseReq = Math.max(-diffP, 0) * sf.collapse;
@@ -916,9 +1052,11 @@ function apiTriaxialCheck(axialKlbf, pInt, pExt, ratings, connLimits, sf) {
   const compReq = Math.max(-axialKlbf, 0) * sf.tension;
   const tensionUtil = tensionAvail > 0 ? tensionReq / tensionAvail : 0;
   const compUtil = compAvail > 0 ? compReq / compAvail : 0;
+  const axialUtil = Math.max(tensionUtil, compUtil);
 
   const Fe = Math.sqrt(Math.max(0, Fa * Fa - 0.75 * diffP * diffP * area * area));
-  const triUtil = Fy > 0 ? (Fe / Fy) * sf.triaxial : 0;
+  const triAllowable = Fy / sf.triaxial;
+  const triUtil = triAllowable > 0 ? Fe / triAllowable : 0;
 
   const util = Math.max(burstUtil, collapseUtil, tensionUtil, compUtil, triUtil);
   let mode = "Triaxial";
@@ -928,9 +1066,24 @@ function apiTriaxialCheck(axialKlbf, pInt, pExt, ratings, connLimits, sf) {
   else if (util === compUtil && compUtil > 0) mode = "Compression";
 
   return {
-    util, mode, burstUtil, collapseUtil, tensionUtil, compUtil, triUtil,
-    burstReq, collapseReq, tensionReq, compReq, triReq: triUtil,
-    burstAvail, collapseAvail, tensionAvail, compAvail, triAvail: 1
+    util, mode, burstUtil, collapseUtil, tensionUtil, compUtil, axialUtil, triUtil,
+    burstReq, collapseReq, tensionReq, compReq, triReq: Fe,
+    burstAvail, collapseAvail, tensionAvail, compAvail, triAvail: triAllowable,
+    audit: {
+      formulas: {
+        burst: "ΔP+ × SF / (Barlow_burst × conn × biaxial_burst)",
+        collapse: "ΔP− × SF / (API_collapse × conn × biaxial_collapse)",
+        tension: "Fax+ × SF / min(body, conn)_tension",
+        compression: "Fax− × SF / min(body, conn)_compression",
+        triaxial: "Fe / (0.875×Yp×A / SF_tri) where Fe = √(Fa² − 0.75×ΔP²×A²)"
+      },
+      inputs: { axialKlbf, pInt, pExt, diffP, yieldPsi: ratings.yieldPsi, od: ratings.od, id: ratings.id, area },
+      intermediate: {
+        Fy_lbf: Fy, Fa_lbf: Fa, Fe_lbf: Fe, triAllowable_lbf: triAllowable,
+        burstBase, collapseBase, burstBiax, collapseBiax,
+        burstAvail, collapseAvail, tensionAvail, compAvail
+      }
+    }
   };
 }
 
@@ -981,7 +1134,10 @@ function pill(util) {
 }
 
 /* ===== UI HELPERS ===== */
+function dlsSafe(v) { return (v ?? 0).toFixed(1); }
+
 let activeTab = "project";
+let activeDesignLine = "burst";
 
 function toast(msg, type = "success") {
   const wrap = document.getElementById("toastWrap");
@@ -1005,7 +1161,9 @@ function switchTab(tabId) {
   if (tabId === "profiles") requestAnimationFrame(drawPressureChart);
   if (tabId === "strings") requestAnimationFrame(drawSchematic);
   if (tabId === "survey") requestAnimationFrame(drawSurveyChart);
-  if (tabId === "analysis") requestAnimationFrame(drawUtilChart);
+  if (tabId === "analysis") {
+    requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); });
+  }
 }
 
 function updateWorkflow() {
@@ -1098,7 +1256,170 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV5";
+const STORAGE_KEY = "casingDesignProV6";
+
+const ENGINE_BENCHMARKS = [
+  {
+    id: "barlow_7_23_n80", name: "7\" 23# N80 Barlow burst (API)",
+    run: () => { const id = pipeIdFromWeight(7, 23); return barlowBurst(7, id, 80000); },
+    expected: 6444, tolPct: 2, unit: "psi"
+  },
+  {
+    id: "collapse_7_23_n80", name: "7\" 23# N80 API collapse",
+    run: () => { const id = pipeIdFromWeight(7, 23); return apiCollapsePressure(7, id, 80000); },
+    expected: 4402, tolPct: 3, unit: "psi"
+  },
+  {
+    id: "tension_9_625_53_p110", name: "9.625\" 53.5# P110 body tension",
+    run: () => { const id = pipeIdFromWeight(9.625, 53.5); return bodyYieldTensionKlbf(9.625, id, 110000); },
+    expected: 1513, tolPct: 3, unit: "klbf"
+  },
+  {
+    id: "hydrostatic_10ppg_10000", name: "10 ppg hydrostatic @ 10,000 ft",
+    run: () => hydrostaticPsi(10, 10000),
+    expected: 5200, tolPct: 0.5, unit: "psi"
+  },
+  {
+    id: "biaxial_burst_comp", name: "Biaxial burst factor (compression)",
+    run: () => biaxialBurstFactor(-200, 80000, 7, pipeIdFromWeight(7, 29)),
+    expected: 0.789, tolPct: 3, unit: "ratio"
+  },
+  {
+    id: "triaxial_pure_burst", name: "Triaxial burst-dominated check",
+    run: () => {
+      const r = calcPipeRatings({ od: 7, wt: 29, grade: "N80", conn: "BTC" }, 200, false, 0);
+      const c = connectionLimits(r, "BTC");
+      return apiTriaxialCheck(50, 4000, 1000, r, c, { burst: 1.1, collapse: 1, tension: 1.2, triaxial: 1.25, buckling: 1.3 }).burstUtil;
+    },
+    expected: 0.40, tolPct: 8, unit: "util"
+  },
+  {
+    id: "dawson_paslay_deviated", name: "Dawson-Paslay sinusoidal (32° inc)",
+    run: () => {
+      const id = pipeIdFromWeight(9.625, 53.5);
+      return dawsonPaslaySinusoidalKlbf(9.625, id, 32, 10.5, 0.5, 53.5);
+    },
+    expected: 963, tolPct: 5, unit: "klbf"
+  },
+  {
+    id: "buckling_compression_only", name: "Buckling ignores tension",
+    run: () => {
+      const r = calcPipeRatings({ od: 9.625, wt: 53.5, grade: "P110", conn: "BTC" }, 200, false, 0);
+      const str = { fluidInt: 9, spanFt: 60, radialClearance: 0.5 };
+      return bucklingCheck(250, r, str, { depth: 5000 }, {}, { buckling: 1.3 }).util;
+    },
+    expected: 0, tolPct: 1, unit: "util"
+  },
+  {
+    id: "pipe_id_formula", name: "Pipe ID from weight (7\" 29#)",
+    run: () => pipeIdFromWeight(7, 29),
+    expected: 6.176, tolPct: 1, unit: "in"
+  },
+  {
+    id: "thermal_contraction", name: "Thermal axial (ΔT = −150°F)",
+    run: () => Math.abs(thermalAxialKlbf(7, pipeIdFromWeight(7, 29), -150)),
+    expected: 249, tolPct: 5, unit: "klbf"
+  }
+];
+
+function runEngineBenchmarks() {
+  return ENGINE_BENCHMARKS.map(b => {
+    const got = b.run();
+    const err = Math.abs(got - b.expected) / Math.max(Math.abs(b.expected), 1e-9) * 100;
+    return { ...b, got, errPct: err, pass: err <= b.tolPct };
+  });
+}
+
+function analyzeLoad(load, inp, sf) {
+  const str = state.strings.find(s => s.id === load.stringId);
+  const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
+  if (!str || !pipeDef) return null;
+
+  const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
+  const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
+  const conn = connectionLimits(ratings, pipeDef.conn);
+  const inc = surveyAtTvd(load.depth).inc;
+  const dls = surveyAtTvd(load.depth).dls || 0;
+  const axialEff = effectiveAxialForTriaxial(load.axial, ratings.od, inc, dls);
+  const tri = apiTriaxialCheck(axialEff, load.pInt, load.pExt, ratings, conn, sf);
+  const buck = bucklingCheck(axialEff, ratings, str, load, inp, sf);
+
+  const util = Math.max(tri.util, buck.util);
+  let mode = tri.mode;
+  let required = tri.burstReq;
+  let available = tri.burstAvail;
+  let unit = "psi";
+
+  if (buck.util >= tri.util && buck.util > 0) {
+    mode = buck.mode;
+    required = buck.required;
+    available = buck.available;
+    unit = "klbf";
+  } else if (tri.mode === "Collapse") { required = tri.collapseReq; available = tri.collapseAvail; }
+  else if (tri.mode === "Tension") { required = tri.tensionReq; available = tri.tensionAvail; unit = "klbf"; }
+  else if (tri.mode === "Compression") { required = tri.compReq; available = tri.compAvail; unit = "klbf"; }
+  else if (tri.mode === "Triaxial") { required = tri.triReq; available = tri.triAvail; unit = "lbf"; }
+
+  const audit = {
+    string: str.label, depth: load.depth, scenario: load.scenario, zone: load.zone,
+    pipe: `${pipeDef.od}" ${pipeDef.wt}ppf ${pipeDef.grade} ${pipeDef.conn}`,
+    wearPct: wear, tempF: load.temp, inc, dls,
+    loads: { pInt: load.pInt, pExt: load.pExt, axial: load.axial, axialEff },
+    triaxial: tri.audit,
+    buckling: {
+      formulas: {
+        sinusoidal: "F_sin = 2√(E·I·w·sinθ/r) / SF (Dawson-Paslay)",
+        helical: "F_hel = √2 × F_sin / SF",
+        bending: "F_bend = E·OD·DLS·sinθ / (2×57300)"
+      },
+      intermediate: buck
+    },
+    safetyFactors: sf
+  };
+
+  return {
+    string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
+    required, available, util, unit, depth: load.depth,
+    zone: load.zone, scenario: load.scenario,
+    burstUtil: tri.burstUtil, collapseUtil: tri.collapseUtil,
+    axialUtil: tri.axialUtil, triUtil: tri.triUtil, buckUtil: buck.util,
+    audit
+  };
+}
+
+function formatValidationReport(audit) {
+  if (!audit) return "Run analysis to generate validation trace.";
+  const lines = [
+    "=== GOVERNING CHECK VALIDATION TRACE ===",
+    `String: ${audit.string} @ ${audit.depth} ft TVD`,
+    `Pipe: ${audit.pipe} | Wear: ${audit.wearPct}% | Temp: ${audit.tempF}°F`,
+    `Survey: Inc ${audit.inc?.toFixed(1)}° | DLS ${audit.dls?.toFixed(2)}°/100ft`,
+    `Scenario: ${audit.scenario} | Zone: ${audit.zone}`,
+    "",
+    "--- Applied Loads ---",
+    `P_int = ${Math.round(audit.loads.pInt)} psi`,
+    `P_ext = ${Math.round(audit.loads.pExt)} psi`,
+    `ΔP = ${Math.round(audit.loads.pInt - audit.loads.pExt)} psi`,
+    `F_axial = ${audit.loads.axial.toFixed(1)} klbf (effective w/ bending: ${audit.loads.axialEff.toFixed(1)} klbf)`,
+    "",
+    "--- Triaxial (API TR 5C3) ---"
+  ];
+  Object.entries(audit.triaxial.formulas).forEach(([k, v]) => lines.push(`${k}: ${v}`));
+  lines.push("", "Intermediate:");
+  Object.entries(audit.triaxial.intermediate).forEach(([k, v]) => {
+    lines.push(`  ${k} = ${typeof v === "number" ? (Math.abs(v) > 100 ? Math.round(v) : v.toFixed(4)) : v}`);
+  });
+  lines.push("", "--- Buckling ---");
+  Object.entries(audit.buckling.formulas).forEach(([k, v]) => lines.push(`${k}: ${v}`));
+  const bi = audit.buckling.intermediate;
+  lines.push(`  Compression = ${bi.compKlbf?.toFixed(1)} klbf`);
+  lines.push(`  F_sin avail = ${bi.sinAvail === Infinity ? "∞" : bi.sinAvail?.toFixed(1)} klbf`);
+  lines.push(`  F_hel avail = ${bi.helAvail === Infinity ? "∞" : bi.helAvail?.toFixed(1)} klbf`);
+  lines.push(`  Unsupported span = ${bi.span} ft`);
+  lines.push("", "--- Safety Factors ---", JSON.stringify(audit.safetyFactors));
+  return lines.join("\n");
+}
+
 let auditEntries = [];
 let lastAnalysis = null;
 
@@ -1111,11 +1432,14 @@ const defaultState = () => ({
     { id: "TB", od: 9.625, wt: 53.5, grade: "P110", conn: "BTC", wearPct: 0 }
   ],
   strings: [
-    { id: "s1", label: "Surface Casing", type: "surface", top: 0, shoe: 3000, toc: 500, pipeId: "S", fluidInt: 8.6, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 3000, apbSealed: false, apbPsi: 0 },
-    { id: "s2", label: "Intermediate", type: "intermediate", top: 0, shoe: 8000, toc: 1500, pipeId: "I", fluidInt: 10.5, fluidExt: 9.0, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 6500, apbSealed: false, apbPsi: 0 },
-    { id: "s3", label: "Production", type: "production", top: 0, shoe: 11000, toc: 2000, pipeId: "P", fluidInt: 11.5, fluidExt: 9.5, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 9000, apbSealed: true, apbPsi: 1800 },
-    { id: "s4", label: "Drilling Liner", type: "liner", top: 10000, shoe: 12500, toc: 10500, pipeId: "L1", fluidInt: 12.0, fluidExt: 9.8, hangOffKlbf: 280, preTensionKlbf: 0, spanFt: 2500, apbSealed: false, apbPsi: 0 },
-    { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 4200, apbSealed: false, apbPsi: 0 }
+    { id: "s1", label: "Surface Casing", type: "surface", top: 0, shoe: 3000, toc: 500, pipeId: "S", fluidInt: 8.6, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 60, radialClearance: 0.75, apbSealed: false, apbPsi: 0 },
+    { id: "s2", label: "Intermediate", type: "intermediate", top: 0, shoe: 8000, toc: 1500, pipeId: "I", fluidInt: 10.5, fluidExt: 9.0, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 60, radialClearance: 0.5, apbSealed: false, apbPsi: 0 },
+    { id: "s3", label: "Production", type: "production", top: 0, shoe: 11000, toc: 2000, pipeId: "P", fluidInt: 11.5, fluidExt: 9.5, hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 60, radialClearance: 0.5, apbSealed: true, apbPsi: 1800 },
+    { id: "s4", label: "Drilling Liner", type: "liner", top: 10000, shoe: 12500, toc: 10500, pipeId: "L1", fluidInt: 12.0, fluidExt: 9.8, hangOffKlbf: 280, preTensionKlbf: 0, spanFt: 40, radialClearance: 0.4, apbSealed: false, apbPsi: 0 },
+    { id: "s5", label: "Tieback", type: "tieback", top: 0, shoe: 5000, toc: 800, pipeId: "TB", fluidInt: 9.0, fluidExt: 8.6, hangOffKlbf: 0, preTensionKlbf: 180, spanFt: 60, radialClearance: 0.5, apbSealed: false, apbPsi: 0 }
+  ],
+  packers: [
+    { id: "pk1", stringId: "s3", label: "Production Packer", depth: 10800, setDownKlbf: 35, annulusPsi: 1200 }
   ],
   profiles: [
     { tvd: 0, pp: 8.6, fg: 9.0, mwInt: 8.6, mwExt: 8.6, temp: 70 },
@@ -1141,7 +1465,7 @@ const defaultState = () => ({
 });
 
 let state = defaultState();
-let counters = { pipe: 10, string: 10, load: 10, profile: 10 };
+let counters = { pipe: 10, string: 10, load: 10, profile: 10, packer: 1 };
 
 function logAudit(msg) {
   const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -1206,17 +1530,22 @@ function setInputs(inp) {
 }
 
 function serializeProject() {
-  return JSON.stringify({ version: 5, inputs: getInputs(), state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 6, inputs: getInputs(), state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
-  st.strings = (st.strings || []).map(s => ({
-    hangOffKlbf: 0, preTensionKlbf: 0, spanFt: Math.max((s.shoe || 0) - (s.top || 0), 500),
-    apbSealed: false, apbPsi: 0, ...s
-  }));
+  st.strings = (st.strings || []).map(s => {
+    const merged = {
+      hangOffKlbf: 0, preTensionKlbf: 0, spanFt: 60, radialClearance: 0.5,
+      apbSealed: false, apbPsi: 0, ...s
+    };
+    if (merged.spanFt > 300) merged.spanFt = 60;
+    return merged;
+  });
   st.catalog = (st.catalog || []).map(p => ({ wearPct: 0, ...p }));
   if (!st.survey) st.survey = defaultState().survey;
   if (!st.fluidSegments) st.fluidSegments = {};
+  if (!st.packers) st.packers = defaultState().packers;
   return st;
 }
 
@@ -1287,13 +1616,29 @@ function renderStrings() {
     <td><input type="number" step="0.1" value="${s.fluidExt}" data-str="${i}" data-f="fluidExt" style="width:45px"/></td>
     <td><input type="number" value="${s.hangOffKlbf ?? 0}" data-str="${i}" data-f="hangOffKlbf" style="width:45px"/></td>
     <td><input type="number" value="${s.preTensionKlbf ?? 0}" data-str="${i}" data-f="preTensionKlbf" style="width:45px"/></td>
-    <td><input type="number" value="${s.spanFt ?? 3000}" data-str="${i}" data-f="spanFt" style="width:50px"/></td>
+    <td><input type="number" value="${s.spanFt ?? 60}" data-str="${i}" data-f="spanFt" style="width:45px"/></td>
+    <td><input type="number" step="0.05" value="${s.radialClearance ?? 0.5}" data-str="${i}" data-f="radialClearance" style="width:40px"/></td>
     <td><input type="checkbox" data-str="${i}" data-f="apbSealed" ${s.apbSealed ? "checked" : ""}/></td>
     <td><input type="number" value="${s.apbPsi ?? 0}" data-str="${i}" data-f="apbPsi" style="width:50px"/></td>
     <td><button class="small danger" data-del-str="${i}">✕</button></td>
   </tr>`).join("");
   drawSchematic();
   renderFluidSegStringSelect();
+  renderPackers();
+}
+
+function renderPackers() {
+  const body = document.getElementById("packersBody");
+  if (!body) return;
+  const packers = state.packers || [];
+  body.innerHTML = packers.map((p, i) => `<tr>
+    <td><input value="${p.label || ""}" data-pk="${i}" data-f="label" style="width:100px"/></td>
+    <td><select data-pk="${i}" data-f="stringId">${state.strings.map(s => `<option value="${s.id}" ${s.id===p.stringId?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input type="number" value="${p.depth}" data-pk="${i}" data-f="depth" style="width:70px"/></td>
+    <td><input type="number" value="${p.setDownKlbf ?? 0}" data-pk="${i}" data-f="setDownKlbf" style="width:55px"/></td>
+    <td><input type="number" value="${p.annulusPsi ?? 0}" data-pk="${i}" data-f="annulusPsi" style="width:60px"/></td>
+    <td><button class="small danger" data-del-pk="${i}">✕</button></td>
+  </tr>`).join("");
 }
 
 function renderSurvey() {
@@ -1433,6 +1778,7 @@ function renderResults() {
     <div style="font-size:0.72rem;color:var(--muted-2);margin-top:0.35rem">${g.detail || ""}</div>`;
 
   drawUtilChart();
+  drawDesignLineChart();
   updateReportPreview();
   populateFilterDropdowns();
 }
@@ -1449,6 +1795,7 @@ function renderAll() {
   populateFilterDropdowns();
   updateWorkflow();
   updateReportPreview();
+  renderBenchmarks(runEngineBenchmarks());
   document.getElementById("auditLog").textContent = auditEntries.join("\n");
 }
 
@@ -1511,46 +1858,29 @@ function runAnalysis() {
       let marginals = 0;
 
       for (const load of state.loads) {
-        const str = state.strings.find(s => s.id === load.stringId);
-        const pipeDef = state.catalog.find(p => p.id === str?.pipeId);
-        if (!str || !pipeDef) continue;
+        const result = analyzeLoad(load, inp, sf);
+        if (!result) continue;
 
-        const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
-        const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
-        const conn = connectionLimits(ratings, pipeDef.conn);
-        const tri = apiTriaxialCheck(load.axial, load.pInt, load.pExt, ratings, conn, sf);
-
-        const span = str.spanFt ?? Math.max(str.shoe - str.top, 500);
-        const dls = surveyAtTvd(load.depth).dls || 0;
-        const buckAvail = sinusoidalBucklingKlbf(ratings.od, ratings.id, span, dls) / sf.buckling;
-        const buckReq = Math.max(load.axial, 0);
-        const buckUtil = buckAvail > 0 && buckAvail < Infinity ? buckReq / buckAvail : 0;
-
-        const util = Math.max(tri.util, buckUtil);
-        let mode = tri.mode;
-        if (buckUtil > tri.util) mode = "Buckling";
-
-        const required = mode === "Buckling" ? buckReq : (tri.mode === "Burst" ? tri.burstReq : tri.mode === "Collapse" ? tri.collapseReq : tri.mode === "Tension" ? tri.tensionReq : tri.mode === "Compression" ? tri.compReq : tri.triReq);
-        const available = mode === "Buckling" ? buckAvail : (tri.mode === "Burst" ? tri.burstAvail : tri.mode === "Collapse" ? tri.collapseAvail : tri.mode === "Tension" ? tri.tensionAvail : tri.mode === "Compression" ? tri.compAvail : 1);
-        const unit = mode === "Buckling" ? "klbf" : (tri.mode === "Triaxial" ? "ratio" : "psi");
-
-        rows.push({
-          string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
-          required, available, util, unit, depth: load.depth,
-          zone: load.zone, scenario: load.scenario
+        rows.push(result);
+        depthChart.push({
+          depth: load.depth, util: result.util, string: result.string, scenario: load.scenario,
+          burstUtil: result.burstUtil, collapseUtil: result.collapseUtil, axialUtil: result.axialUtil
         });
-        depthChart.push({ depth: load.depth, util, string: str.label, scenario: load.scenario });
 
-        if (util >= 1) failures++;
-        else if (util >= 0.85) marginals++;
-        if (util > maxUtil) {
-          maxUtil = util;
+        if (result.util >= 1) failures++;
+        else if (result.util >= 0.85) marginals++;
+        if (result.util > maxUtil) {
+          maxUtil = result.util;
           governing = {
-            string: str.label, loadName: load.name, mode, util, depth: load.depth,
-            detail: `${pipeDef.od}" ${pipeDef.grade} ${pipeDef.conn} · wear ${wear}% · DLS ${dls.toFixed(1)}°/100ft · ${load.zone}`
+            string: result.string, loadName: load.name, mode: result.mode, util: result.util, depth: load.depth,
+            detail: `${result.audit.pipe} · wear ${result.audit.wearPct}% · DLS ${dlsSafe(result.audit.dls)}°/100ft · ${load.zone}`,
+            audit: result.audit
           };
         }
       }
+
+      const benchmarks = runEngineBenchmarks();
+      const benchPass = benchmarks.filter(b => b.pass).length;
 
       let banner;
       if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
@@ -1559,11 +1889,14 @@ function runAnalysis() {
 
       lastAnalysis = {
         rows, depthChart, banner,
-        governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "" },
+        governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "", audit: null },
+        benchmarks, benchPass, benchTotal: benchmarks.length,
         timestamp: new Date().toISOString()
       };
       renderResults();
-      logAudit(`Analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%`);
+      renderValidationReport();
+      renderBenchmarks();
+      logAudit(`Analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%, benchmarks ${benchPass}/${benchmarks.length}`);
       autoSave();
       updateWorkflow();
       switchTab("analysis");
@@ -1843,12 +2176,191 @@ function drawUtilChart() {
   }
 }
 
+function drawDesignLineChart() {
+  const canvas = document.getElementById("designLineChart");
+  const legendEl = document.getElementById("designLineLegend");
+  const captionEl = document.getElementById("designLineCaption");
+  if (!canvas) return;
+
+  const field = activeDesignLine === "burst" ? "burstUtil" : activeDesignLine === "collapse" ? "collapseUtil" : "axialUtil";
+  const modeLabel = activeDesignLine.charAt(0).toUpperCase() + activeDesignLine.slice(1);
+  const cssH = 340;
+  const { ctx, w, h } = setupChartCanvas(canvas, cssH);
+
+  if (!lastAnalysis?.depthChart?.length) {
+    ctx.fillStyle = "#060a0f";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#8b9ab0";
+    ctx.font = "12px Inter, system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(`Run analysis to plot ${modeLabel} design line`, w / 2, h / 2);
+    ctx.textAlign = "left";
+    if (legendEl) legendEl.innerHTML = "";
+    if (captionEl) captionEl.textContent = `Separate ${modeLabel.toLowerCase()} utilization envelope per string vs TVD.`;
+    return;
+  }
+
+  const envelope = new Map();
+  lastAnalysis.depthChart.forEach(p => {
+    const key = `${p.string}\0${p.depth}`;
+    const val = p[field] ?? 0;
+    const prev = envelope.get(key);
+    if (!prev || val > prev[field]) envelope.set(key, { ...p, [field]: val });
+  });
+
+  const byString = {};
+  envelope.forEach(p => {
+    if (!byString[p.string]) byString[p.string] = [];
+    byString[p.string].push(p);
+  });
+
+  const points = [...envelope.values()];
+  const maxDepth = Math.max(...points.map(p => p.depth), 1);
+  const governingString = lastAnalysis.governing?.string;
+  const xMax = 1.5;
+  const margin = { left: 58, right: 24, top: 34, bottom: 46 };
+  const plotW = w - margin.left - margin.right;
+  const plotH = h - margin.top - margin.bottom;
+  const xPos = util => margin.left + Math.min(util / xMax, 1) * plotW;
+  const yPos = depth => margin.top + (depth / maxDepth) * plotH;
+
+  ctx.fillStyle = "#060a0f";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#0a1018";
+  ctx.fillRect(margin.left, margin.top, plotW, plotH);
+
+  const x100 = xPos(1.0);
+  ctx.fillStyle = "rgba(239,68,68,0.08)";
+  ctx.fillRect(x100, margin.top, margin.left + plotW - x100, plotH);
+  [0, 0.5, 0.85, 1.0, 1.25, 1.5].forEach(t => {
+    const x = xPos(t);
+    ctx.strokeStyle = "rgba(42,53,72,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(x, margin.top);
+    ctx.lineTo(x, margin.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = t >= 1 ? "#ef4444" : "#8b9ab0";
+    ctx.textAlign = "center";
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillText(`${Math.round(t * 100)}%`, x, margin.top - 10);
+  });
+  niceDepthTicks(maxDepth).forEach(d => {
+    const y = yPos(d);
+    ctx.strokeStyle = "rgba(42,53,72,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + plotW, y);
+    ctx.stroke();
+    ctx.fillStyle = "#8b9ab0";
+    ctx.textAlign = "right";
+    ctx.fillText(`${d}`, margin.left - 8, y + 4);
+  });
+  ctx.fillStyle = "#eef2f7";
+  ctx.font = "11px Inter, system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText(`${modeLabel} Utilization (%) →`, margin.left + plotW / 2, h - 12);
+  ctx.textAlign = "left";
+
+  const legendItems = [];
+  Object.entries(byString).forEach(([name, pts], index) => {
+    const color = stringChartColor(name, index);
+    const sorted = [...pts].sort((a, b) => a.depth - b.depth);
+    const isGov = name === governingString;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGov ? 3.5 : 2;
+    ctx.beginPath();
+    sorted.forEach((p, i) => {
+      const x = xPos(p[field] ?? 0);
+      const y = yPos(p.depth);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    const maxU = Math.max(...sorted.map(p => p[field] ?? 0));
+    legendItems.push({ name, color, maxU, isGov });
+  });
+
+  if (legendEl) {
+    legendEl.innerHTML = legendItems.map(it => `
+      <span class="chart-legend-item ${it.isGov ? "governing" : ""}">
+        <span class="swatch" style="background:${it.color}"></span>
+        ${it.name} <span class="mono">max ${(it.maxU * 100).toFixed(0)}%</span>
+      </span>`).join("");
+  }
+  if (captionEl) {
+    captionEl.textContent = `${modeLabel} design line — max ${modeLabel.toLowerCase()} utilization at each depth (axis capped at 150%).`;
+  }
+}
+
+function renderValidationReport() {
+  const el = document.getElementById("validationReport");
+  if (!el) return;
+  el.textContent = formatValidationReport(lastAnalysis?.governing?.audit);
+}
+
+function renderBenchmarks(benchmarks) {
+  const el = document.getElementById("benchmarkResults");
+  if (!el) return;
+  const b = benchmarks || lastAnalysis?.benchmarks || runEngineBenchmarks();
+  const pass = b.filter(x => x.pass).length;
+  el.innerHTML = b.map(x => {
+    const fmt = x.unit === "util" || x.unit === "ratio" ? x.got.toFixed(3) : Math.round(x.got);
+    return `<div class="bench-row ${x.pass ? "pass" : "fail"}"><span>${x.name}</span><span class="mono">${x.pass ? "✓" : "✗"} ${fmt} ${x.unit} (±${x.tolPct}%)</span></div>`;
+  }).join("") + `<div class="chart-caption" style="margin-top:0.5rem">${pass}/${b.length} engine benchmarks within tolerance</div>`;
+}
+
+function parseCsvRows(text) {
+  return text.trim().split(/\r?\n/).filter(Boolean).map(line =>
+    line.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, ""))
+  );
+}
+
+function importCatalogCsv(text) {
+  const rows = parseCsvRows(text);
+  if (!rows.length) return;
+  const hdr = rows[0].map(h => h.toLowerCase());
+  const start = hdr.some(h => /od|grade|ppf/.test(h)) ? 1 : 0;
+  let n = 0;
+  for (let i = start; i < rows.length; i++) {
+    const r = rows[i];
+    const col = n => { const idx = hdr.indexOf(n); return idx >= 0 ? r[idx] : ""; };
+    counters.pipe++;
+    state.catalog.push({
+      id: col("id") || `C${counters.pipe}`,
+      od: parseFloat(col("od")) || 7,
+      wt: parseFloat(col("wt") || col("ppf")) || 29,
+      grade: col("grade") || "L80",
+      conn: col("conn") || "BTC",
+      wearPct: parseFloat(col("wearpct") || col("wear")) || 0
+    });
+    n++;
+  }
+  renderCatalog();
+  logAudit(`Imported ${n} pipe(s) from CSV`);
+  toast(`Imported ${n} pipe(s) from CSV`);
+}
+
+function importSurveyCsv(text) {
+  const rows = parseCsvRows(text);
+  if (!rows.length) return;
+  const hdr = rows[0].map(h => h.toLowerCase());
+  const start = hdr.some(h => /md|inc/.test(h)) ? 1 : 0;
+  state.survey = [];
+  for (let i = start; i < rows.length; i++) {
+    const r = rows[i];
+    const col = n => { const idx = hdr.indexOf(n); return idx >= 0 ? parseFloat(r[idx]) : 0; };
+    state.survey.push({ md: col("md"), inc: col("inc"), azi: col("azi") });
+  }
+  renderSurvey();
+  logAudit(`Imported ${state.survey.length} survey point(s) from CSV`);
+  toast(`Imported ${state.survey.length} survey point(s)`);
+}
+
 /* ===== EXPORT ===== */
 function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v5 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v6 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -1857,7 +2369,8 @@ function updateReportPreview() {
     ``, `--- Results (${lastAnalysis.rows.length} checks) ---`
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
-  lines.push("", "v5: wear allowance, APB, deviation survey/DLS, multi-fluid columns, running drag/shock.");
+  lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
+  lines.push("v6: Dawson-Paslay/helical buckling, bending, packer loads, design lines, validation trace.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -1942,8 +2455,57 @@ function bindEvents() {
   });
 
   window.addEventListener("resize", () => {
-    if (activeTab === "analysis") requestAnimationFrame(drawUtilChart);
+    if (activeTab === "analysis") requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); });
   });
+
+  document.getElementById("designLineTabs")?.addEventListener("click", e => {
+    const btn = e.target.closest(".design-line-tab");
+    if (!btn) return;
+    activeDesignLine = btn.dataset.line;
+    document.querySelectorAll(".design-line-tab").forEach(b => b.classList.toggle("active", b === btn));
+    drawDesignLineChart();
+  });
+
+  document.getElementById("btnRunBenchmarks")?.addEventListener("click", () => {
+    const b = runEngineBenchmarks();
+    renderBenchmarks(b);
+    toast(`${b.filter(x => x.pass).length}/${b.length} benchmarks pass`, b.every(x => x.pass) ? "success" : "error");
+  });
+
+  const btnImportCatalog = document.getElementById("btnImportCatalog");
+  if (btnImportCatalog) btnImportCatalog.onclick = () => document.getElementById("catalogCsvInput").click();
+  document.getElementById("catalogCsvInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { importCatalogCsv(r.result); } catch (err) { toast(err.message, "error"); } };
+    r.readAsText(f);
+    e.target.value = "";
+  };
+
+  const btnImportSurvey = document.getElementById("btnImportSurvey");
+  if (btnImportSurvey) btnImportSurvey.onclick = () => document.getElementById("surveyCsvInput").click();
+  document.getElementById("surveyCsvInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { importSurveyCsv(r.result); } catch (err) { toast(err.message, "error"); } };
+    r.readAsText(f);
+    e.target.value = "";
+  };
+
+  const btnAddPacker = document.getElementById("btnAddPacker");
+  if (btnAddPacker) btnAddPacker.onclick = () => {
+    counters.packer = (counters.packer || 0) + 1;
+    if (!state.packers) state.packers = [];
+    state.packers.push({
+      id: `pk${counters.packer}`, stringId: state.strings[0]?.id || "s1",
+      label: `Packer ${counters.packer}`, depth: state.strings[0]?.shoe || 10000,
+      setDownKlbf: 30, annulusPsi: 1000
+    });
+    renderPackers();
+  };
+
+  document.getElementById("packersBody")?.addEventListener("input", onPackerEdit);
+  document.getElementById("packersBody")?.addEventListener("change", onPackerEdit);
 
   document.getElementById("btnSaveProject").onclick = () => {
     downloadBlob(new Blob([serializeProject()], { type: "application/json" }), `casing_project_${getInputs().wellName || "well"}.json`);
@@ -1985,7 +2547,7 @@ function bindEvents() {
   };
 
   document.getElementById("btnAddCasing").onclick = () => { counters.pipe++; state.catalog.push({ id:`C${counters.pipe}`, od:7, wt:29, grade:"L80", conn:"BTC", wearPct: getInputs().defaultWearPct }); renderCatalog(); };
-  document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:9000, apbSealed:false, apbPsi:0 }); renderStrings(); };
+  document.getElementById("btnAddString").onclick = () => { counters.string++; state.strings.push({ id:`s${counters.string}`, label:`String ${counters.string}`, type:"production", top:0, shoe:10000, toc:1000, pipeId:state.catalog[0]?.id||"P", fluidInt:10, fluidExt:9, hangOffKlbf:0, preTensionKlbf:0, spanFt:60, radialClearance:0.5, apbSealed:false, apbPsi:0 }); renderStrings(); };
   document.getElementById("btnTypicalStrings").onclick = () => { state.strings = defaultState().strings; renderStrings(); logAudit("Typical 5-string set loaded"); };
   document.getElementById("btnAddProfileRow").onclick = () => { counters.profile++; state.profiles.push({ tvd: counters.profile*2000, pp:9, fg:12, mwInt:9, mwExt:8.6, temp:100 }); renderProfiles(); };
   document.getElementById("btnProfilePreset").onclick = () => {
@@ -2044,6 +2606,7 @@ function bindEvents() {
     const dp = e.target.dataset.delProf; if (dp !== undefined) { state.profiles.splice(+dp, 1); renderProfiles(); return; }
     const dl = e.target.dataset.delLoad; if (dl !== undefined) { state.loads.splice(+dl, 1); renderLoads(); return; }
     const dsv = e.target.dataset.delSurvey; if (dsv !== undefined) { state.survey.splice(+dsv, 1); renderSurvey(); return; }
+    const dpk = e.target.dataset.delPk; if (dpk !== undefined) { state.packers.splice(+dpk, 1); renderPackers(); return; }
     const dfs = e.target.dataset.delFseg; if (dfs !== undefined) {
       const sid = document.getElementById("fluidSegString").value;
       state.fluidSegments[sid]?.splice(+dfs, 1);
@@ -2096,6 +2659,14 @@ function onFluidSegEdit(e) {
   state.fluidSegments[sid][i][f] = v;
 }
 
+function onPackerEdit(e) {
+  const i = +e.target.dataset.pk, f = e.target.dataset.f;
+  if (isNaN(i) || !f || !state.packers?.[i]) return;
+  const v = ["label", "stringId"].includes(f) ? e.target.value : parseFloat(e.target.value);
+  if (typeof v === "number" && isNaN(v)) return;
+  state.packers[i][f] = v;
+}
+
 function onProfileEdit(e) {
   const i = +e.target.dataset.prof, f = e.target.dataset.f;
   if (isNaN(i) || !f) return;
@@ -2116,6 +2687,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV5");
     if (!saved) saved = localStorage.getItem("casingDesignProV4");
     if (!saved) saved = localStorage.getItem("casingDesignProV3");
     if (saved) loadProject(JSON.parse(saved));
@@ -2124,7 +2696,8 @@ function init() {
   bindEvents();
   updateSubtitle();
   updateWorkflow();
-  logAudit("Casing Design Pro v5 initialized");
+  renderValidationReport();
+  logAudit("Casing Design Pro v6 initialized");
   setInterval(autoSave, 30000);
 }
 
