@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v10 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v11 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -290,7 +290,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v10</span></h1>
+          <h1>Casing Design <span>Pro v11</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -679,7 +679,7 @@
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v10 · Phase E — manufacturer VME CSV + Monte Carlo</span>
+    <span>Casing Design Pro v11 · Phase F1 — Python engine parity + wired analysis</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -1804,7 +1804,7 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV10";
+const STORAGE_KEY = "casingDesignProV11";
 const PYTHON_API_URL = "http://localhost:8010/api/analyze";
 const PYTHON_MC_URL = "http://localhost:8010/api/montecarlo";
 
@@ -2337,7 +2337,7 @@ function serializeProject() {
     warmbackHours: inp.thermalWarmbackHrs,
     poisson: inp.thermalPoisson
   };
-  return JSON.stringify({ version: 10, inputs: inp, state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 11, inputs: inp, state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
@@ -2834,6 +2834,178 @@ function runMonteCarloLocal(iterations) {
   };
 }
 
+async function runAnalysisViaApi() {
+  const payload = {
+    inputs: getInputs(),
+    state,
+    scenarios: scenariosForLoadGeneration(getInputs())
+  };
+  const res = await fetch(PYTHON_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Analysis API error ${res.status}`);
+  return res.json();
+}
+
+function mapPythonAnalysisToLastAnalysis(apiResult) {
+  const rows = (apiResult.rows || []).map(r => ({
+    string: r.string,
+    loadName: r.load_name,
+    mode: r.mode,
+    required: r.required,
+    available: r.available,
+    util: r.util,
+    unit: r.unit,
+    depth: r.depth,
+    zone: r.zone,
+    scenario: r.scenario,
+    burstUtil: r.burst_util,
+    collapseUtil: r.collapse_util,
+    axialUtil: r.axial_util,
+    triUtil: r.tri_util,
+    burstLoad: r.burst_load,
+    collapseLoad: r.collapse_load,
+    burstRating: r.burst_rating,
+    collapseRating: r.collapse_rating,
+    axialLoad: r.axial_load,
+    axialRating: r.axial_rating,
+    audit: {
+      string: r.string,
+      depth: r.depth,
+      scenario: r.scenario,
+      zone: r.zone,
+      wearPct: r.wear_pct,
+      tempF: r.temp_f,
+      loads: { pInt: r.p_int, pExt: r.p_ext, axial: r.axial_klbf, axialEff: r.axial_klbf },
+      engine: "python"
+    }
+  }));
+
+  if (apiResult.loads?.length) {
+    state.loads = apiResult.loads.map(l => ({
+      id: l.id,
+      name: l.name,
+      stringId: l.stringId,
+      depth: l.depth,
+      pInt: l.pInt,
+      pExt: l.pExt,
+      axial: l.axial,
+      temp: l.temp,
+      scenario: l.scenario,
+      zone: l.zone
+    }));
+  }
+
+  const depthChart = rows.map(r => ({
+    depth: r.depth,
+    util: r.util,
+    string: r.string,
+    scenario: r.scenario,
+    burstUtil: r.burstUtil,
+    collapseUtil: r.collapseUtil,
+    axialUtil: r.axialUtil,
+    burstLoad: r.burstLoad,
+    collapseLoad: r.collapseLoad,
+    burstRating: r.burstRating,
+    collapseRating: r.collapseRating,
+    axialLoad: r.axialLoad,
+    axialRating: r.axialRating
+  }));
+
+  const failures = rows.filter(r => r.util >= 1).length;
+  const marginals = rows.filter(r => r.util >= 0.85 && r.util < 1).length;
+  const maxUtil = apiResult.max_util ?? Math.max(...rows.map(r => r.util), 0);
+  const g = apiResult.governing || {};
+  const governing = {
+    string: g.string || "N/A",
+    loadName: g.load_name || "",
+    mode: g.mode || "",
+    util: g.util || 0,
+    depth: g.depth || 0,
+    detail: (g.detail || "") + " · Python engine",
+    audit: rows.find(r => r.util === maxUtil)?.audit || null
+  };
+
+  let banner;
+  if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
+  else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
+  else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
+
+  const benchmarks = runEngineBenchmarks();
+  const benchPass = benchmarks.filter(b => b.pass).length;
+
+  return {
+    rows,
+    depthChart,
+    banner,
+    governing,
+    benchmarks,
+    benchPass,
+    benchTotal: benchmarks.length,
+    timestamp: new Date().toISOString(),
+    engine: "python"
+  };
+}
+
+function runLocalAnalysis(inp) {
+  if (!state.loads.length) generateLoadCases(false);
+
+  const sf = {
+    burst: inp.sfBurst, collapse: inp.sfCollapse,
+    tension: inp.sfTension, triaxial: inp.sfTriaxial, buckling: inp.sfBuckling
+  };
+
+  const rows = [];
+  const depthChart = [];
+  let maxUtil = 0;
+  let governing = null;
+  let failures = 0;
+  let marginals = 0;
+
+  for (const load of state.loads) {
+    const result = analyzeLoad(load, inp, sf);
+    if (!result) continue;
+
+    rows.push(result);
+    depthChart.push({
+      depth: load.depth, util: result.util, string: result.string, scenario: load.scenario,
+      burstUtil: result.burstUtil, collapseUtil: result.collapseUtil, axialUtil: result.axialUtil,
+      burstLoad: result.burstLoad, collapseLoad: result.collapseLoad,
+      burstRating: result.burstRating, collapseRating: result.collapseRating,
+      axialLoad: result.axialLoad, axialRating: result.axialRating
+    });
+
+    if (result.util >= 1) failures++;
+    else if (result.util >= 0.85) marginals++;
+    if (result.util > maxUtil) {
+      maxUtil = result.util;
+      governing = {
+        string: result.string, loadName: load.name, mode: result.mode, util: result.util, depth: load.depth,
+        detail: `${result.audit.pipe} · wear ${result.audit.wearPct}% · DLS ${dlsSafe(result.audit.dls)}°/100ft · ${load.zone}`,
+        audit: result.audit
+      };
+    }
+  }
+
+  const benchmarks = runEngineBenchmarks();
+  const benchPass = benchmarks.filter(b => b.pass).length;
+
+  let banner;
+  if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
+  else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
+  else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
+
+  return {
+    rows, depthChart, banner,
+    governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "", audit: null },
+    benchmarks, benchPass, benchTotal: benchmarks.length,
+    timestamp: new Date().toISOString(),
+    engine: "local"
+  };
+}
+
 async function runMonteCarloViaApi(iterations) {
   const payload = { inputs: getInputs(), state, iterations };
   const res = await fetch(PYTHON_MC_URL, {
@@ -3019,69 +3191,33 @@ function runAnalysis() {
   setGlobalStatus("running", "Analyzing…");
   showLoading(true);
 
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
-      if (!state.loads.length) generateLoadCases(false);
-
-      const sf = {
-        burst: inp.sfBurst, collapse: inp.sfCollapse,
-        tension: inp.sfTension, triaxial: inp.sfTriaxial, buckling: inp.sfBuckling
-      };
-
-      const rows = [];
-      const depthChart = [];
-      let maxUtil = 0;
-      let governing = null;
-      let failures = 0;
-      let marginals = 0;
-
-      for (const load of state.loads) {
-        const result = analyzeLoad(load, inp, sf);
-        if (!result) continue;
-
-        rows.push(result);
-        depthChart.push({
-          depth: load.depth, util: result.util, string: result.string, scenario: load.scenario,
-          burstUtil: result.burstUtil, collapseUtil: result.collapseUtil, axialUtil: result.axialUtil,
-          burstLoad: result.burstLoad, collapseLoad: result.collapseLoad,
-          burstRating: result.burstRating, collapseRating: result.collapseRating,
-          axialLoad: result.axialLoad, axialRating: result.axialRating
-        });
-
-        if (result.util >= 1) failures++;
-        else if (result.util >= 0.85) marginals++;
-        if (result.util > maxUtil) {
-          maxUtil = result.util;
-          governing = {
-            string: result.string, loadName: load.name, mode: result.mode, util: result.util, depth: load.depth,
-            detail: `${result.audit.pipe} · wear ${result.audit.wearPct}% · DLS ${dlsSafe(result.audit.dls)}°/100ft · ${load.zone}`,
-            audit: result.audit
-          };
+      let analysis;
+      if (inp.usePythonEngine) {
+        try {
+          const apiResult = await runAnalysisViaApi();
+          analysis = mapPythonAnalysisToLastAnalysis(apiResult);
+          toast("Analysis via Python engine", "success");
+        } catch {
+          toast("Python engine unavailable — using local JS", "error");
+          analysis = runLocalAnalysis(inp);
         }
+      } else {
+        analysis = runLocalAnalysis(inp);
       }
 
-      const benchmarks = runEngineBenchmarks();
-      const benchPass = benchmarks.filter(b => b.pass).length;
-
-      let banner;
-      if (failures > 0) banner = { cls: "fail", text: `DESIGN FAILED — ${failures} check(s) exceed rating` };
-      else if (marginals > 0) banner = { cls: "warn", text: `MARGINAL — ${marginals} check(s) above 85% utilization` };
-      else banner = { cls: "pass", text: `DESIGN PASSES — max utilization ${(maxUtil * 100).toFixed(1)}%` };
-
-      lastAnalysis = {
-        rows, depthChart, banner,
-        governing: governing || { string: "N/A", loadName: "", mode: "", util: 0, depth: 0, detail: "", audit: null },
-        benchmarks, benchPass, benchTotal: benchmarks.length,
-        timestamp: new Date().toISOString()
-      };
+      lastAnalysis = analysis;
+      const failures = analysis.rows.filter(r => r.util >= 1).length;
+      const maxUtil = Math.max(...analysis.rows.map(r => r.util), 0);
       renderResults();
       renderValidationReport();
       renderBenchmarks();
-      logAudit(`Analysis: ${rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%, benchmarks ${benchPass}/${benchmarks.length}`);
+      logAudit(`Analysis (${analysis.engine}): ${analysis.rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%, benchmarks ${analysis.benchPass}/${analysis.benchTotal}`);
       autoSave();
       updateWorkflow();
       switchTab("analysis");
-      toast(`Analysis complete — ${rows.length} checks`, failures > 0 ? "error" : "success");
+      toast(`Analysis complete — ${analysis.rows.length} checks`, failures > 0 ? "error" : "success");
     } catch (err) {
       setGlobalStatus("fail", "Analysis error");
       toast(err.message || "Analysis failed", "error");
@@ -3777,7 +3913,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v10 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v11 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -3787,7 +3923,7 @@ function updateReportPreview() {
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v10 Phase E: manufacturer VME CSV curves + Monte Carlo P10/P50/P90.");
+  lines.push("v11 Phase F1: Python engine wired to analysis with axial/pressure parity.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -4244,6 +4380,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV10");
     if (!saved) saved = localStorage.getItem("casingDesignProV9");
     if (!saved) saved = localStorage.getItem("casingDesignProV8");
     if (!saved) saved = localStorage.getItem("casingDesignProV7");
@@ -4258,7 +4395,7 @@ function init() {
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v10 initialized");
+  logAudit("Casing Design Pro v11 initialized");
   setInterval(autoSave, 30000);
 }
 

@@ -1,4 +1,4 @@
-# Casing Design Pro — Python Engine (v9)
+# Casing Design Pro — Python Engine (v11)
 
 WellCat-class **casing design** screening engine with validated Python backend and browser frontend.
 
@@ -6,11 +6,11 @@ WellCat-class **casing design** screening engine with validated Python backend a
 
 | Layer | Role |
 |-------|------|
-| `casing-design-pro-v3.html` | Single-file UI (v9) — works offline with embedded JS engine |
-| `backend/engine/` | Canonical Python engine — ISO 10400, surge/swab, wear profiles, sour service, probabilistic |
-| `backend/app/main.py` | FastAPI — `/api/analyze`, `/api/benchmarks` |
+| `casing-design-pro-v3.html` | Single-file UI (v11) — works offline with embedded JS engine |
+| `backend/engine/` | Canonical Python engine — full axial/pressure parity with JS (Phase F1) |
+| `backend/app/main.py` | FastAPI — `/api/analyze`, `/api/montecarlo`, `/api/benchmarks` |
 
-HTML remains the primary interface (no build step). The Python API is optional for heavier runs and regression validation.
+HTML remains the primary interface (no build step). The Python API is optional; when **Use Python Engine** is enabled, **Run Analysis** and Monte Carlo call the backend.
 
 ## Quick start
 
@@ -37,7 +37,7 @@ chmod +x casing-design-pro/start-backend.sh
 
 API: http://localhost:8010/docs
 
-In the app, enable **Use Python Engine** on the Project tab (calls `http://localhost:8010/api/analyze`).
+In the app, enable **Use Python Engine** on the Project tab — this routes **Run Analysis** and Monte Carlo to `http://localhost:8010`.
 
 ### Tests
 
@@ -57,15 +57,12 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-## Phase D — casing gap closure
+## Phase F1 — Python engine parity
 
-- **ISO 10400** design code path (distinct burst/collapse factors vs API)
-- **Surge / swab** running loads (pipe speed + mud PV)
-- **Cementing pressure schedule** (multi-stage density / pressure)
-- **Wear vs depth** profiles per string
-- **Probabilistic** P90 pore / P10 fracture envelopes
-- **Sour service** H₂S partial-pressure derating
-- **Hanger / wellhead** axial loads
+- **Run Analysis** wired to `POST /api/analyze` when Python engine is on (fallback to local JS)
+- Full **axial load** model: buoyed weight, liner/tieback/hanger, thermal, ballooning, packer, running drag
+- Full **pressure** model: cemented/open hole, offshore mudline, APB, sealed annuli, fluid segments, thermal scenarios
+- **12 new parity tests** in `tests/test_loads_parity.py`
 
 ## Phase E — manufacturer VME + Monte Carlo
 
@@ -76,4 +73,4 @@ pytest tests/ -v
 
 ## vs WellCat
 
-~**95–98%** of casing **design screening** workflow.
+~**95–98%** of casing **design screening** workflow (JS engine). Python backend now matches JS for axial/pressure loads; buckling/VME-in-Python remain Phase F2.

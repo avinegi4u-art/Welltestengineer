@@ -76,4 +76,12 @@ def triaxial_check(
         "tri_util": tri_util,
         "burst_avail": burst_avail,
         "collapse_avail": collapse_avail,
+        "burst_req": burst_req,
+        "collapse_req": collapse_req,
+        "tension_req": tension_req,
+        "tension_avail": ratings["tension"] * 1000,
+        "comp_req": comp_req,
+        "comp_avail": ratings["compression"] * 1000,
+        "tri_req": fe * sf.get("triaxial", 1.25),
+        "tri_avail": fy,
     }

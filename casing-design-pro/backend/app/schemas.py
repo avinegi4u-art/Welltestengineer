@@ -15,10 +15,12 @@ class AnalyzeRequest(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     rows: list[dict[str, Any]]
+    loads: list[dict[str, Any]] | None = None
     check_count: int
     max_util: float
     governing: dict[str, Any] | None
     design_code: str
+    engine: str | None = None
 
 
 class MonteCarloRequest(BaseModel):
