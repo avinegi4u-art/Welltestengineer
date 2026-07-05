@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v12 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v13 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -290,11 +290,12 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v12</span></h1>
+          <h1>Casing Design <span>Pro v13</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
       <div class="topbar-actions">
+        <span class="status-pill idle" id="pythonBackendBadge" title="Python engine connection">Python: off</span>
         <span class="status-pill idle" id="globalStatus">Ready</span>
         <span class="status-pill idle" id="autosaveBadge">Autosave off</span>
         <button class="primary" id="btnRunAllTop">▶ Run Analysis</button>
@@ -378,8 +379,9 @@
           <label class="field">MC Iterations<input id="mcIterations" type="number" value="500" min="50" max="5000" step="50" /></label>
           <label class="field">Pipe Speed (ft/min)<input id="pipeSpeedFtMin" type="number" value="90" min="0" /></label>
           <label class="field">Mud Plastic Visc (cP)<input id="mudPlasticVisc" type="number" value="25" min="1" /></label>
+          <label class="field">Python API Base URL<input id="pythonApiBaseUrl" value="http://localhost:8010" placeholder="http://localhost:8010" /></label>
           <label class="field">Python Engine
-            <select id="usePythonEngine"><option value="off">Off (local JS)</option><option value="on">On (localhost:8010)</option></select>
+            <select id="usePythonEngine"><option value="off">Off (local JS)</option><option value="on">On (use API above)</option></select>
           </label>
           <label class="field">Shock Factor<input id="shockFactor" type="number" step="0.05" value="1.15" /></label>
         </div>
@@ -399,7 +401,12 @@
           <label>Office Sign-off Status
             <select id="signoffStatus"><option value="draft">Draft</option><option value="review">Under Review</option><option value="approved">Approved for Drilling</option></select>
           </label>
+          <label style="margin-top:0.5rem">Reviewer / Approver<input id="signoffReviewer" placeholder="Senior drilling engineer name" /></label>
           <label style="margin-top:0.5rem">Sign-off Notes<textarea id="signoffNotes" rows="3" placeholder="Peer review comments, assumptions, limitations..."></textarea></label>
+          <div class="toolbar" style="margin-top:0.5rem">
+            <button class="small" id="btnRevertSignoff" type="button">↩ Revert to Draft</button>
+          </div>
+          <div id="signoffAuditPanel" class="audit" style="margin-top:0.65rem;max-height:120px;font-size:0.72rem"></div>
         </div>
       </div>
     </div>
@@ -654,6 +661,7 @@
         <div class="toolbar">
           <button id="btnExportCsv">⬇ CSV Results</button>
           <button id="btnExportHtml">⬇ HTML Report</button>
+          <button id="btnExportSignoff">⬇ Sign-off Package (JSON)</button>
           <button id="btnPrint">🖨 Print</button>
           <button class="small" id="btnRunBenchmarks">↻ Run Engine Benchmarks</button>
         </div>
@@ -672,14 +680,14 @@
       </div>
       <div class="card">
         <h3>Engine Benchmark Suite</h3>
-        <p class="card-desc">35 published-style API / textbook regression cases. Green = within tolerance.</p>
+        <p class="card-desc">35 published-style API / textbook regression cases. Green = within tolerance. Uses Python API when engine is on.</p>
         <div id="benchmarkResults"></div>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v12 · Phase F2 — buckling, VME, MC histogram</span>
+    <span>Casing Design Pro v13 · Phase F3 — CI, benchmarks, sign-off audit</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -1804,9 +1812,91 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV12";
-const PYTHON_API_URL = "http://localhost:8010/api/analyze";
-const PYTHON_MC_URL = "http://localhost:8010/api/montecarlo";
+const STORAGE_KEY = "casingDesignProV13";
+let PYTHON_API_BASE = "http://localhost:8010";
+let PYTHON_API_URL = "http://localhost:8010/api/analyze";
+let PYTHON_MC_URL = "http://localhost:8010/api/montecarlo";
+let PYTHON_BENCH_URL = "http://localhost:8010/api/benchmarks";
+let PYTHON_HEALTH_URL = "http://localhost:8010/api/health";
+let pythonBackendOnline = false;
+
+function getPythonApiBase() {
+  const raw = (document.getElementById("pythonApiBaseUrl")?.value || "http://localhost:8010").trim().replace(/\/$/, "");
+  return raw || "http://localhost:8010";
+}
+
+function syncPythonApiUrls() {
+  PYTHON_API_BASE = getPythonApiBase();
+  PYTHON_API_URL = `${PYTHON_API_BASE}/api/analyze`;
+  PYTHON_MC_URL = `${PYTHON_API_BASE}/api/montecarlo`;
+  PYTHON_BENCH_URL = `${PYTHON_API_BASE}/api/benchmarks`;
+  PYTHON_HEALTH_URL = `${PYTHON_API_BASE}/api/health`;
+}
+
+async function checkPythonBackend() {
+  const badge = document.getElementById("pythonBackendBadge");
+  const inp = getInputs();
+  if (!inp.usePythonEngine) {
+    pythonBackendOnline = false;
+    if (badge) { badge.textContent = "Python: off"; badge.className = "status-pill idle"; }
+    return false;
+  }
+  syncPythonApiUrls();
+  if (badge) { badge.textContent = "Python: checking…"; badge.className = "status-pill warn"; }
+  try {
+    const res = await fetch(PYTHON_HEALTH_URL, { method: "GET", signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    pythonBackendOnline = data.status === "ok";
+    if (badge) {
+      badge.textContent = pythonBackendOnline ? `Python: v${(data.version || "?").split(".")[0]} ✓` : "Python: error";
+      badge.className = `status-pill ${pythonBackendOnline ? "pass" : "fail"}`;
+    }
+    return pythonBackendOnline;
+  } catch {
+    pythonBackendOnline = false;
+    if (badge) { badge.textContent = "Python: offline"; badge.className = "status-pill fail"; }
+    return false;
+  }
+}
+
+function setSignoffLocked(locked) {
+  const ro = locked;
+  document.getElementById("signoffStatus").disabled = ro;
+  document.getElementById("signoffNotes").readOnly = ro;
+  document.getElementById("signoffReviewer").readOnly = ro;
+  document.getElementById("btnRevertSignoff").style.display = locked ? "inline-block" : "none";
+}
+
+function renderSignoffAudit() {
+  const el = document.getElementById("signoffAuditPanel");
+  if (!el) return;
+  const log = state.signoffAuditLog || [];
+  if (!log.length) {
+    el.textContent = "Sign-off audit trail empty — status changes and analysis runs are logged here.";
+    return;
+  }
+  el.textContent = log.slice(0, 12).map(e =>
+    `[${e.timestamp?.slice(0, 19).replace("T", " ")}] ${e.status?.toUpperCase()} · ${e.action} · ${e.engineer}${e.reviewer && e.reviewer !== "—" ? ` (rev: ${e.reviewer})` : ""}${e.detail ? ` — ${e.detail}` : ""}`
+  ).join("\n");
+}
+
+function recordSignOffEvent(action, detail = "") {
+  if (!state.signoffAuditLog) state.signoffAuditLog = [];
+  const inp = getInputs();
+  state.signoffAuditLog.unshift({
+    timestamp: new Date().toISOString(),
+    engineer: inp.engineer || "—",
+    reviewer: inp.signoffReviewer || "—",
+    status: inp.signoffStatus,
+    action,
+    detail,
+    engine: lastAnalysis?.engine || (inp.usePythonEngine ? "python" : "local")
+  });
+  if (state.signoffAuditLog.length > 100) state.signoffAuditLog.pop();
+  renderSignoffAudit();
+}
+
 
 const ENGINE_BENCHMARKS = [
   {
@@ -2266,6 +2356,7 @@ function getInputs() {
     pipeSpeedFtMin: +document.getElementById("pipeSpeedFtMin").value || 90,
     mudPlasticVisc: +document.getElementById("mudPlasticVisc").value || 25,
     usePythonEngine: document.getElementById("usePythonEngine").value === "on",
+    pythonApiBaseUrl: getPythonApiBase(),
     thermalEnabled: document.getElementById("thermalEnabled").value === "on",
     thermalMode: document.getElementById("thermalMode").value,
     thermalTimeHours: +document.getElementById("thermalTimeHours").value || 12,
@@ -2276,6 +2367,7 @@ function getInputs() {
     thermalWarmbackHrs: +document.getElementById("thermalWarmbackHrs").value || 48,
     thermalPoisson: +document.getElementById("thermalPoisson").value || 0.3,
     signoffStatus: document.getElementById("signoffStatus").value,
+    signoffReviewer: document.getElementById("signoffReviewer").value.trim(),
     signoffNotes: document.getElementById("signoffNotes").value
   };
 }
@@ -2311,6 +2403,8 @@ function setInputs(inp) {
   document.getElementById("pipeSpeedFtMin").value = inp.pipeSpeedFtMin ?? 90;
   document.getElementById("mudPlasticVisc").value = inp.mudPlasticVisc ?? 25;
   document.getElementById("usePythonEngine").value = inp.usePythonEngine ? "on" : "off";
+  document.getElementById("pythonApiBaseUrl").value = inp.pythonApiBaseUrl || "http://localhost:8010";
+  syncPythonApiUrls();
   document.getElementById("thermalEnabled").value = inp.thermalEnabled === false ? "off" : "on";
   document.getElementById("thermalMode").value = inp.thermalMode || state.thermal?.mode || "circulation";
   document.getElementById("thermalTimeHours").value = inp.thermalTimeHours ?? state.thermal?.timeHours ?? 12;
@@ -2321,7 +2415,9 @@ function setInputs(inp) {
   document.getElementById("thermalWarmbackHrs").value = inp.thermalWarmbackHrs ?? state.thermal?.warmbackHours ?? 48;
   document.getElementById("thermalPoisson").value = inp.thermalPoisson ?? state.thermal?.poisson ?? 0.3;
   document.getElementById("signoffStatus").value = inp.signoffStatus || "draft";
+  document.getElementById("signoffReviewer").value = inp.signoffReviewer || "";
   document.getElementById("signoffNotes").value = inp.signoffNotes || "";
+  setSignoffLocked(inp.signoffStatus === "approved");
 }
 
 function serializeProject() {
@@ -2337,7 +2433,7 @@ function serializeProject() {
     warmbackHours: inp.thermalWarmbackHrs,
     poisson: inp.thermalPoisson
   };
-  return JSON.stringify({ version: 12, inputs: inp, state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 13, inputs: inp, state, auditEntries, signoffAuditLog: state.signoffAuditLog || [] }, null, 2);
 }
 
 function migrateState(st) {
@@ -2368,9 +2464,12 @@ function loadProject(data) {
   if (!data || !data.state) throw new Error("Invalid project file");
   setInputs(data.inputs || {});
   state = migrateState(data.state);
+  state.signoffAuditLog = data.signoffAuditLog || state.signoffAuditLog || [];
   auditEntries = data.auditEntries || [];
+  renderSignoffAudit();
   logAudit(`Project loaded (v${data.version || "?"})`);
   renderAll();
+  checkPythonBackend();
 }
 
 function autoSave() {
@@ -2835,6 +2934,7 @@ function runMonteCarloLocal(iterations) {
 }
 
 async function runAnalysisViaApi() {
+  syncPythonApiUrls();
   const payload = {
     inputs: getInputs(),
     state,
@@ -3008,6 +3108,7 @@ function runLocalAnalysis(inp) {
 }
 
 async function runMonteCarloViaApi(iterations) {
+  syncPythonApiUrls();
   const payload = { inputs: getInputs(), state, iterations };
   const res = await fetch(PYTHON_MC_URL, {
     method: "POST",
@@ -3016,6 +3117,41 @@ async function runMonteCarloViaApi(iterations) {
   });
   if (!res.ok) throw new Error(`Monte Carlo API error ${res.status}`);
   return res.json();
+}
+
+function mapApiBenchmarks(apiResult) {
+  return (apiResult.benchmarks || []).map(b => ({
+    id: b.id,
+    name: b.name || b.id,
+    got: b.got,
+    expected: b.expected,
+    errPct: b.err_pct ?? b.errPct ?? 0,
+    pass: b.pass,
+    tolPct: b.tol_pct ?? b.tolPct ?? 0,
+    unit: b.unit || ""
+  }));
+}
+
+async function runBenchmarksViaApi() {
+  syncPythonApiUrls();
+  const res = await fetch(PYTHON_BENCH_URL);
+  if (!res.ok) throw new Error(`Benchmark API error ${res.status}`);
+  const data = await res.json();
+  return mapApiBenchmarks(data);
+}
+
+async function runBenchmarksUnified() {
+  const inp = getInputs();
+  if (inp.usePythonEngine) {
+    try {
+      const b = await runBenchmarksViaApi();
+      toast(`Python benchmarks: ${b.filter(x => x.pass).length}/${b.length} pass`, b.every(x => x.pass) ? "success" : "error");
+      return b;
+    } catch {
+      toast("Python benchmarks unavailable — using local engine", "error");
+    }
+  }
+  return runEngineBenchmarks();
 }
 
 function renderMonteCarloResults(mc) {
@@ -3215,6 +3351,7 @@ function runAnalysis() {
       renderValidationReport();
       renderBenchmarks();
       logAudit(`Analysis (${analysis.engine}): ${analysis.rows.length} checks, max util ${(maxUtil * 100).toFixed(1)}%, benchmarks ${analysis.benchPass}/${analysis.benchTotal}`);
+      recordSignOffEvent("Analysis run", `max util ${(maxUtil * 100).toFixed(1)}% · ${analysis.rows.length} checks`);
       autoSave();
       updateWorkflow();
       switchTab("analysis");
@@ -3914,17 +4051,23 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v12 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v13 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
-    `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
+    `Reviewer: ${inp.signoffReviewer || "—"} | Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
+    `Engine: ${lastAnalysis.engine || "local"} | Python API: ${inp.usePythonEngine ? getPythonApiBase() : "disabled"}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
     `Governing: ${lastAnalysis.governing.string} — ${lastAnalysis.governing.loadName} — ${lastAnalysis.governing.mode} @ ${(lastAnalysis.governing.util*100).toFixed(1)}%`,
-    ``, `Safety Factors: Burst ${inp.sfBurst}× Collapse ${inp.sfCollapse}× Tension ${inp.sfTension}× Triaxial ${inp.sfTriaxial}×`,
+    ``, `Safety Factors: Burst ${inp.sfBurst}× Collapse ${inp.sfCollapse}× Tension ${inp.sfTension}× Triaxial ${inp.sfTriaxial}× Buckling ${inp.sfBuckling}×`,
     ``, `--- Results (${lastAnalysis.rows.length} checks) ---`
   ];
-  lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
+  lastAnalysis.rows.slice(0, 40).forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
+  if (lastAnalysis.rows.length > 40) lines.push(`… and ${lastAnalysis.rows.length - 40} more checks`);
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v12 Phase F2: Python buckling + manufacturer VME + MC histogram parity.");
+  lines.push("", "--- Sign-off Audit (recent) ---");
+  (state.signoffAuditLog || []).slice(0, 8).forEach(e => {
+    lines.push(`${e.timestamp?.slice(0, 19)} | ${e.status} | ${e.action} | ${e.detail || ""}`);
+  });
+  lines.push("", "v13 Phase F3: CI pipeline, expanded Python benchmarks, sign-off audit trail.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -3939,22 +4082,61 @@ function exportCsv() {
 function exportHtmlReport() {
   if (!lastAnalysis) { toast("Run analysis first.", "error"); return; }
   const inp = getInputs();
+  const auditRows = (state.signoffAuditLog || []).map(e =>
+    `<tr><td>${e.timestamp?.slice(0, 19) || ""}</td><td>${e.status}</td><td>${e.action}</td><td>${e.engineer}</td><td>${e.reviewer || ""}</td><td>${e.detail || ""}</td></tr>`
+  ).join("");
   const rows = lastAnalysis.rows.map(r => `<tr><td>${r.string}</td><td>${r.loadName}</td><td>${r.mode}</td><td>${Math.round(r.required)}</td><td>${Math.round(r.available)}</td><td>${(r.util*100).toFixed(1)}%</td><td>${pill(r.util)}</td></tr>`).join("");
+  const gov = lastAnalysis.governing;
+  const validation = gov?.audit ? formatValidationReport(gov.audit) : "No validation trace.";
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Casing Design Report — ${inp.wellName}</title>
-    <style>body{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}
-    h1{color:#0077b6}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:0.4rem;font-size:0.85rem}th{background:#f0f4f8}
-    .banner{padding:0.75rem;border-radius:8px;margin:1rem 0;font-weight:600}.pass{background:#d1fae5}.warn{background:#fef3c7}.fail{background:#fee2e2}</style></head><body>
-    <h1>Casing Design Pro v5 — Engineering Report</h1>
+    <style>body{font-family:system-ui;max-width:960px;margin:2rem auto;padding:0 1rem;line-height:1.45}
+    h1{color:#0077b6}table{border-collapse:collapse;width:100%;margin:0.75rem 0}th,td{border:1px solid #ccc;padding:0.4rem;font-size:0.85rem}th{background:#f0f4f8}
+    .banner{padding:0.75rem;border-radius:8px;margin:1rem 0;font-weight:600}.pass{background:#d1fae5}.warn{background:#fef3c7}.fail{background:#fee2e2}
+    pre{background:#f8fafc;padding:0.75rem;border-radius:8px;font-size:0.75rem;white-space:pre-wrap}</style></head><body>
+    <h1>Casing Design Pro v13 — Engineering Report</h1>
     <p><strong>Well:</strong> ${inp.wellName} &nbsp; <strong>Field:</strong> ${inp.fieldName}<br>
-    <strong>Engineer:</strong> ${inp.engineer} &nbsp; <strong>Date:</strong> ${new Date().toISOString().slice(0,10)}<br>
-    <strong>Sign-off:</strong> ${inp.signoffStatus}</p>
+    <strong>Engineer:</strong> ${inp.engineer} &nbsp; <strong>Reviewer:</strong> ${inp.signoffReviewer || "—"}<br>
+    <strong>Date:</strong> ${new Date().toISOString().slice(0,10)} &nbsp; <strong>Sign-off:</strong> ${inp.signoffStatus}<br>
+    <strong>Analysis engine:</strong> ${lastAnalysis.engine || "local"}</p>
     <div class="banner ${lastAnalysis.banner.cls}">${lastAnalysis.banner.text}</div>
-    <p><strong>Governing:</strong> ${lastAnalysis.governing.string} — ${lastAnalysis.governing.loadName} — ${lastAnalysis.governing.mode} (${(lastAnalysis.governing.util*100).toFixed(1)}%)</p>
+    <p><strong>Governing:</strong> ${gov.string} — ${gov.loadName} — ${gov.mode} (${(gov.util*100).toFixed(1)}%)</p>
+    <h2>Integrity Results</h2>
     <table><thead><tr><th>String</th><th>Load</th><th>Mode</th><th>Required</th><th>Available</th><th>Util</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-    <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v5.</p>
+    <h2>Sign-off Audit Trail</h2>
+    <table><thead><tr><th>Timestamp</th><th>Status</th><th>Action</th><th>Engineer</th><th>Reviewer</th><th>Detail</th></tr></thead><tbody>${auditRows || "<tr><td colspan=6>No audit entries</td></tr>"}</tbody></table>
+    <h2>Governing Case Validation</h2>
+    <pre>${validation.replace(/</g, "&lt;")}</pre>
+    <p style="font-size:0.8rem;color:#666;margin-top:2rem">Generated by Casing Design Pro v13. Screening tool — verify with company standards before drilling approval.</p>
     </body></html>`;
   downloadBlob(new Blob([html], { type: "text/html" }), `casing_report_${inp.wellName || "well"}.html`);
+  recordSignOffEvent("HTML report exported", lastAnalysis.banner?.text || "");
   toast("HTML report exported");
+}
+
+function exportSignoffPackage() {
+  if (!lastAnalysis) { toast("Run analysis first.", "error"); return; }
+  const inp = getInputs();
+  const pkg = {
+    version: 13,
+    generatedAt: new Date().toISOString(),
+    well: { name: inp.wellName, field: inp.fieldName },
+    personnel: { engineer: inp.engineer, reviewer: inp.signoffReviewer },
+    signoff: { status: inp.signoffStatus, notes: inp.signoffNotes },
+    analysis: {
+      engine: lastAnalysis.engine,
+      conclusion: lastAnalysis.banner?.text,
+      governing: lastAnalysis.governing,
+      checkCount: lastAnalysis.rows.length,
+      maxUtil: Math.max(...lastAnalysis.rows.map(r => r.util), 0),
+      benchmarks: `${lastAnalysis.benchPass}/${lastAnalysis.benchTotal}`
+    },
+    signoffAuditLog: state.signoffAuditLog || [],
+    auditEntries: auditEntries.slice(0, 50),
+    disclaimer: "Formal sign-off package for office distribution. Engineer must verify assumptions before external release."
+  };
+  downloadBlob(new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" }), `casing_signoff_${inp.wellName || "well"}.json`);
+  recordSignOffEvent("Sign-off package exported", pkg.analysis.conclusion || "");
+  toast("Sign-off package exported");
 }
 
 function downloadBlob(blob, name) {
@@ -3982,6 +4164,7 @@ function bindEvents() {
   document.getElementById("btnRecalcRatings").onclick = () => { renderCatalog(); logAudit("Ratings recalculated"); toast("Ratings recalculated"); };
   document.getElementById("btnExportCsv").onclick = exportCsv;
   document.getElementById("btnExportHtml").onclick = exportHtmlReport;
+  document.getElementById("btnExportSignoff").onclick = exportSignoffPackage;
   document.getElementById("btnPrint").onclick = () => window.print();
 
   document.getElementById("btnHelp")?.addEventListener("click", showHelp);
@@ -3998,6 +4181,33 @@ function bindEvents() {
   });
   ["wellName", "fieldName", "engineerName"].forEach(id => {
     document.getElementById(id)?.addEventListener("input", updateSubtitle);
+  });
+
+  document.getElementById("pythonApiBaseUrl")?.addEventListener("change", () => { syncPythonApiUrls(); checkPythonBackend(); });
+  document.getElementById("usePythonEngine")?.addEventListener("change", checkPythonBackend);
+
+  let lastSignoffStatus = document.getElementById("signoffStatus")?.value;
+  document.getElementById("signoffStatus")?.addEventListener("change", e => {
+    const next = e.target.value;
+    if (lastSignoffStatus === "approved" && next !== "approved") {
+      if (!confirm("Change sign-off status from Approved? This will be recorded in the audit trail.")) {
+        e.target.value = lastSignoffStatus;
+        return;
+      }
+    }
+    setSignoffLocked(next === "approved");
+    recordSignOffEvent("Status changed", `${lastSignoffStatus} → ${next}`);
+    lastSignoffStatus = next;
+    autoSave();
+  });
+
+  document.getElementById("btnRevertSignoff")?.addEventListener("click", () => {
+    if (!confirm("Revert sign-off to Draft?")) return;
+    document.getElementById("signoffStatus").value = "draft";
+    setSignoffLocked(false);
+    recordSignOffEvent("Reverted to draft", "Manual unlock");
+    lastSignoffStatus = "draft";
+    autoSave();
   });
 
   document.addEventListener("keydown", e => {
@@ -4028,10 +4238,12 @@ function bindEvents() {
     drawDesignLineChart();
   });
 
-  document.getElementById("btnRunBenchmarks")?.addEventListener("click", () => {
-    const b = runEngineBenchmarks();
+  document.getElementById("btnRunBenchmarks")?.addEventListener("click", async () => {
+    const b = await runBenchmarksUnified();
     renderBenchmarks(b);
-    toast(`${b.filter(x => x.pass).length}/${b.length} benchmarks pass`, b.every(x => x.pass) ? "success" : "error");
+    if (!getInputs().usePythonEngine) {
+      toast(`${b.filter(x => x.pass).length}/${b.length} benchmarks pass`, b.every(x => x.pass) ? "success" : "error");
+    }
   });
 
   const btnImportCatalog = document.getElementById("btnImportCatalog");
@@ -4381,6 +4593,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV12");
     if (!saved) saved = localStorage.getItem("casingDesignProV11");
     if (!saved) saved = localStorage.getItem("casingDesignProV10");
     if (!saved) saved = localStorage.getItem("casingDesignProV9");
@@ -4391,13 +4604,16 @@ function init() {
     if (!saved) saved = localStorage.getItem("casingDesignProV4");
     if (!saved) saved = localStorage.getItem("casingDesignProV3");
     if (saved) loadProject(JSON.parse(saved));
-    else { state = defaultState(); renderAll(); }
-  } catch { state = defaultState(); renderAll(); }
+    else { state = defaultState(); state.signoffAuditLog = []; renderAll(); }
+  } catch { state = defaultState(); state.signoffAuditLog = []; renderAll(); }
   bindEvents();
+  syncPythonApiUrls();
+  renderSignoffAudit();
+  checkPythonBackend();
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v12 initialized");
+  logAudit("Casing Design Pro v13 initialized");
   setInterval(autoSave, 30000);
 }
 

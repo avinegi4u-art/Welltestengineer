@@ -20,6 +20,6 @@ Well testing and completion engineering tools (single-file HTML apps).
 | `vertical-kill-sheet-app.html` | Vertical well kill sheet with live formulas |
 | `acid-calculator-v5.html` | Acid job calculator |
 | `CasingDesign.html` | WellCat-style casing screening v2.1 — burst, collapse, tension (superseded by Pro v3) |
-| `casing-design-pro-v3.html` | **Casing Design Pro v12** — Phase F2: buckling, VME, MC histogram; plus F1 Python parity, v10 VME/MC, v9 ISO/surge/wear |
+| `casing-design-pro-v3.html` | **Casing Design Pro v13** — Phase F3: CI, benchmarks, sign-off audit; plus F2 buckling/VME, F1 Python parity |
 
 Open any `.html` file in a browser — no build step required.

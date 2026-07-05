@@ -1,4 +1,4 @@
-# Casing Design Pro — Python Engine (v12)
+# Casing Design Pro — Python Engine (v13)
 
 WellCat-class **casing design** screening engine with validated Python backend and browser frontend.
 
@@ -6,9 +6,10 @@ WellCat-class **casing design** screening engine with validated Python backend a
 
 | Layer | Role |
 |-------|------|
-| `casing-design-pro-v3.html` | Single-file UI (v12) — works offline with embedded JS engine |
-| `backend/engine/` | Canonical Python engine — full parity with JS (F1 loads + F2 buckling/VME) |
-| `backend/app/main.py` | FastAPI — `/api/analyze`, `/api/montecarlo`, `/api/benchmarks` |
+| `casing-design-pro-v3.html` | Single-file UI (v13) — works offline with embedded JS engine |
+| `backend/engine/` | Canonical Python engine — full parity with JS + 35 regression benchmarks |
+| `backend/app/main.py` | FastAPI — `/api/analyze`, `/api/montecarlo`, `/api/benchmarks`, `/api/health` |
+| `.github/workflows/casing-design-pro.yml` | CI — pytest on push/PR |
 
 HTML remains the primary interface (no build step). The Python API is optional; when **Use Python Engine** is enabled, **Run Analysis** and Monte Carlo call the backend.
 
@@ -56,6 +57,15 @@ cd casing-design-pro/backend
 pip install -r requirements.txt
 pytest tests/ -v
 ```
+
+## Phase F3 — CI, benchmarks, sign-off audit
+
+- **GitHub Actions CI** — `pytest` on every push/PR touching `casing-design-pro/`
+- **35 engine benchmarks** — `/api/benchmarks` parity with JS `ENGINE_BENCHMARKS`
+- **`/api/health`** — backend connection check for UI status badge
+- **Configurable Python API URL** — Project tab field + live connected/offline badge
+- **Sign-off audit trail** — timestamped log, reviewer field, lock on Approved, JSON package export
+- **Enhanced HTML report** — includes audit trail and governing validation trace
 
 ## Phase F2 — buckling, VME, Monte Carlo alignment
 
