@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casing Design Pro v6 — WellCat-Class Integrity Suite</title>
+  <title>Casing Design Pro v7 — WellCat-Class Integrity Suite</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0e14'/%3E%3Crect x='22' y='8' width='20' height='48' rx='3' fill='none' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M18 52h28' stroke='%23ff6b35' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -206,6 +206,7 @@
     .chart-legend-item .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
     .chart-caption { margin: 0 0 0.5rem; font-size: 0.72rem; color: var(--muted-2); line-height: 1.45; }
     .design-line-tab.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .rating-line-tab.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
     .bench-row { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-light); font-size: 0.72rem; }
     .bench-row.pass { color: var(--good); }
     .bench-row.fail { color: var(--bad); }
@@ -289,7 +290,7 @@
       <div class="brand">
         <div class="brand-mark">⛯</div>
         <div>
-          <h1>Casing Design <span>Pro v6</span></h1>
+          <h1>Casing Design <span>Pro v7</span></h1>
           <p id="wellSubtitle">AD-B-01H · Demo Field · API 5CT / TR 5C3 integrity suite</p>
         </div>
       </div>
@@ -411,7 +412,10 @@
           <button class="small" id="btnRecalcRatings">↻ Recalculate All Ratings</button>
         </div>
         <input type="file" id="catalogCsvInput" accept=".csv,text/csv" hidden />
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID calc</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>Conn T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>OD</th><th>ppf</th><th>Grade</th><th>Conn</th><th>Wear%</th><th>ID calc</th><th>Burst</th><th>Collapse</th><th>Tension</th><th>VME T</th><th></th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+        <h3 style="margin-top:1rem">Connection VME Envelope</h3>
+        <p class="card-desc">ISO burst–tension interaction for selected pipe (first catalog row). Pb vs axial load.</p>
+        <canvas class="chart" id="vmeChart" style="height:220px"></canvas>
       </div>
       <div class="card">
         <h3>Casing Strings</h3>
@@ -519,6 +523,17 @@
           <canvas class="chart util-chart" id="designLineChart"></canvas>
           <div class="chart-legend" id="designLineLegend"></div>
         </div>
+        <h3 style="margin-top:1.25rem">Rating vs Load Lines</h3>
+        <p class="chart-caption" id="ratingLineCaption">Solid = rating (allowable); dashed = worst-case load. WellCat-style design lines in psi / klbf.</p>
+        <div class="toolbar" id="ratingLineTabs">
+          <button class="small rating-line-tab active" data-rline="burst">Burst ψ</button>
+          <button class="small rating-line-tab" data-rline="collapse">Collapse ψ</button>
+          <button class="small rating-line-tab" data-rline="axial">Axial klbf</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas class="chart util-chart" id="ratingLineChart"></canvas>
+          <div class="chart-legend" id="ratingLineLegend"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -548,14 +563,14 @@
       </div>
       <div class="card">
         <h3>Engine Benchmark Suite</h3>
-        <p class="card-desc">10 published-style API checks run on every analysis. Green = within tolerance.</p>
+        <p class="card-desc">22 published-style API / textbook regression cases. Green = within tolerance.</p>
         <div id="benchmarkResults"></div>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>Casing Design Pro v6 · Local-first · API 5CT / TR 5C3</span>
+    <span>Casing Design Pro v7 · Phase B — VME + rating lines</span>
     <span id="footerMeta">Screening tool — verify with company standards before drilling approval</span>
   </footer>
 </div>
@@ -601,15 +616,20 @@ const SCENARIOS = {
   annulusIntegrity: { label: "Sealed Annulus / APB" }
 };
 
-const CONNECTIONS = {
-  BTC: { burstF: 1.0, collapseF: 1.0, tensionF: 0.55, compressionF: 0.55 },
-  LTC: { burstF: 0.95, collapseF: 0.95, tensionF: 0.55, compressionF: 0.55 },
-  STC: { burstF: 0.9, collapseF: 0.9, tensionF: 0.5, compressionF: 0.5 },
-  "VAM TOP": { burstF: 0.92, collapseF: 0.88, tensionF: 0.72, compressionF: 0.65 },
-  "VAM 21": { burstF: 0.9, collapseF: 0.86, tensionF: 0.7, compressionF: 0.63 },
-  TSH: { burstF: 0.88, collapseF: 0.85, tensionF: 0.68, compressionF: 0.6 },
-  FOX: { burstF: 0.9, collapseF: 0.87, tensionF: 0.7, compressionF: 0.62 }
+const CONNECTION_VME = {
+  BTC: { burstEff: 1.0, collapseEff: 1.0, tensionEff: 0.55, compressionEff: 0.55, label: "API BTC" },
+  LTC: { burstEff: 0.95, collapseEff: 0.95, tensionEff: 0.55, compressionEff: 0.55, label: "API LTC" },
+  STC: { burstEff: 0.9, collapseEff: 0.9, tensionEff: 0.5, compressionEff: 0.5, label: "API STC" },
+  "VAM TOP": { burstEff: 0.92, collapseEff: 0.88, tensionEff: 0.72, compressionEff: 0.65, label: "VAM TOP" },
+  "VAM 21": { burstEff: 0.9, collapseEff: 0.86, tensionEff: 0.7, compressionEff: 0.63, label: "VAM 21" },
+  TSH: { burstEff: 0.88, collapseEff: 0.85, tensionEff: 0.68, compressionEff: 0.6, label: "Tenaris TSH" },
+  FOX: { burstEff: 0.9, collapseEff: 0.87, tensionEff: 0.7, compressionEff: 0.62, label: "Fox Premium" }
 };
+
+/** Legacy alias for dropdown keys */
+const CONNECTIONS = Object.fromEntries(
+  Object.entries(CONNECTION_VME).map(([k, v]) => [k, { burstF: v.burstEff, collapseF: v.collapseEff, tensionF: v.tensionEff, compressionF: v.compressionEff }])
+);
 
 const STEEL_ALPHA = 6.5e-6;
 const DEG = Math.PI / 180;
@@ -1018,14 +1038,61 @@ function biaxialBurstFactor(axialLbf, yieldPsi, od, id) {
   return Math.max(Math.sqrt(1 - 0.75 * f * f) - 0.5 * f, 0);
 }
 
-function connectionLimits(pipeRatings, connName) {
-  const c = CONNECTIONS[connName] || CONNECTIONS.BTC;
+function isoEllipseBurstAllowance(pb0, ft0Klbf, axialKlbf) {
+  if (pb0 <= 0 || ft0Klbf <= 0) return 0;
+  if (axialKlbf <= 0) return pb0;
+  const r = Math.min(axialKlbf / ft0Klbf, 1);
+  return pb0 * Math.sqrt(Math.max(0, 1 - r * r));
+}
+
+function isoEllipseTensionAllowance(ft0Klbf, pb0Psi, diffP) {
+  if (ft0Klbf <= 0 || pb0Psi <= 0) return 0;
+  const p = Math.max(diffP, 0);
+  if (p <= 0) return ft0Klbf;
+  const r = Math.min(p / pb0Psi, 1);
+  return ft0Klbf * Math.sqrt(Math.max(0, 1 - r * r));
+}
+
+function connectionVmeLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0) {
+  const vme = CONNECTION_VME[connName] || CONNECTION_VME.BTC;
+  const connBurst0 = pipeRatings.burst * vme.burstEff;
+  const connCollapse0 = pipeRatings.collapse * vme.collapseEff;
+  const connTension0 = pipeRatings.tension * vme.tensionEff;
+  const connComp0 = (pipeRatings.compression ?? pipeRatings.tension) * vme.compressionEff;
+
+  const burstBody = pipeRatings.burst * biaxialBurstFactor(axialKlbf, pipeRatings.yieldPsi, pipeRatings.od, pipeRatings.id);
+  const collapseBody = pipeRatings.collapse * biaxialCollapseFactor(axialKlbf, pipeRatings.yieldPsi, pipeRatings.od, pipeRatings.id);
+  const burstVme = isoEllipseBurstAllowance(connBurst0, connTension0, Math.max(axialKlbf, 0));
+  const collapseVme = collapseBody * vme.collapseEff;
+  const tensionVme = isoEllipseTensionAllowance(connTension0, connBurst0, diffP);
+
   return {
-    burst: pipeRatings.burst * c.burstF,
-    collapse: pipeRatings.collapse * c.collapseF,
-    tension: pipeRatings.tension * c.tensionF,
-    compression: pipeRatings.compression * c.compressionF
+    burst: Math.min(burstBody, burstVme),
+    collapse: Math.min(collapseBody, collapseVme),
+    tension: Math.min(pipeRatings.tension, tensionVme),
+    compression: Math.min(pipeRatings.compression ?? pipeRatings.tension, connComp0),
+    vme: {
+      label: vme.label,
+      connBurst0, connCollapse0, connTension0, connComp0,
+      burstVme, collapseVme, tensionVme
+    }
   };
+}
+
+function connectionLimits(pipeRatings, connName, axialKlbf = 0, diffP = 0) {
+  return connectionVmeLimits(pipeRatings, connName, axialKlbf, diffP);
+}
+
+function vmeEllipsePoints(pipeRatings, connName, steps = 36) {
+  const lim = connectionVmeLimits(pipeRatings, connName, 0, 0);
+  const ft0 = lim.vme.connTension0;
+  const pb0 = lim.vme.connBurst0;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const fa = (i / steps) * ft0;
+    pts.push({ axial: fa, burst: isoEllipseBurstAllowance(pb0, ft0, fa) });
+  }
+  return { pts, ft0, pb0, label: lim.vme.label };
 }
 
 function apiTriaxialCheck(axialKlbf, pInt, pExt, ratings, connLimits, sf) {
@@ -1138,6 +1205,7 @@ function dlsSafe(v) { return (v ?? 0).toFixed(1); }
 
 let activeTab = "project";
 let activeDesignLine = "burst";
+let activeRatingLine = "burst";
 
 function toast(msg, type = "success") {
   const wrap = document.getElementById("toastWrap");
@@ -1159,10 +1227,10 @@ function switchTab(tabId) {
   document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${tabId}`));
   updateWorkflow();
   if (tabId === "profiles") requestAnimationFrame(drawPressureChart);
-  if (tabId === "strings") requestAnimationFrame(drawSchematic);
+  if (tabId === "strings") requestAnimationFrame(() => { drawSchematic(); drawVmeChart(); });
   if (tabId === "survey") requestAnimationFrame(drawSurveyChart);
   if (tabId === "analysis") {
-    requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); });
+    requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); drawRatingLineChart(); });
   }
 }
 
@@ -1256,7 +1324,7 @@ function getFilteredResults(rows) {
 }
 
 /* ===== STATE ===== */
-const STORAGE_KEY = "casingDesignProV6";
+const STORAGE_KEY = "casingDesignProV7";
 
 const ENGINE_BENCHMARKS = [
   {
@@ -1319,6 +1387,90 @@ const ENGINE_BENCHMARKS = [
     id: "thermal_contraction", name: "Thermal axial (ΔT = −150°F)",
     run: () => Math.abs(thermalAxialKlbf(7, pipeIdFromWeight(7, 29), -150)),
     expected: 249, tolPct: 5, unit: "klbf"
+  },
+  {
+    id: "wall_thickness_7_29", name: "Wall thickness 7\" 29#",
+    run: () => { const id = pipeIdFromWeight(7, 29); return wallThickness(7, id); },
+    expected: 0.412, tolPct: 2, unit: "in"
+  },
+  {
+    id: "barlow_9_625_p110", name: "9.625\" 53.5# P110 Barlow burst",
+    run: () => { const id = pipeIdFromWeight(9.625, 53.5); return barlowBurst(9.625, id, 110000); },
+    expected: 11031, tolPct: 2, unit: "psi"
+  },
+  {
+    id: "collapse_13_375_l80", name: "13.375\" 68# L80 API collapse",
+    run: () => { const id = pipeIdFromWeight(13.375, 68); return apiCollapsePressure(13.375, id, 80000); },
+    expected: 2229, tolPct: 3, unit: "psi"
+  },
+  {
+    id: "vme_burst_half_tension", name: "VME burst @ 50% conn tension",
+    run: () => {
+      const r = calcPipeRatings({ od: 9.625, wt: 53.5, grade: "P110", conn: "BTC" }, 200, false, 0);
+      const c = connectionVmeLimits(r, "BTC", 0, 0);
+      return isoEllipseBurstAllowance(c.vme.connBurst0, c.vme.connTension0, c.vme.connTension0 * 0.5);
+    },
+    expected: 9553, tolPct: 2, unit: "psi"
+  },
+  {
+    id: "vme_tension_under_pressure", name: "VME tension @ 50% conn burst ΔP",
+    run: () => {
+      const r = calcPipeRatings({ od: 7, wt: 29, grade: "N80", conn: "VAM TOP" }, 200, false, 0);
+      const c = connectionVmeLimits(r, "VAM TOP", 0, 0);
+      return isoEllipseTensionAllowance(c.vme.connTension0, c.vme.connBurst0, c.vme.connBurst0 * 0.5);
+    },
+    expected: 372, tolPct: 5, unit: "klbf"
+  },
+  {
+    id: "biaxial_collapse_tension", name: "Biaxial collapse factor (tension)",
+    run: () => biaxialCollapseFactor(300, 80000, 7, pipeIdFromWeight(7, 29)),
+    expected: 0.652, tolPct: 3, unit: "ratio"
+  },
+  {
+    id: "temp_derate_p110_400f", name: "P110 temp derating @ 400°F",
+    run: () => tempDeratingFactor("P110", 400),
+    expected: 0.9, tolPct: 2, unit: "ratio"
+  },
+  {
+    id: "wear_reduces_burst", name: "Wear changes burst rating (10% vs 0%)",
+    run: () => {
+      const p = { od: 7, wt: 29, grade: "N80", conn: "BTC" };
+      const pristine = calcPipeRatings(p, 200, false, 0).burst;
+      const worn = calcPipeRatings(p, 200, false, 10).burst;
+      return Math.abs(pristine - worn);
+    },
+    expected: 824, tolPct: 5, unit: "psi"
+  },
+  {
+    id: "hydrostatic_12ppg_8000", name: "12 ppg hydrostatic @ 8,000 ft",
+    run: () => hydrostaticPsi(12, 8000),
+    expected: 4992, tolPct: 0.5, unit: "psi"
+  },
+  {
+    id: "triaxial_fe_fy", name: "Triaxial Fe/Fy (burst + tension)",
+    run: () => {
+      const r = calcPipeRatings({ od: 7, wt: 29, grade: "N80", conn: "BTC" }, 200, false, 0);
+      const area = (Math.PI / 4) * (r.od * r.od - r.id * r.id);
+      const Fa = 200 * 1000;
+      const diffP = 3000;
+      const Fe = Math.sqrt(Math.max(0, Fa * Fa - 0.75 * diffP * diffP * area * area));
+      const Fy = 0.875 * r.yieldPsi * area;
+      return Fe / Fy;
+    },
+    expected: 0.33, tolPct: 5, unit: "ratio"
+  },
+  {
+    id: "vam_top_conn_tension", name: "VAM TOP connection tension cap",
+    run: () => {
+      const r = calcPipeRatings({ od: 9.625, wt: 53.5, grade: "L80", conn: "VAM TOP" }, 200, false, 0);
+      return connectionVmeLimits(r, "VAM TOP", 0, 0).tension;
+    },
+    expected: 792, tolPct: 3, unit: "klbf"
+  },
+  {
+    id: "offshore_external_mudline", name: "Offshore external @ 3,000 ft (WD=1500)",
+    run: () => offshoreExternalPsi(3000, 9.0, { waterDepth: 1500, rigElev: 75, seawaterPpg: 8.6 }),
+    expected: 1371, tolPct: 3, unit: "psi"
   }
 ];
 
@@ -1337,7 +1489,7 @@ function analyzeLoad(load, inp, sf) {
 
   const wear = pipeDef.wearPct ?? inp.defaultWearPct ?? 0;
   const ratings = calcPipeRatings(pipeDef, load.temp, inp.tempDerating, wear);
-  const conn = connectionLimits(ratings, pipeDef.conn);
+  const conn = connectionLimits(ratings, pipeDef.conn, axialEff, load.pInt - load.pExt);
   const inc = surveyAtTvd(load.depth).inc;
   const dls = surveyAtTvd(load.depth).dls || 0;
   const axialEff = effectiveAxialForTriaxial(load.axial, ratings.od, inc, dls);
@@ -1365,6 +1517,7 @@ function analyzeLoad(load, inp, sf) {
     pipe: `${pipeDef.od}" ${pipeDef.wt}ppf ${pipeDef.grade} ${pipeDef.conn}`,
     wearPct: wear, tempF: load.temp, inc, dls,
     loads: { pInt: load.pInt, pExt: load.pExt, axial: load.axial, axialEff },
+    connVme: conn.vme,
     triaxial: tri.audit,
     buckling: {
       formulas: {
@@ -1377,12 +1530,19 @@ function analyzeLoad(load, inp, sf) {
     safetyFactors: sf
   };
 
+  const diffP = load.pInt - load.pExt;
   return {
     string: str.label, loadName: `${load.name} @ ${load.depth} ft`, mode,
     required, available, util, unit, depth: load.depth,
     zone: load.zone, scenario: load.scenario,
     burstUtil: tri.burstUtil, collapseUtil: tri.collapseUtil,
     axialUtil: tri.axialUtil, triUtil: tri.triUtil, buckUtil: buck.util,
+    burstLoad: Math.max(diffP, 0),
+    collapseLoad: Math.max(-diffP, 0),
+    burstRating: tri.burstAvail,
+    collapseRating: tri.collapseAvail,
+    axialLoad: Math.abs(axialEff),
+    axialRating: axialEff >= 0 ? tri.tensionAvail : tri.compAvail,
     audit
   };
 }
@@ -1401,6 +1561,11 @@ function formatValidationReport(audit) {
     `P_ext = ${Math.round(audit.loads.pExt)} psi`,
     `ΔP = ${Math.round(audit.loads.pInt - audit.loads.pExt)} psi`,
     `F_axial = ${audit.loads.axial.toFixed(1)} klbf (effective w/ bending: ${audit.loads.axialEff.toFixed(1)} klbf)`,
+    "",
+    "--- Connection VME Envelope ---",
+    `Type: ${audit.connVme?.label || "—"}`,
+    `Pb0 = ${Math.round(audit.connVme?.connBurst0 || 0)} psi | Pc0 = ${Math.round(audit.connVme?.connCollapse0 || 0)} psi`,
+    `Ft0 = ${(audit.connVme?.connTension0 || 0).toFixed(1)} klbf`,
     "",
     "--- Triaxial (API TR 5C3) ---"
   ];
@@ -1530,7 +1695,7 @@ function setInputs(inp) {
 }
 
 function serializeProject() {
-  return JSON.stringify({ version: 6, inputs: getInputs(), state, auditEntries }, null, 2);
+  return JSON.stringify({ version: 7, inputs: getInputs(), state, auditEntries }, null, 2);
 }
 
 function migrateState(st) {
@@ -1584,7 +1749,7 @@ function renderCatalog() {
     const wear = p.wearPct ?? inp.defaultWearPct ?? 0;
     const r = calcPipeRatings(p, 200, inp.tempDerating, wear);
     p.idCalc = r.id;
-    const conn = connectionLimits(r, p.conn);
+    const conn = connectionLimits(r, p.conn, 0, 0);
     return `<tr>
       <td><input value="${p.id}" data-cat="${i}" data-f="id" style="width:40px"/></td>
       <td><input type="number" step="0.001" value="${p.od}" data-cat="${i}" data-f="od"/></td>
@@ -1600,6 +1765,7 @@ function renderCatalog() {
       <td><button class="small danger" data-del-cat="${i}">✕</button></td>
     </tr>`;
   }).join("");
+  drawVmeChart();
 }
 
 function renderStrings() {
@@ -1779,6 +1945,7 @@ function renderResults() {
 
   drawUtilChart();
   drawDesignLineChart();
+  drawRatingLineChart();
   updateReportPreview();
   populateFilterDropdowns();
 }
@@ -1864,7 +2031,10 @@ function runAnalysis() {
         rows.push(result);
         depthChart.push({
           depth: load.depth, util: result.util, string: result.string, scenario: load.scenario,
-          burstUtil: result.burstUtil, collapseUtil: result.collapseUtil, axialUtil: result.axialUtil
+          burstUtil: result.burstUtil, collapseUtil: result.collapseUtil, axialUtil: result.axialUtil,
+          burstLoad: result.burstLoad, collapseLoad: result.collapseLoad,
+          burstRating: result.burstRating, collapseRating: result.collapseRating,
+          axialLoad: result.axialLoad, axialRating: result.axialRating
         });
 
         if (result.util >= 1) failures++;
@@ -2291,6 +2461,171 @@ function drawDesignLineChart() {
   }
 }
 
+function drawVmeChart() {
+  const canvas = document.getElementById("vmeChart");
+  if (!canvas || !state.catalog.length) return;
+  const p = state.catalog[0];
+  const inp = getInputs();
+  const r = calcPipeRatings(p, 200, inp.tempDerating, p.wearPct ?? 0);
+  const { pts, ft0, pb0, label } = vmeEllipsePoints(r, p.conn);
+  const cssH = 220;
+  const { ctx, w, h } = setupChartCanvas(canvas, cssH);
+  ctx.fillStyle = "#060a0f";
+  ctx.fillRect(0, 0, w, h);
+  const margin = { left: 48, right: 16, top: 28, bottom: 40 };
+  const plotW = w - margin.left - margin.right;
+  const plotH = h - margin.top - margin.bottom;
+  const maxX = Math.max(ft0, 1);
+  const maxY = Math.max(pb0, 1);
+  ctx.strokeStyle = "#00b4d8";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  pts.forEach((pt, i) => {
+    const x = margin.left + (pt.axial / maxX) * plotW;
+    const y = margin.top + plotH - (pt.burst / maxY) * plotH;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = "#8b9ab0";
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillText(`${label} — Burst vs Axial (ISO VME)`, margin.left, 16);
+  ctx.fillText("Axial (klbf) →", margin.left + plotW / 2 - 30, h - 8);
+  ctx.save();
+  ctx.translate(12, margin.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Burst (psi) →", 0, 0);
+  ctx.restore();
+}
+
+function buildRatingEnvelope(fieldLoad, fieldRating) {
+  const envelope = new Map();
+  (lastAnalysis?.depthChart || []).forEach(p => {
+    const key = `${p.string}\0${p.depth}`;
+    const prev = envelope.get(key);
+    const load = p[fieldLoad] ?? 0;
+    const rating = p[fieldRating] ?? 0;
+    if (!prev) envelope.set(key, { ...p, load, rating });
+    else envelope.set(key, {
+      ...p,
+      load: Math.max(prev.load, load),
+      rating: Math.min(prev.rating || Infinity, rating) || rating
+    });
+  });
+  const byString = {};
+  envelope.forEach(p => {
+    if (!byString[p.string]) byString[p.string] = [];
+    byString[p.string].push(p);
+  });
+  return byString;
+}
+
+function drawRatingLineChart() {
+  const canvas = document.getElementById("ratingLineChart");
+  const legendEl = document.getElementById("ratingLineLegend");
+  const captionEl = document.getElementById("ratingLineCaption");
+  if (!canvas) return;
+
+  const fieldMap = {
+    burst: { load: "burstLoad", rating: "burstRating", unit: "psi", label: "Burst ΔP+" },
+    collapse: { load: "collapseLoad", rating: "collapseRating", unit: "psi", label: "Collapse ΔP−" },
+    axial: { load: "axialLoad", rating: "axialRating", unit: "klbf", label: "Axial" }
+  };
+  const fm = fieldMap[activeRatingLine] || fieldMap.burst;
+  const cssH = 340;
+  const { ctx, w, h } = setupChartCanvas(canvas, cssH);
+
+  if (!lastAnalysis?.depthChart?.length) {
+    ctx.fillStyle = "#060a0f";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#8b9ab0";
+    ctx.font = "12px Inter, system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("Run analysis to plot rating vs load lines", w / 2, h / 2);
+    ctx.textAlign = "left";
+    if (legendEl) legendEl.innerHTML = "";
+    return;
+  }
+
+  const byString = buildRatingEnvelope(fm.load, fm.rating);
+  const allPts = Object.values(byString).flat();
+  const maxDepth = Math.max(...allPts.map(p => p.depth), 1);
+  const maxVal = Math.max(...allPts.flatMap(p => [p.load, p.rating]), 100);
+  const margin = { left: 58, right: 24, top: 34, bottom: 46 };
+  const plotW = w - margin.left - margin.right;
+  const plotH = h - margin.top - margin.bottom;
+  const xPos = v => margin.left + Math.min(v / maxVal, 1) * plotW;
+  const yPos = d => margin.top + (d / maxDepth) * plotH;
+
+  ctx.fillStyle = "#060a0f";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#0a1018";
+  ctx.fillRect(margin.left, margin.top, plotW, plotH);
+
+  niceDepthTicks(maxDepth).forEach(d => {
+    const y = yPos(d);
+    ctx.strokeStyle = "rgba(42,53,72,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + plotW, y);
+    ctx.stroke();
+    ctx.fillStyle = "#8b9ab0";
+    ctx.textAlign = "right";
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillText(`${d}`, margin.left - 8, y + 4);
+  });
+
+  ctx.fillStyle = "#eef2f7";
+  ctx.font = "11px Inter, system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText(`${fm.label} (${fm.unit}) →`, margin.left + plotW / 2, h - 12);
+  ctx.textAlign = "left";
+
+  const legendItems = [];
+  const governingString = lastAnalysis.governing?.string;
+  Object.entries(byString).forEach(([name, pts], index) => {
+    const color = stringChartColor(name, index);
+    const sorted = [...pts].sort((a, b) => a.depth - b.depth);
+    const isGov = name === governingString;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGov ? 2.5 : 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    sorted.forEach((p, i) => {
+      const x = xPos(p.load);
+      const y = yPos(p.depth);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGov ? 3 : 2;
+    ctx.beginPath();
+    sorted.forEach((p, i) => {
+      const x = xPos(p.rating);
+      const y = yPos(p.depth);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+
+    const maxLoad = Math.max(...sorted.map(p => p.load));
+    legendItems.push({ name, color, maxLoad, isGov });
+  });
+
+  if (legendEl) {
+    legendEl.innerHTML = legendItems.map(it => `
+      <span class="chart-legend-item ${it.isGov ? "governing" : ""}">
+        <span class="swatch" style="background:${it.color}"></span>
+        ${it.name}
+        <span class="mono">— solid rating / dashed load</span>
+      </span>`).join("");
+  }
+  if (captionEl) {
+    captionEl.textContent = `${fm.label}: solid = allowable rating, dashed = worst-case load envelope per string.`;
+  }
+}
+
 function renderValidationReport() {
   const el = document.getElementById("validationReport");
   if (!el) return;
@@ -2360,7 +2695,7 @@ function updateReportPreview() {
   const inp = getInputs();
   if (!lastAnalysis) return;
   const lines = [
-    `CASING DESIGN PRO v6 — ENGINEERING REPORT`,
+    `CASING DESIGN PRO v7 — ENGINEERING REPORT`,
     `Well: ${inp.wellName} | Field: ${inp.fieldName} | Engineer: ${inp.engineer}`,
     `Date: ${new Date().toISOString().slice(0,10)} | Code: ${inp.designCode.toUpperCase()} | Sign-off: ${inp.signoffStatus}`,
     ``, `CONCLUSION: ${lastAnalysis.banner.text}`,
@@ -2370,7 +2705,7 @@ function updateReportPreview() {
   ];
   lastAnalysis.rows.forEach(r => lines.push(`${r.string} | ${r.loadName} | ${r.mode} | ${(r.util*100).toFixed(1)}%`));
   lines.push("", `Engine benchmarks: ${lastAnalysis.benchPass ?? "?"}/${lastAnalysis.benchTotal ?? "?"} pass`);
-  lines.push("v6: Dawson-Paslay/helical buckling, bending, packer loads, design lines, validation trace.");
+  lines.push("v7 Phase B: connection VME curves, rating vs load lines, 22 regression cases.");
   document.getElementById("reportPreview").textContent = lines.join("\n");
 }
 
@@ -2455,7 +2790,15 @@ function bindEvents() {
   });
 
   window.addEventListener("resize", () => {
-    if (activeTab === "analysis") requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); });
+    if (activeTab === "analysis") requestAnimationFrame(() => { drawUtilChart(); drawDesignLineChart(); drawRatingLineChart(); });
+  });
+
+  document.getElementById("ratingLineTabs")?.addEventListener("click", e => {
+    const btn = e.target.closest(".rating-line-tab");
+    if (!btn) return;
+    activeRatingLine = btn.dataset.rline;
+    document.querySelectorAll(".rating-line-tab").forEach(b => b.classList.toggle("active", b === btn));
+    drawRatingLineChart();
   });
 
   document.getElementById("designLineTabs")?.addEventListener("click", e => {
@@ -2687,6 +3030,7 @@ function onLoadEdit(e) {
 function init() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) saved = localStorage.getItem("casingDesignProV6");
     if (!saved) saved = localStorage.getItem("casingDesignProV5");
     if (!saved) saved = localStorage.getItem("casingDesignProV4");
     if (!saved) saved = localStorage.getItem("casingDesignProV3");
@@ -2697,7 +3041,7 @@ function init() {
   updateSubtitle();
   updateWorkflow();
   renderValidationReport();
-  logAudit("Casing Design Pro v6 initialized");
+  logAudit("Casing Design Pro v7 initialized");
   setInterval(autoSave, 30000);
 }
 
