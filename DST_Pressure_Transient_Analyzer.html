@@ -307,7 +307,7 @@
 
     .chart {
       width: 100%;
-      min-height: 310px;
+      min-height: 380px;
       border-radius: 16px;
       background: #071525;
       border: 1px solid var(--border);
@@ -317,10 +317,18 @@
     .chart > svg {
       display: block;
       width: 100%;
-      height: 310px;
+      height: 380px;
     }
-    .chart .js-plotly-plot, .chart .plot-container { width: 100%; }
-    .chart.tall { min-height: 340px; }
+    .chart .js-plotly-plot,
+    .chart .plot-container,
+    .chart .svg-container {
+      width: 100% !important;
+      max-width: 100%;
+    }
+    .chart .plot-container {
+      min-height: 380px;
+    }
+    .chart.tall { min-height: 420px; }
 
     .legend {
       display: flex;
@@ -928,19 +936,6 @@
         </div>
 
         <div class="card span-8">
-          <div class="chart-toolbar">
-            <h2 style="margin-bottom:0">Pressure and rate trend</h2>
-            <button class="small" data-export-plot="trendChart">Export PNG</button>
-          </div>
-          <div id="trendChart" class="chart" aria-label="BHP and rate trend chart"></div>
-          <div class="legend">
-            <span style="--c:#63a7ff">BHP</span>
-            <span style="--c:#3dd7b6">Rate</span>
-            <span style="--c:#ffba66">Shut-in points</span>
-          </div>
-        </div>
-
-        <div class="card span-5">
           <h2>Detected DST periods</h2>
           <p class="help">Auto labels can be corrected below. Manual edits are saved with the case and used by Horner, superposition, QC, and reporting.</p>
           <div class="scroll">
@@ -953,7 +948,20 @@
           </div>
         </div>
 
-        <div class="card span-7">
+        <div class="card span-12">
+          <div class="chart-toolbar">
+            <h2 style="margin-bottom:0">Pressure and rate trend</h2>
+            <button class="small" data-export-plot="trendChart">Export PNG</button>
+          </div>
+          <div id="trendChart" class="chart" aria-label="BHP and rate trend chart"></div>
+          <div class="legend">
+            <span style="--c:#63a7ff">BHP</span>
+            <span style="--c:#3dd7b6">Rate</span>
+            <span style="--c:#ffba66">Shut-in points</span>
+          </div>
+        </div>
+
+        <div class="card span-12">
           <div class="chart-toolbar">
             <h2 style="margin-bottom:0">Horner buildup estimate</h2>
             <button class="small" data-export-plot="hornerChart">Export PNG</button>
@@ -1147,16 +1155,42 @@
       paper_bgcolor: "#071525",
       plot_bgcolor: "#071525",
       font: {color: "#a9bad0", family: "Inter, sans-serif", size: 12},
-      margin: {l: 62, r: 58, t: 16, b: 46},
+      margin: {l: 62, r: 24, t: 16, b: 46},
+      autosize: true,
       showlegend: false,
       hovermode: "closest",
       dragmode: "zoom"
     };
-    const PLOT_CONFIG = {responsive: true, displaylogo: false, displayModeBar: true,
+    const PLOT_CONFIG = {responsive: true, useResizeHandler: true, displaylogo: false, displayModeBar: true,
       modeBarButtonsToRemove: ["lasso2d", "autoScale2d", "toggleSpikelines"]};
+    const PLOT_HEIGHT = 380;
     function axisStyle(extra) {
       return Object.assign({gridcolor: "rgba(255,255,255,0.08)", zerolinecolor: "rgba(255,255,255,0.14)",
         linecolor: "rgba(255,255,255,0.25)", tickcolor: "#a9bad0", titlefont: {size: 12}}, extra || {});
+    }
+
+    function renderPlot(el, traces, layout, config) {
+      if (!PLOTLY_READY() || !el) return;
+      Plotly.react(el, traces, Object.assign({}, PLOT_LAYOUT_BASE, layout), Object.assign({}, PLOT_CONFIG, config || {}));
+      queuePlotResize(el);
+    }
+
+    function queuePlotResize(el) {
+      if (!PLOTLY_READY() || !el) return;
+      const resize = () => {
+        try {
+          if (el.classList.contains("js-plotly-plot") || el.querySelector(".js-plotly-plot")) {
+            Plotly.Plots.resize(el);
+          }
+        } catch (error) {}
+      };
+      requestAnimationFrame(resize);
+      setTimeout(resize, 60);
+    }
+
+    function resizeCharts() {
+      if (!PLOTLY_READY()) return;
+      ["trendChart", "hornerChart", "derivativeChart"].forEach(id => queuePlotResize(els[id]));
     }
 
     const els = {};
@@ -1185,6 +1219,7 @@
       loadSavedCase();
       renderManualLabels();
       refresh();
+      window.addEventListener("resize", () => resizeCharts());
     });
 
     function bindEvents() {
@@ -1253,6 +1288,7 @@
     function showTab(tabName) {
       document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === tabName));
       document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabName));
+      if (["analysis", "diagnostics"].includes(tabName)) resizeCharts();
     }
 
     /* Parsing and unit normalization */
@@ -2063,6 +2099,7 @@
       renderSuperposition();
       renderEvents();
       if (message) els.rowCount.textContent = `${state.rows.length} rows loaded - ${message}`;
+      resizeCharts();
     }
 
     function renderKpis() {
@@ -2218,12 +2255,12 @@
         const shapes = state.events.map(e => ({type: "line", x0: new Date(e.timeMs), x1: new Date(e.timeMs), yref: "paper", y0: 0, y1: 1, line: {color: "#ffd166", width: 1, dash: "dot"}}));
         const annotations = state.events.map(e => ({x: new Date(e.timeMs), yref: "paper", y: 1, text: e.type, showarrow: false, font: {color: "#ffd166", size: 10}, textangle: -90, xanchor: "left", yanchor: "top"}));
         const layout = Object.assign({}, PLOT_LAYOUT_BASE, {
-          height: 320, shapes, annotations,
+          height: PLOT_HEIGHT, shapes, annotations,
           xaxis: axisStyle({title: "time"}),
           yaxis: axisStyle({title: `BHP, ${pUnit}`}),
           yaxis2: axisStyle({title: `rate, ${rUnit}`, overlaying: "y", side: "right", showgrid: false})
         });
-        Plotly.react(els.trendChart, traces, layout, PLOT_CONFIG);
+        renderPlot(els.trendChart, traces, layout);
         return;
       }
       const points = state.rows.map((row, index) => ({x: row.timeMs, bhp: row.bhp, rate: row.rate, period: periodAtIndex(index)}));
@@ -2278,11 +2315,11 @@
           traces.push({x: [0], y: [analysis.pStar], name: "p*", mode: "markers", marker: {color: "#7ee787", size: 10, symbol: "star"}, hovertemplate: `p* %{y:.1f} ${pUnit}<extra></extra>`});
         }
         const layout = Object.assign({}, PLOT_LAYOUT_BASE, {
-          height: 320, dragmode: "select",
+          height: PLOT_HEIGHT, dragmode: "select",
           xaxis: axisStyle({title: xLabel, autorange: drawdown ? true : "reversed"}),
           yaxis: axisStyle({title: `BHP, ${pUnit}`})
         });
-        Plotly.react(els.hornerChart, traces, layout, PLOT_CONFIG);
+        renderPlot(els.hornerChart, traces, layout);
         els.hornerChart.removeAllListeners && els.hornerChart.removeAllListeners("plotly_selected");
         els.hornerChart.on("plotly_selected", ev => applyRegionSelection(ev));
         els.hornerChart.on("plotly_doubleclick", () => { els.hornerStart.value = 0.001; els.hornerEnd.value = 999; refresh("Reset radial-flow window."); });
@@ -2349,11 +2386,11 @@
           traces.push({x: [p0.te, teMax], y: [p0.deltaP, p0.deltaP * (teMax / p0.te)], name: "unit slope", mode: "lines", line: {color: "#c7a6ff", width: 1.4, dash: "dash"}, hoverinfo: "skip"});
         }
         const layout = Object.assign({}, PLOT_LAYOUT_BASE, {
-          height: 320, dragmode: "select",
+          height: PLOT_HEIGHT, dragmode: "select",
           xaxis: axisStyle({title: "equivalent time t_e, hr (log)", type: "log"}),
           yaxis: axisStyle({title: `Δp and Δp′, ${pUnit} (log)`, type: "log"})
         });
-        Plotly.react(els.derivativeChart, traces, layout, PLOT_CONFIG);
+        renderPlot(els.derivativeChart, traces, layout);
         els.derivativeChart.removeAllListeners && els.derivativeChart.removeAllListeners("plotly_selected");
         els.derivativeChart.on("plotly_selected", ev => applyRegionSelection(ev));
         els.derivativeChart.on("plotly_doubleclick", () => { els.hornerStart.value = 0.001; els.hornerEnd.value = 999; refresh("Reset radial-flow window."); });
@@ -2450,7 +2487,7 @@
     /* SVG plotting and export */
     function lineSvg({series, events = [], xLabel, yLabel, rightLabel, formatX}) {
       const width = 920;
-      const height = 310;
+      const height = 380;
       const pad = {l: 66, r: 62, t: 24, b: 48};
       const allX = series.flatMap(s => s.points.map(p => p.x));
       const xMin = Math.min(...allX);
@@ -2479,7 +2516,7 @@
 
     function scatterSvg({points, fit, xLabel, yLabel}) {
       const width = 920;
-      const height = 310;
+      const height = 380;
       const pad = {l: 68, r: 28, t: 24, b: 48};
       const xMin = minOf(points, "x");
       const xMax = maxOf(points, "x");
@@ -2503,7 +2540,7 @@
 
     function logLogSvg({delta, derivative, regimes = []}) {
       const width = 920;
-      const height = 310;
+      const height = 380;
       const pad = {l: 68, r: 28, t: 24, b: 48};
       const all = delta.concat(derivative);
       if (!all.length) return emptySvg("Need positive delta pressure and derivative points.");
@@ -2530,8 +2567,8 @@
     }
 
     function emptySvg(text) {
-      return `<svg viewBox="0 0 920 310" role="img" xmlns="http://www.w3.org/2000/svg">
-        <rect width="920" height="310" fill="#071525"/>
+      return `<svg viewBox="0 0 920 380" role="img" xmlns="http://www.w3.org/2000/svg">
+        <rect width="920" height="380" fill="#071525"/>
         <text x="460" y="155" text-anchor="middle" fill="#a9bad0" font-size="18">${escapeHtml(text)}</text>
       </svg>`;
     }
