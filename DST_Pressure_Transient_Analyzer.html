@@ -802,22 +802,22 @@
             <label>Time
               <input id="manualTime" type="datetime-local" />
             </label>
-            <label>BHP, psi
+            <label><span id="manualLabelBhp">BHP, psi</span>
               <input id="manualBhp" type="number" step="0.1" placeholder="8420" />
             </label>
-            <label>Oil rate, bpd
+            <label><span id="manualLabelOil">Oil rate, bpd</span>
               <input id="manualOil" type="number" step="0.1" placeholder="520" />
             </label>
-            <label>Water rate, bpd
+            <label><span id="manualLabelWater">Water rate, bpd</span>
               <input id="manualWater" type="number" step="0.1" placeholder="0" />
             </label>
-            <label>Gas rate, Mscf/d
+            <label><span id="manualLabelGas">Gas rate, Mscf/d</span>
               <input id="manualGas" type="number" step="0.1" placeholder="0" />
             </label>
-            <label>WHP, psi
+            <label><span id="manualLabelWhp">WHP, psi</span>
               <input id="manualWhp" type="number" step="0.1" placeholder="580" />
             </label>
-            <label>Temperature, F
+            <label><span id="manualLabelTemp">Temperature, °F</span>
               <input id="manualTemp" type="number" step="0.1" placeholder="186" />
             </label>
           </div>
@@ -1190,6 +1190,7 @@
       setManualTimeNow();
       setEventTimeNow();
       loadSavedCase();
+      renderManualLabels();
       refresh();
     });
 
@@ -1492,25 +1493,26 @@
 
     function addManualRow() {
       const time = parseTime(els.manualTime.value);
-      const bhp = toNum(els.manualBhp.value);
-      if (!time || !Number.isFinite(bhp)) {
+      const rawBhp = toNum(els.manualBhp.value);
+      if (!time || !Number.isFinite(rawBhp)) {
         alert("Manual reading needs a valid time and BHP.");
         return;
       }
+      const unitMap = defaultUnitMap();
       const row = {
         id: `${time.getTime()}-manual-${Math.random().toString(36).slice(2, 8)}`,
         rawIndex: state.rows.length,
         timeMs: time.getTime(),
         timeText: els.manualTime.value,
-        bhp,
-        oil: toNum(els.manualOil.value) || 0,
-        water: toNum(els.manualWater.value) || 0,
-        gas: toNum(els.manualGas.value) || 0,
-        whp: Number.isFinite(toNum(els.manualWhp.value)) ? toNum(els.manualWhp.value) : null,
-        temp: Number.isFinite(toNum(els.manualTemp.value)) ? toNum(els.manualTemp.value) : null,
+        bhp: convertPressure(rawBhp, unitMap.pressure.value),
+        oil: convertRate(toNum(els.manualOil.value) || 0, unitMap.rate.value),
+        water: convertRate(toNum(els.manualWater.value) || 0, unitMap.rate.value),
+        gas: convertGas(toNum(els.manualGas.value) || 0, unitMap.gas.value),
+        whp: convertNullablePressure(nullableNum(els.manualWhp.value), unitMap.pressure.value),
+        temp: convertNullableTemp(nullableNum(els.manualTemp.value), unitMap.temp.value),
         source: "manual",
         explicitRate: false,
-        units: {pressure: "psi", rate: "bpd", gas: "mscfd", temp: "f"}
+        units: {pressure: unitMap.pressure.value, rate: unitMap.rate.value, gas: unitMap.gas.value, temp: unitMap.temp.value}
       };
       row.rate = calcRate(row);
       appendRows([row], "manual");
@@ -1593,6 +1595,7 @@
     /* Analysis */
     function refresh(message) {
       normalizeRows();
+      renderManualLabels();
       state.periods = detectPeriods(state.rows);
       state.analysis = null;
       state.quality = buildQualityChecks();
@@ -2718,8 +2721,9 @@
     function engineeringConclusion() {
       const analysis = state.analysis;
       const suitability = state.quality.find(check => check.check === "Interpretation suitability");
-      if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup was detected.";
-      return `${analysis.confidence.label}. Horner p* is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
+      if (!analysis) return "Dataset is not ready for PTA interpretation because no usable buildup or drawdown period was detected.";
+      const pressureLabel = analysis.mode === "drawdown" ? "initial pressure p_i" : "Horner p*";
+      return `${analysis.confidence.label}. ${pressureLabel} is ${fmt(analysis.pStar, 1)} psi with k ${fmt(analysis.k, 2)} md and skin ${fmt(analysis.skin, 1)}. ${suitability ? suitability.detail : ""}`;
     }
 
     function reportToHtml(report) {
@@ -2874,6 +2878,43 @@
       ["pressure", "rate", "gas", "temp"].forEach(key => {
         const id = `${key}Unit`;
         if (units[key] && els[id]) els[id].value = units[key];
+      });
+      renderManualLabels();
+    }
+
+    function displayPressureUnit(unit) {
+      const key = canonicalUnit(unit);
+      return {psi: "psi", kpa: "kPa", bar: "bar", mpa: "MPa"}[key] || unit;
+    }
+
+    function displayRateUnit(unit) {
+      const key = canonicalUnit(unit);
+      return {bpd: "bpd", stbd: "STB/d", m3d: "m³/d"}[key] || unit;
+    }
+
+    function displayGasUnit(unit) {
+      const key = canonicalUnit(unit);
+      return {mscfd: "Mscf/d", scfd: "scf/d", e3m3d: "e³ m³/d"}[key] || unit;
+    }
+
+    function displayTempUnit(unit) {
+      const key = canonicalUnit(unit);
+      return {f: "°F", c: "°C", k: "K"}[key] || unit;
+    }
+
+    function renderManualLabels() {
+      const units = defaultUnitMap();
+      const labels = {
+        manualLabelBhp: `BHP, ${displayPressureUnit(units.pressure.value)}`,
+        manualLabelOil: `Oil rate, ${displayRateUnit(units.rate.value)}`,
+        manualLabelWater: `Water rate, ${displayRateUnit(units.rate.value)}`,
+        manualLabelGas: `Gas rate, ${displayGasUnit(units.gas.value)}`,
+        manualLabelWhp: `WHP, ${displayPressureUnit(units.pressure.value)}`,
+        manualLabelTemp: `Temperature, ${displayTempUnit(units.temp.value)}`
+      };
+      Object.entries(labels).forEach(([id, text]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
       });
     }
 
