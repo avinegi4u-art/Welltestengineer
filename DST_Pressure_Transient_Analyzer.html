@@ -311,13 +311,15 @@
       border-radius: 16px;
       background: #071525;
       border: 1px solid var(--border);
-      overflow: hidden;
+      overflow: visible;
+      position: relative;
     }
 
     .chart > svg {
       display: block;
       width: 100%;
       height: 380px;
+      border-radius: 16px;
     }
     .chart .js-plotly-plot,
     .chart .plot-container,
@@ -327,8 +329,46 @@
     }
     .chart .plot-container {
       min-height: 380px;
+      border-radius: 16px;
+      overflow: hidden;
     }
     .chart.tall { min-height: 420px; }
+
+    .chart .modebar {
+      opacity: 1 !important;
+      right: 10px !important;
+      top: 10px !important;
+    }
+    .chart .modebar-group {
+      background: rgba(13, 27, 45, 0.94) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 10px !important;
+      padding: 2px !important;
+    }
+    .chart .modebar-btn {
+      color: #eef5ff !important;
+    }
+    .chart .modebar-btn:hover {
+      color: var(--accent) !important;
+      background: rgba(61, 215, 182, 0.12) !important;
+    }
+    .chart .modebar-btn.active {
+      color: var(--accent) !important;
+      background: rgba(61, 215, 182, 0.18) !important;
+    }
+
+    .plot-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      margin-bottom: 0.55rem;
+    }
+    .plot-tools .plot-tool.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(61, 215, 182, 0.12);
+    }
 
     .legend {
       display: flex;
@@ -951,7 +991,15 @@
         <div class="card span-12">
           <div class="chart-toolbar">
             <h2 style="margin-bottom:0">Pressure and rate trend</h2>
-            <button class="small" data-export-plot="trendChart">Export PNG</button>
+          </div>
+          <div class="plot-tools" data-plot-tools="trendChart" data-default-mode="zoom">
+            <button type="button" class="small plot-tool active" data-mode="zoom" title="Drag to zoom a region">Zoom</button>
+            <button type="button" class="small plot-tool" data-mode="pan" title="Pan the chart">Pan</button>
+            <button type="button" class="small plot-tool" data-mode="select" title="Box select a region">Select</button>
+            <button type="button" class="small plot-tool" data-action="reset" title="Reset axes to full range">Reset axes</button>
+            <button type="button" class="small plot-tool" data-action="autoscale" title="Autoscale all axes">Autoscale</button>
+            <button type="button" class="small plot-tool" data-action="spikes" title="Toggle crosshair spike lines">Spikes</button>
+            <button type="button" class="small plot-tool" data-action="png" title="Download chart as PNG">PNG</button>
           </div>
           <div id="trendChart" class="chart" aria-label="BHP and rate trend chart"></div>
           <div class="legend">
@@ -964,7 +1012,15 @@
         <div class="card span-12">
           <div class="chart-toolbar">
             <h2 style="margin-bottom:0">Horner buildup estimate</h2>
-            <button class="small" data-export-plot="hornerChart">Export PNG</button>
+          </div>
+          <div class="plot-tools" data-plot-tools="hornerChart" data-default-mode="select">
+            <button type="button" class="small plot-tool" data-mode="zoom" title="Drag to zoom a region">Zoom</button>
+            <button type="button" class="small plot-tool" data-mode="pan" title="Pan the chart">Pan</button>
+            <button type="button" class="small plot-tool active" data-mode="select" title="Box select radial-flow points for fit window">Select fit</button>
+            <button type="button" class="small plot-tool" data-action="reset" title="Reset axes and fit window">Reset axes</button>
+            <button type="button" class="small plot-tool" data-action="autoscale" title="Autoscale axes">Autoscale</button>
+            <button type="button" class="small plot-tool" data-action="spikes" title="Toggle crosshair spike lines">Spikes</button>
+            <button type="button" class="small plot-tool" data-action="png" title="Download chart as PNG">PNG</button>
           </div>
           <div id="hornerChart" class="chart" aria-label="Horner buildup chart"></div>
           <div id="hornerSummary" class="callout" style="margin-top:0.75rem">Load a flow followed by shut-in to calculate Horner slope, p*, permeability, skin, and PI.</div>
@@ -1027,12 +1083,18 @@
         <div class="card span-7">
           <div class="chart-toolbar">
             <h2 style="margin-bottom:0">Log-log diagnostic (Bourdet derivative)<span class="info" data-tip="Log-log plot of Δp and the pressure derivative Δp' vs equivalent time. Unit slope (1:1) at early time = wellbore storage; a flat derivative = infinite-acting radial flow; an upward-turning late derivative = a boundary.">i</span></h2>
-            <div class="row">
-              <label class="small" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--muted)">Smoothing L
-                <input id="derivL" class="tight-input" type="number" min="0" max="0.5" step="0.05" value="0.15" title="Bourdet smoothing window in natural-log cycles. 0 = no smoothing (noisy); 0.1-0.3 is typical." />
-              </label>
-              <button class="small" data-export-plot="derivativeChart">Export PNG</button>
-            </div>
+            <label class="small" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--muted)">Smoothing L
+              <input id="derivL" class="tight-input" type="number" min="0" max="0.5" step="0.05" value="0.15" title="Bourdet smoothing window in natural-log cycles. 0 = no smoothing (noisy); 0.1-0.3 is typical." />
+            </label>
+          </div>
+          <div class="plot-tools" data-plot-tools="derivativeChart" data-default-mode="select">
+            <button type="button" class="small plot-tool" data-mode="zoom" title="Drag to zoom a region">Zoom</button>
+            <button type="button" class="small plot-tool" data-mode="pan" title="Pan the chart">Pan</button>
+            <button type="button" class="small plot-tool active" data-mode="select" title="Box select radial-flow window on log-log plot">Select fit</button>
+            <button type="button" class="small plot-tool" data-action="reset" title="Reset axes and fit window">Reset axes</button>
+            <button type="button" class="small plot-tool" data-action="autoscale" title="Autoscale log axes">Autoscale</button>
+            <button type="button" class="small plot-tool" data-action="spikes" title="Toggle crosshair spike lines">Spikes</button>
+            <button type="button" class="small plot-tool" data-action="png" title="Download chart as PNG">PNG</button>
           </div>
           <div id="derivativeChart" class="chart" aria-label="Pressure derivative chart"></div>
           <div class="legend">
@@ -1155,14 +1217,21 @@
       paper_bgcolor: "#071525",
       plot_bgcolor: "#071525",
       font: {color: "#a9bad0", family: "Inter, sans-serif", size: 12},
-      margin: {l: 62, r: 24, t: 16, b: 46},
+      margin: {l: 62, r: 24, t: 42, b: 46},
       autosize: true,
       showlegend: false,
       hovermode: "closest",
       dragmode: "zoom"
     };
-    const PLOT_CONFIG = {responsive: true, useResizeHandler: true, displaylogo: false, displayModeBar: true,
-      modeBarButtonsToRemove: ["lasso2d", "autoScale2d", "toggleSpikelines"]};
+    const PLOT_CONFIG = {
+      responsive: true,
+      useResizeHandler: true,
+      scrollZoom: true,
+      displaylogo: false,
+      displayModeBar: true,
+      showTips: true,
+      toImageButtonOptions: {format: "png", filename: "dst-pta-chart", height: 760, width: 1400, scale: 2}
+    };
     const PLOT_HEIGHT = 380;
     function axisStyle(extra) {
       return Object.assign({gridcolor: "rgba(255,255,255,0.08)", zerolinecolor: "rgba(255,255,255,0.14)",
@@ -1193,6 +1262,82 @@
       ["trendChart", "hornerChart", "derivativeChart"].forEach(id => queuePlotResize(els[id]));
     }
 
+    function plotChartEl(chartId) {
+      return els[chartId] || document.getElementById(chartId);
+    }
+
+    function setPlotDragMode(chartId, mode) {
+      const chart = plotChartEl(chartId);
+      const toolbar = document.querySelector(`[data-plot-tools="${chartId}"]`);
+      toolbar?.querySelectorAll("[data-mode]").forEach(button => {
+        button.classList.toggle("active", button.dataset.mode === mode);
+      });
+      if (!chart || !chart.classList.contains("js-plotly-plot") || !PLOTLY_READY()) return;
+      Plotly.relayout(chart, {dragmode: mode});
+    }
+
+    function resetPlotAxes(chartId) {
+      const chart = plotChartEl(chartId);
+      if (!chart || !PLOTLY_READY()) return;
+      Plotly.relayout(chart, {
+        "xaxis.autorange": true,
+        "yaxis.autorange": true,
+        "yaxis2.autorange": true
+      });
+    }
+
+    function bindPlotTools() {
+      document.querySelectorAll("[data-plot-tools]").forEach(toolbar => {
+        const chartId = toolbar.dataset.plotTools;
+        toolbar.querySelectorAll(".plot-tool").forEach(button => {
+          button.addEventListener("click", () => {
+            if (button.dataset.mode) {
+              setPlotDragMode(chartId, button.dataset.mode);
+              return;
+            }
+            switch (button.dataset.action) {
+              case "reset":
+                resetPlotAxes(chartId);
+                if (chartId === "hornerChart" || chartId === "derivativeChart") {
+                  els.hornerStart.value = 0.001;
+                  els.hornerEnd.value = 999;
+                  refresh("Reset radial-flow window.");
+                }
+                break;
+              case "autoscale":
+                resetPlotAxes(chartId);
+                break;
+              case "spikes": {
+                const chart = plotChartEl(chartId);
+                if (!chart || !PLOTLY_READY()) break;
+                const enable = !button.classList.contains("active");
+                button.classList.toggle("active", enable);
+                Plotly.relayout(chart, {
+                  "xaxis.showspikes": enable,
+                  "yaxis.showspikes": enable,
+                  hovermode: enable ? "x unified" : "closest"
+                });
+                break;
+              }
+              case "png":
+                exportPlotAsPng(chartId);
+                break;
+              default:
+                break;
+            }
+          });
+        });
+      });
+    }
+
+    function syncPlotToolbars() {
+      document.querySelectorAll("[data-plot-tools]").forEach(toolbar => {
+        const chartId = toolbar.dataset.plotTools;
+        const defaultMode = toolbar.dataset.defaultMode || "zoom";
+        setPlotDragMode(chartId, defaultMode);
+      });
+    }
+
     const els = {};
     const fieldIds = [
       "csvFile", "caseFile", "timeMode", "csvPaste", "endpointUrl", "pollSeconds", "pollMessage",
@@ -1214,6 +1359,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       fieldIds.forEach(id => els[id] = document.getElementById(id));
       bindEvents();
+      bindPlotTools();
       setManualTimeNow();
       setEventTimeNow();
       loadSavedCase();
@@ -2100,6 +2246,7 @@
       renderEvents();
       if (message) els.rowCount.textContent = `${state.rows.length} rows loaded - ${message}`;
       resizeCharts();
+      syncPlotToolbars();
     }
 
     function renderKpis() {
