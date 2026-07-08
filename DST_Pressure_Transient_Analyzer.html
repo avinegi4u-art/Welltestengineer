@@ -680,12 +680,6 @@
       </div>
       <div class="hero-actions">
         <span class="status-pill"><span id="liveDot" class="dot"></span><span id="liveStatus">Offline/local mode</span></span>
-        <span class="status-pill" title="Display unit system for computed results. Data import units are set separately on the Data link tab.">Results
-          <span class="seg" id="unitSystem" role="group" aria-label="Display unit system">
-            <button data-usys="field" class="active">Field</button>
-            <button data-usys="si">SI</button>
-          </span>
-        </span>
         <button id="loadSample" class="primary">Load DST demo</button>
         <button id="saveLocal">Save case</button>
         <button id="clearData" class="ghost">Clear</button>
@@ -976,7 +970,7 @@
           <div id="resultsGrid" class="results-grid">
             <div class="result"><div class="rlabel">Permeability k</div><div class="rvalue muted">-</div></div>
           </div>
-          <p class="help" id="resultsFootnote" style="margin-top:0.7rem">Results update live from the selected radial-flow window. Values switch between field and SI with the toggle in the header.</p>
+          <p class="help" id="resultsFootnote" style="margin-top:0.7rem">Results update live from the selected radial-flow window. All analysis outputs use field units (psi, bpd, md, ft).</p>
         </div>
 
         <div class="card span-5">
@@ -1145,8 +1139,7 @@
       importStats: {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []},
       pollTimer: null,
       lastPollError: "",
-      lastReportHtml: "",
-      unitSystem: "field"
+      lastReportHtml: ""
     };
 
     const PLOTLY_READY = () => typeof window !== "undefined" && typeof window.Plotly !== "undefined";
@@ -1251,12 +1244,6 @@
       [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "analysisMode", "fluidType", "derivL"].forEach(id => {
         els[id]?.addEventListener("change", () => refresh());
       });
-      document.querySelectorAll("#unitSystem [data-usys]").forEach(button => button.addEventListener("click", () => {
-        state.unitSystem = button.dataset.usys;
-        document.querySelectorAll("#unitSystem [data-usys]").forEach(b => b.classList.toggle("active", b === button));
-        renderResults();
-        renderKpis();
-      }));
     }
 
     function analysisInputIds() {
@@ -2081,15 +2068,13 @@
     function renderKpis() {
       const last = state.rows[state.rows.length - 1];
       const analysis = state.analysis;
-      const bhpD = last ? dispP(last.bhp) : null;
-      els.kpiBhp.textContent = bhpD ? `${fmt(bhpD.v, 0)}` : "-";
-      els.kpiBhpNote.textContent = last ? `${bhpD.u} · ${formatTime(last.timeMs)}` : (useSI() ? "kPa" : "psi");
-      const rateD = last ? dispRate(last.rate) : null;
-      els.kpiRate.textContent = rateD ? fmt(rateD.v, 0) : "-";
+      els.kpiBhp.textContent = last ? fmt(last.bhp, 0) : "-";
+      els.kpiBhpNote.textContent = last ? `psi · ${formatTime(last.timeMs)}` : "psi";
+      els.kpiRate.textContent = last ? fmt(last.rate, 0) : "-";
       const current = state.periods[state.periods.length - 1];
       els.kpiPeriod.textContent = current ? current.type : "-";
       els.kpiPeriodNote.textContent = current ? `${fmt(current.durationHr, 2)} hr, ${current.rows.length} points` : "flow/shut-in";
-      els.kpiPstar.textContent = analysis ? fmt(dispP(analysis.pStar).v, 0) : "-";
+      els.kpiPstar.textContent = analysis ? fmt(analysis.pStar, 0) : "-";
       els.kpiPerm.textContent = analysis ? fmt(analysis.k, 2) : "-";
       els.kpiConfidence.textContent = analysis ? `${Math.round(analysis.confidence.score)}%` : "-";
       els.kpiConfidenceNote.textContent = analysis ? analysis.confidence.label : "analysis state";
@@ -2165,15 +2150,13 @@
       });
     }
 
-    /* Display-unit helpers (field <-> SI) */
-    const P_KPA = 6.894757, FT_M = 0.3048, BBL_M3 = 0.1589873;
-    function useSI() { return state.unitSystem === "si"; }
-    function dispP(psi) { return useSI() ? {v: psi * P_KPA, u: "kPa"} : {v: psi, u: "psi"}; }
-    function dispLen(ft) { return useSI() ? {v: ft * FT_M, u: "m"} : {v: ft, u: "ft"}; }
-    function dispSlope(psiCycle) { return useSI() ? {v: psiCycle * P_KPA, u: "kPa/cyc"} : {v: psiCycle, u: "psi/cyc"}; }
-    function dispRate(bpd) { return useSI() ? {v: bpd * BBL_M3, u: "m³/d"} : {v: bpd, u: "bpd"}; }
-    function dispC(bblPsi) { return useSI() ? {v: bblPsi * BBL_M3 / P_KPA, u: "m³/kPa"} : {v: bblPsi, u: "bbl/psi"}; }
-    function dispPI(bpdPsi) { return useSI() ? {v: bpdPsi * BBL_M3 / P_KPA, u: "m³/d/kPa"} : {v: bpdPsi, u: "bpd/psi"}; }
+    /* Display helpers (field units throughout) */
+    function dispP(psi) { return {v: psi, u: "psi"}; }
+    function dispLen(ft) { return {v: ft, u: "ft"}; }
+    function dispSlope(psiCycle) { return {v: psiCycle, u: "psi/cyc"}; }
+    function dispRate(bpd) { return {v: bpd, u: "bpd"}; }
+    function dispC(bblPsi) { return {v: bblPsi, u: "bbl/psi"}; }
+    function dispPI(bpdPsi) { return {v: bpdPsi, u: "bpd/psi"}; }
 
     function renderResults() {
       const a = state.analysis;
@@ -2220,14 +2203,13 @@
         els.trendChart.innerHTML = emptySvg("Load readings to plot pressure, rate, periods, and events.");
         return;
       }
-      const pconv = useSI() ? P_KPA : 1, rconv = useSI() ? BBL_M3 : 1;
-      const pUnit = useSI() ? "kPa" : "psi", rUnit = useSI() ? "m³/d" : "bpd";
+      const pUnit = "psi", rUnit = "bpd";
       if (PLOTLY_READY()) {
         const x = state.rows.map(r => new Date(r.timeMs));
-        const bhp = state.rows.map(r => r.bhp * pconv);
-        const rate = state.rows.map(r => r.rate * rconv);
+        const bhp = state.rows.map(r => r.bhp);
+        const rate = state.rows.map(r => r.rate);
         const shutX = [], shutY = [];
-        state.rows.forEach((r, i) => { const per = periodAtIndex(i); if (per === "shut-in" || per === "afterflow") { shutX.push(new Date(r.timeMs)); shutY.push(r.bhp * pconv); } });
+        state.rows.forEach((r, i) => { const per = periodAtIndex(i); if (per === "shut-in" || per === "afterflow") { shutX.push(new Date(r.timeMs)); shutY.push(r.bhp); } });
         const traces = [
           {x, y: bhp, name: "BHP", mode: "lines", line: {color: "#63a7ff", width: 2.4}, yaxis: "y", hovertemplate: `%{x|%b %d %H:%M}<br>BHP %{y:.1f} ${pUnit}<extra></extra>`},
           {x, y: rate, name: "Rate", mode: "lines", line: {color: "#3dd7b6", width: 2}, yaxis: "y2", hovertemplate: `%{x|%b %d %H:%M}<br>Rate %{y:.1f} ${rUnit}<extra></extra>`},
@@ -2244,7 +2226,7 @@
         Plotly.react(els.trendChart, traces, layout, PLOT_CONFIG);
         return;
       }
-      const points = state.rows.map((row, index) => ({x: row.timeMs, bhp: row.bhp * pconv, rate: row.rate * rconv, period: periodAtIndex(index)}));
+      const points = state.rows.map((row, index) => ({x: row.timeMs, bhp: row.bhp, rate: row.rate, period: periodAtIndex(index)}));
       els.trendChart.innerHTML = lineSvg({
         series: [
           {points: points.map(p => ({x: p.x, y: p.bhp, period: p.period})), color: "#63a7ff"},
@@ -2275,25 +2257,25 @@
         els.hornerSummary.textContent = "Load a DST sequence, correct periods if needed, and set the radial-flow window to calculate p*, permeability, skin, and PI.";
         return;
       }
-      const pconv = useSI() ? P_KPA : 1, pUnit = useSI() ? "kPa" : "psi";
+      const pUnit = "psi";
       const drawdown = analysis.mode === "drawdown";
       const xLabel = drawdown ? "log₁₀ flowing time, hr" : "log₁₀ (t_p+Δt)/Δt   ←  p* at 1";
       if (PLOTLY_READY()) {
         const sel = new Set(analysis.selected);
         const unsel = analysis.points.filter(p => !sel.has(p));
         const selPts = analysis.points.filter(p => sel.has(p));
-        const mk = arr => ({x: arr.map(p => p.logH), y: arr.map(p => p.pressure * pconv), customdata: arr.map(p => p.dt)});
+        const mk = arr => ({x: arr.map(p => p.logH), y: arr.map(p => p.pressure), customdata: arr.map(p => p.dt)});
         const u = mk(unsel), s = mk(selPts);
         const xs = analysis.points.map(p => p.logH);
         const xMin = Math.min(...xs), xMax = Math.max(...xs);
-        const fitLine = {x: [xMin, xMax], y: [(analysis.fit.intercept + analysis.fit.slope * xMin) * pconv, (analysis.fit.intercept + analysis.fit.slope * xMax) * pconv]};
+        const fitLine = {x: [xMin, xMax], y: [analysis.fit.intercept + analysis.fit.slope * xMin, analysis.fit.intercept + analysis.fit.slope * xMax]};
         const traces = [
           {x: u.x, y: u.y, customdata: u.customdata, name: "excluded", mode: "markers", marker: {color: "#6b7c93", size: 6, opacity: 0.55}, hovertemplate: `Δt %{customdata:.3f} hr<br>p %{y:.1f} ${pUnit}<extra>excluded</extra>`},
           {x: s.x, y: s.y, customdata: s.customdata, name: "radial fit", mode: "markers", marker: {color: "#ffba66", size: 8, line: {color: "#fff", width: 0.5}}, hovertemplate: `Δt %{customdata:.3f} hr<br>p %{y:.1f} ${pUnit}<extra>radial fit</extra>`},
           {x: fitLine.x, y: fitLine.y, name: "fit", mode: "lines", line: {color: "#3dd7b6", width: 2.4, dash: "dash"}, hoverinfo: "skip"}
         ];
         if (!drawdown) {
-          traces.push({x: [0], y: [analysis.pStar * pconv], name: "p*", mode: "markers", marker: {color: "#7ee787", size: 10, symbol: "star"}, hovertemplate: `p* %{y:.1f} ${pUnit}<extra></extra>`});
+          traces.push({x: [0], y: [analysis.pStar], name: "p*", mode: "markers", marker: {color: "#7ee787", size: 10, symbol: "star"}, hovertemplate: `p* %{y:.1f} ${pUnit}<extra></extra>`});
         }
         const layout = Object.assign({}, PLOT_LAYOUT_BASE, {
           height: 320, dragmode: "select",
@@ -2306,8 +2288,8 @@
         els.hornerChart.on("plotly_doubleclick", () => { els.hornerStart.value = 0.001; els.hornerEnd.value = 999; refresh("Reset radial-flow window."); });
       } else {
         els.hornerChart.innerHTML = scatterSvg({
-          points: analysis.points.map(point => ({x: point.logH, y: point.pressure * pconv, selected: analysis.selected.includes(point)})),
-          fit: {slope: analysis.fit.slope * pconv, intercept: analysis.fit.intercept * pconv},
+          points: analysis.points.map(point => ({x: point.logH, y: point.pressure, selected: analysis.selected.includes(point)})),
+          fit: {slope: analysis.fit.slope, intercept: analysis.fit.intercept},
           xLabel, yLabel: `BHP ${pUnit}`
         });
       }
@@ -2339,32 +2321,32 @@
         els.derivativeChart.innerHTML = emptySvg("Need more buildup points for the log-log pressure derivative.");
         return;
       }
-      const pconv = useSI() ? P_KPA : 1, pUnit = useSI() ? "kPa" : "psi";
+      const pUnit = "psi";
       const deltaPts = analysis.points.filter(p => p.te > 0 && p.deltaP > 0);
       const derPts = analysis.derivatives.filter(p => p.te > 0 && p.derivative > 0);
       if (els.derivativeNote) {
         const kD = analysis.kDerivative, kH = analysis.k;
         const cons = Number.isFinite(kD) && Number.isFinite(kH) && Math.abs(kD - kH) / kH < 0.35;
         els.derivativeNote.innerHTML = Number.isFinite(analysis.plateau)
-          ? `Radial-flow plateau ≈ ${fmt(dispP(analysis.plateau).v, 1)} ${pUnit} → derivative-implied k = ${fmt(kD, 2)} md vs semilog k = ${fmt(kH, 2)} md (${cons ? "consistent ✓" : "differ — refine the fit window ⚠"}). Storage ends near ${Number.isFinite(analysis.wbs?.tStorageEndHr) ? fmt(analysis.wbs.tStorageEndHr, 2) + " hr" : "n/a"}.`
+          ? `Radial-flow plateau ≈ ${fmt(analysis.plateau, 1)} ${pUnit} → derivative-implied k = ${fmt(kD, 2)} md vs semilog k = ${fmt(kH, 2)} md (${cons ? "consistent ✓" : "differ — refine the fit window ⚠"}). Storage ends near ${Number.isFinite(analysis.wbs?.tStorageEndHr) ? fmt(analysis.wbs.tStorageEndHr, 2) + " hr" : "n/a"}.`
           : "Not enough stable derivative points to read a radial-flow plateau.";
       }
       if (PLOTLY_READY()) {
         const sel = new Set(analysis.selected);
-        const dTrace = {x: deltaPts.map(p => p.te), y: deltaPts.map(p => p.deltaP * pconv), customdata: deltaPts.map(p => p.dt), name: "Δp", mode: "markers+lines", marker: {color: "#63a7ff", size: 5}, line: {color: "#63a7ff", width: 1.4}, hovertemplate: `t_e %{x:.3f} hr<br>Δp %{y:.2f} ${pUnit}<extra></extra>`};
+        const dTrace = {x: deltaPts.map(p => p.te), y: deltaPts.map(p => p.deltaP), customdata: deltaPts.map(p => p.dt), name: "Δp", mode: "markers+lines", marker: {color: "#63a7ff", size: 5}, line: {color: "#63a7ff", width: 1.4}, hovertemplate: `t_e %{x:.3f} hr<br>Δp %{y:.2f} ${pUnit}<extra></extra>`};
         const derColors = derPts.map(p => sel.has(p) || [...sel].some(s => Math.abs(s.dt - p.dt) < 1e-9) ? "#7ee787" : "#ffba66");
-        const derTrace = {x: derPts.map(p => p.te), y: derPts.map(p => p.derivative * pconv), customdata: derPts.map(p => p.dt), name: "Δp′", mode: "markers", marker: {color: derColors, size: 7}, hovertemplate: `t_e %{x:.3f} hr<br>Δp′ %{y:.2f} ${pUnit}<extra>derivative</extra>`};
+        const derTrace = {x: derPts.map(p => p.te), y: derPts.map(p => p.derivative), customdata: derPts.map(p => p.dt), name: "Δp′", mode: "markers", marker: {color: derColors, size: 7}, hovertemplate: `t_e %{x:.3f} hr<br>Δp′ %{y:.2f} ${pUnit}<extra>derivative</extra>`};
         const traces = [dTrace, derTrace];
         const teVals = deltaPts.map(p => p.te).concat(derPts.map(p => p.te));
         const teMin = Math.min(...teVals), teMax = Math.max(...teVals);
         // Radial-flow plateau reference line
         if (Number.isFinite(analysis.plateau) && analysis.plateau > 0) {
-          traces.push({x: [teMin, teMax], y: [analysis.plateau * pconv, analysis.plateau * pconv], name: "radial m/2.303", mode: "lines", line: {color: "#7ee787", width: 1.6, dash: "dot"}, hoverinfo: "skip"});
+          traces.push({x: [teMin, teMax], y: [analysis.plateau, analysis.plateau], name: "radial m/2.303", mode: "lines", line: {color: "#7ee787", width: 1.6, dash: "dot"}, hoverinfo: "skip"});
         }
         // Unit-slope (wellbore storage) reference through the earliest Δp point
         if (deltaPts.length) {
           const p0 = deltaPts[0];
-          traces.push({x: [p0.te, teMax], y: [p0.deltaP * pconv, p0.deltaP * pconv * (teMax / p0.te)], name: "unit slope", mode: "lines", line: {color: "#c7a6ff", width: 1.4, dash: "dash"}, hoverinfo: "skip"});
+          traces.push({x: [p0.te, teMax], y: [p0.deltaP, p0.deltaP * (teMax / p0.te)], name: "unit slope", mode: "lines", line: {color: "#c7a6ff", width: 1.4, dash: "dash"}, hoverinfo: "skip"});
         }
         const layout = Object.assign({}, PLOT_LAYOUT_BASE, {
           height: 320, dragmode: "select",
@@ -2378,8 +2360,8 @@
         return;
       }
       els.derivativeChart.innerHTML = logLogSvg({
-        delta: deltaPts.map(point => ({x: point.te, y: point.deltaP * pconv})),
-        derivative: derPts.map(point => ({x: point.te, y: point.derivative * pconv})),
+        delta: deltaPts.map(point => ({x: point.te, y: point.deltaP})),
+        derivative: derPts.map(point => ({x: point.te, y: point.derivative})),
         regimes: analysis.regimes
       });
     }
@@ -2857,7 +2839,7 @@
       return {
         well: els.caseWell.value, zone: els.caseZone.value, engineer: els.caseEngineer.value,
         analysisMode: els.analysisMode?.value, fluidType: els.fluidType?.value,
-        derivL: els.derivL?.value, unitSystem: state.unitSystem
+        derivL: els.derivL?.value
       };
     }
 
@@ -2925,10 +2907,6 @@
       if (details.analysisMode && els.analysisMode) els.analysisMode.value = details.analysisMode;
       if (details.fluidType && els.fluidType) els.fluidType.value = details.fluidType;
       if (details.derivL && els.derivL) els.derivL.value = details.derivL;
-      if (details.unitSystem) {
-        state.unitSystem = details.unitSystem;
-        document.querySelectorAll("#unitSystem [data-usys]").forEach(b => b.classList.toggle("active", b.dataset.usys === details.unitSystem));
-      }
     }
 
     function compactAnalysis() {
