@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upstream Calculations App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{--text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);--text-base:clamp(1rem,.95rem + .25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);--space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;--space-20:5rem;--radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--color-bg:#f7f6f2;--color-surface:#f9f8f5;--color-surface-2:#fbfbf9;--color-surface-offset:#f3f0ec;--color-border:#d4d1ca;--color-divider:#dcd9d5;--color-text:#28251d;--color-text-muted:#66645f;--color-text-faint:#9a978f;--color-primary:#01696f;--color-primary-hover:#0c4e54;--color-primary-highlight:#cedcd8;--color-success:#437a22;--color-warning:#964219;--color-error:#a12c7b;--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow-md:0 8px 24px rgba(0,0,0,.08);--font-body:'IBM Plex Sans',sans-serif;--font-mono:'IBM Plex Mono',monospace;}
+[data-theme="dark"]{--color-bg:#171614;--color-surface:#1c1b19;--color-surface-2:#201f1d;--color-surface-offset:#22211f;--color-border:#393836;--color-divider:#262523;--color-text:#e1dfda;--color-text-muted:#aaa7a0;--color-text-faint:#706d66;--color-primary:#4f98a3;--color-primary-hover:#227f8b;--color-primary-highlight:#313b3b;--color-success:#6daa45;--color-warning:#bb653b;--color-error:#d163a7;--shadow-sm:0 1px 2px rgba(0,0,0,.25);--shadow-md:0 8px 24px rgba(0,0,0,.35);}
+*{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;font-family:var(--font-body);font-size:var(--text-base);background:var(--color-bg);color:var(--color-text);line-height:1.5} button,input,select,textarea{font:inherit} a{color:inherit} .app{display:grid;grid-template-columns:300px 1fr;min-height:100dvh} .sidebar{background:var(--color-surface);border-right:1px solid var(--color-border);padding:var(--space-6);position:sticky;top:0;height:100dvh;overflow:auto} .main{padding:var(--space-6)} .brand{display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-6)} .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));display:grid;place-items:center;color:#fff;font-weight:700} .muted{color:var(--color-text-muted)} .tiny{font-size:var(--text-xs);color:var(--color-text-faint)} .search{width:100%;padding:.8rem .9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-2);color:var(--color-text)} .nav{display:flex;flex-direction:column;gap:.35rem;margin-top:var(--space-4)} .nav button{text-align:left;padding:.7rem .8rem;border-radius:10px;border:1px solid transparent} .nav button.active,.nav button:hover{background:var(--color-primary-highlight);color:var(--color-primary)} .toolbar{display:flex;gap:var(--space-3);justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:var(--space-6)} .hero{background:linear-gradient(180deg,var(--color-surface),var(--color-surface-2));border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-8);box-shadow:var(--shadow-sm)} .hero h1{font-size:var(--text-2xl);line-height:1.05;margin:0 0 .5rem} .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-4);margin-top:var(--space-6)} .card{grid-column:span 12;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm)} .card h2,.card h3{margin:.1rem 0 .5rem} .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-top:var(--space-4)} .stat{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:14px;padding:var(--space-4)} .table-wrap{overflow:auto;border:1px solid var(--color-border);border-radius:14px} table{width:100%;border-collapse:collapse;min-width:860px} th,td{padding:.8rem;border-bottom:1px solid var(--color-divider);vertical-align:top;text-align:left} th{font-size:var(--text-sm);background:var(--color-surface-offset);position:sticky;top:0} code{font-family:var(--font-mono);font-size:.92em;background:var(--color-surface-offset);padding:.1rem .3rem;border-radius:6px} .controls{display:flex;gap:var(--space-3);flex-wrap:wrap} .btn{padding:.7rem .95rem;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface-2)} .btn.primary{background:var(--color-primary);color:#fff;border-color:var(--color-primary)} .btn.primary:hover{background:var(--color-primary-hover)} .converter,.mini-calc{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3)} .field{display:flex;flex-direction:column;gap:.4rem} .field input,.field select{padding:.75rem .8rem;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-2);color:var(--color-text)} .pill{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:var(--color-primary-highlight);color:var(--color-primary);font-size:var(--text-xs);margin:.15rem .2rem .15rem 0} .section-title{display:flex;justify-content:space-between;align-items:end;gap:var(--space-4);margin:var(--space-6) 0 var(--space-4)} .list{display:grid;gap:var(--space-4)} .calc{border:1px solid var(--color-border);border-radius:16px;padding:var(--space-4);background:var(--color-surface-2)} .calc h4{margin:.1rem 0 .5rem} .footer-note{margin-top:var(--space-6);padding:var(--space-4);border-radius:14px;background:var(--color-surface-offset);border:1px solid var(--color-border)} @media (max-width: 980px){.app{grid-template-columns:1fr} .sidebar{position:relative;height:auto;border-right:none;border-bottom:1px solid var(--color-border)} .stats{grid-template-columns:repeat(2,1fr)} .converter,.mini-calc{grid-template-columns:1fr 1fr}} @media (max-width: 640px){.main,.sidebar{padding:var(--space-4)} .stats{grid-template-columns:1fr} .converter,.mini-calc{grid-template-columns:1fr} .hero{padding:var(--space-5)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">UC</div><div><div><strong>Upstream Calculations</strong></div><div class="tiny">Reference + quick tools</div></div></div>
+    <input id="search" class="search" placeholder="Search segment, formula, keyword">
+    <div class="nav" id="nav"></div>
+  </aside>
+  <main class="main">
+    <div class="toolbar">
+      <div class="hero" style="flex:1 1 760px;">
+        <div class="controls" style="justify-content:space-between;align-items:center;">
+          <span class="pill">Upstream oil & gas</span>
+          <button class="btn" id="themeBtn" aria-label="Toggle theme">Toggle theme</button>
+        </div>
+        <h1>Field calculator index for drilling, completions, production, well testing, DST, wireline, CT, cementing, stimulation, and unit conversion.</h1>
+        <p class="muted">This app is a structured engineering reference, not a substitute for operator procedures, OEM manuals, test packages, or formal simulation software. Use it for screening, preparation, and quick checks only.</p>
+        <div class="stats">
+          <div class="stat"><div class="tiny">Segments</div><div id="segCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
+          <div class="stat"><div class="tiny">Calculation entries</div><div id="calcCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
+          <div class="stat"><div class="tiny">Included tools</div><div style="font-size:var(--text-xl);font-weight:700">Converter + quick calc</div></div>
+          <div class="stat"><div class="tiny">Priority</div><div style="font-size:var(--text-xl);font-weight:700">Safety first</div></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="grid">
+      <div class="card" style="grid-column:span 12">
+        <h2>Quick tools</h2>
+        <p class="muted">The converter covers common field units. The quick calculator includes high-use formulas for hydrostatic pressure, kill mud weight, annular volume, pump output, and productivity index.</p>
+      </div>
+      <div class="card" style="grid-column:span 7">
+        <h3>Unit converter</h3>
+        <div class="converter">
+          <div class="field"><label>Family</label><select id="family"></select></div>
+          <div class="field"><label>From</label><select id="fromUnit"></select></div>
+          <div class="field"><label>To</label><select id="toUnit"></select></div>
+          <div class="field"><label>Value</label><input id="fromValue" type="number" step="any" value="1"></div>
+        </div>
+        <div class="footer-note"><strong>Result:</strong> <span id="convResult">—</span></div>
+      </div>
+      <div class="card" style="grid-column:span 5">
+        <h3>Quick calculator</h3>
+        <div class="field" style="margin-bottom:var(--space-3)"><label>Formula</label><select id="quickCalc"></select></div>
+        <div id="quickFields" class="mini-calc"></div>
+        <div class="controls" style="margin-top:var(--space-3)">
+          <button class="btn primary" id="runCalc">Calculate</button>
+          <button class="btn" id="resetCalc">Reset</button>
+        </div>
+        <div class="footer-note"><strong>Output:</strong> <span id="calcResult">—</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-title"><div><h2 style="margin:0">Calculation library</h2><div class="muted">Browse by segment. Filtered live from the search box.</div></div></div>
+      <div id="library"></div>
+    </section>
+
+    <div class="footer-note">Engineering note: many upstream calculations are scenario-dependent and require fluid PVT, geometry, well trajectory, tool ratings, real-time pressures, and lab correlations. The formulas listed here include exact equations where they are standard and short descriptions where field practice depends on proprietary correlations or job software.</div>
+  </main>
+</div>
+<script>
+const calcData = {"Drilling": [["Hydrostatic pressure", "P = 0.052 \u00d7 MW(ppg) \u00d7 TVD(ft)", ["mud weight", "TVD"]], ["Pressure gradient", "Gradient = P / TVD", ["pressure", "depth"]], ["Equivalent mud weight", "EMW = P / (0.052 \u00d7 TVD)", ["pressure", "TVD"]], ["Annular capacity", "Cap = (Dh\u00b2 - Dp\u00b2) / 1029.4  bbl/ft", ["hole ID", "pipe OD"]], ["Pipe capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["pipe ID"]], ["Displacement", "Disp = OD\u00b2 / 1029.4  bbl/ft", ["pipe OD"]], ["Volume", "V = capacity \u00d7 length", ["capacity", "length"]], ["Pump output", "bbl/stk = liner\u00b2 \u00d7 stroke / 1029.4", ["liner ID", "stroke"]], ["SPM for target rate", "SPM = Q / pump output", ["rate", "pump output"]], ["Annular velocity", "AV(ft/min) = 24.51 \u00d7 Q(gpm) / (Dh\u00b2 - Dp\u00b2)", ["flow rate", "hole ID", "pipe OD"]], ["Jet velocity", "V(ft/s) = 0.3208 \u00d7 Q(gpm) / nozzle area(in\u00b2)", ["flow rate", "nozzle area"]], ["Bit hydraulic horsepower", "HHP = Q(gpm) \u00d7 \u0394P(psi) / 1714", ["flow rate", "pressure loss"]], ["Bit impact force", "IF = 0.01823 \u00d7 Q \u00d7 sqrt(MW \u00d7 \u0394P)", ["flow rate", "mud weight", "bit \u0394P"]], ["ROP", "ROP = drilled footage / drilling time", ["footage", "time"]], ["Ton-mile", "Ton-mile = load \u00d7 distance / 5280", ["hook load", "travel distance"]], ["Buoyancy factor", "BF = 1 - MW(ppg)/65.5", ["mud weight"]], ["Maximum overpull / stretch", "\u0394L = F \u00d7 L / (A \u00d7 E)", ["force", "length", "area", "Young\u2019s modulus"]], ["ECD", "ECD = MW + annular loss / (0.052 \u00d7 TVD)", ["mud weight", "annular pressure loss", "TVD"]], ["Surge / swab estimate", "\u0394P \u221d rheology \u00d7 velocity \u00d7 length / clearance", ["pipe speed", "rheology", "geometry"]], ["Lag strokes / lag time", "Lag = annular volume / pump output", ["annular volume", "pump output"]]], "Well Control": [["Kill mud weight", "KMW = OMW + SIDPP / (0.052 \u00d7 TVD)", ["original mud weight", "SIDPP", "TVD"]], ["Formation pressure", "Pf = 0.052 \u00d7 MW \u00d7 TVD + SIDPP", ["mud weight", "TVD", "SIDPP"]], ["MAASP", "MAASP = LOT pressure - annulus hydrostatic at shoe", ["LOT/FIT", "annular hydrostatic"]], ["ICP", "ICP = SCR pressure + SIDPP", ["slow circulating pressure", "SIDPP"]], ["FCP", "FCP = SCR pressure \u00d7 KMW/OMW", ["SCR", "kill MW", "original MW"]], ["Gas influx height", "h = influx volume / annular capacity", ["influx volume", "annular capacity"]], ["Kick tolerance", "KT from allowable pressure margin and influx type/geometry", ["FIT/LOT", "mud weight", "pore pressure", "annulus geometry"]], ["Trip margin", "TM = chosen additional hydrostatic margin", ["risk basis"]], ["Bullheading pressure", "Psurf = target downhole pressure - hydrostatic", ["target BHP", "fluid gradient"]], ["Choke line friction", "CLF from circulation tests", ["rate", "friction data"]], ["Pressure while stripping", "Hydrostatic change \u00b1 displacement \u00b1 friction", ["pipe volume", "mud weight", "friction"]]], "Completion": [["Tubing capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["tubing ID"]], ["Annulus capacity", "Cap = (casing ID\u00b2 - tubing OD\u00b2)/1029.4", ["casing ID", "tubing OD"]], ["Packer fluid hydrostatic", "P = 0.052 \u00d7 MW \u00d7 TVD", ["fluid density", "depth"]], ["Tubing stretch", "\u0394L = F \u00d7 L / (A \u00d7 E)", ["load", "length", "area", "E"]], ["Thermal expansion", "\u0394L = \u03b1 \u00d7 L \u00d7 \u0394T", ["coefficient", "length", "temperature change"]], ["Tubing movement due to piston effect", "F = \u0394P \u00d7 effective area", ["pressure change", "seal area"]], ["Burst / collapse / tension check", "SF = rating / applied load", ["tool rating", "load case"]], ["Perforation friction estimate", "\u0394Ppf \u2248 C \u00d7 q\u00b2 / perf_density\u00b2", ["rate", "shot density", "perf diameter"]], ["Nodal inflow/outflow match", "Find q where IPR = VLP", ["reservoir data", "tubing data"]], ["Kill fluid volume", "Volume = string + annulus + contingency", ["capacities", "lengths"]]], "Cementing": [["Slurry yield", "Yield = slurry volume / sack", ["water", "cement", "additives"]], ["Sacks required", "sx = required slurry volume / yield", ["annular volume", "excess", "yield"]], ["Annular cement volume", "V = annular capacity \u00d7 interval \u00d7 (1+excess)", ["capacity", "interval", "excess"]], ["Displacement volume", "V = pipe capacity \u00d7 length", ["pipe capacity", "length"]], ["Mix water", "Water = sx \u00d7 gal/sk", ["sacks", "mix water per sack"]], ["TOC after pumping", "TOC = pumped excess slurry / annular capacity", ["slurry volume", "annular capacity"]], ["Balanced plug volumes", "Inside pipe = outside pipe at balance depth", ["pipe cap", "annulus cap", "plug length"]], ["Spacer / flush volumes", "V = capacity \u00d7 interval + contingency", ["capacity", "length"]], ["Equivalent circulating density during cementing", "ECD = MW + annular loss /(0.052\u00d7TVD)", ["density", "friction", "TVD"]], ["Bump pressure differential", "\u0394P = final pressure - circulating pressure", ["surface pressures"]]], "Coiled Tubing": [["CT internal capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["CT ID"]], ["CT displacement", "Disp = OD\u00b2 / 1029.4  bbl/ft", ["CT OD"]], ["CT velocity", "v = Q / area", ["rate", "ID"]], ["Circulating friction", "\u0394P = f(L, rate, density, ID)", ["length", "rate", "density", "ID"]], ["Lock-up depth / helical buckling", "From axial force + well geometry model", ["weight", "pressure", "trajectory"]], ["Burst / collapse with pressure", "Check differential against rating", ["internal pressure", "external pressure"]], ["Pump time to bottom", "t = CT volume / pump rate", ["CT capacity", "pump rate"]], ["Nitrogen lift rate", "From required gas rate and hydrostatic unloading objective", ["well pressure", "fluid gradient", "CT depth"]], ["Overpull / slackoff", "Measured vs modeled forces", ["weight indicator", "friction model"]], ["Acid placement volume", "CT volume to target depth + stage volumes", ["CT cap", "depth", "acid schedule"]]], "Wireline Perforation": [["Shot density", "SPF = shots / perforated ft", ["shots", "interval length"]], ["Perforated interval height", "h = bottom depth - top depth", ["top", "bottom"]], ["Gun string length", "Total = gun sections + accessories", ["component lengths"]], ["Correlation offset", "Offset = log marker depth - reference depth", ["CCL/GR correlation"]], ["Explosive pressure test", "Test to procedure pressure and hold time", ["expected pressure"]], ["Underbalance / overbalance", "\u0394P = reservoir pressure - wellbore pressure", ["Pres", "Pwb"]], ["Perforation tunnel penetration basis", "Vendor charge performance corrected for casing/cement/rock", ["charge type", "casing", "cement", "UCS"]], ["Gun clearance", "Clearance = conduit ID - gun OD", ["conduit drift", "gun OD"]]], "Wireline Open Hole": [["True vertical depth", "TVD from survey", ["MD", "inclination survey"]], ["Porosity from density", "\u03c6d = (\u03c1ma - \u03c1b)/(\u03c1ma - \u03c1f)", ["matrix density", "bulk density", "fluid density"]], ["Porosity from neutron/sonic", "Tool-specific transform", ["neutron or sonic data"]], ["Water saturation (Archie)", "Sw^n = aRw / (\u03c6^m Rt)", ["Rw", "\u03c6", "Rt", "a,m,n"]], ["Shale volume", "Vsh from GR or other model", ["GR log", "clean/shale baselines"]], ["Net pay", "Apply cutoffs to \u03c6, Sw, Vsh", ["cutoffs", "interpreted logs"]], ["Permeability from NMR/core correlation", "k = empirical correlation", ["NMR/core data"]], ["Pressure gradient from MDT", "Gradient = \u0394P/\u0394TVD", ["formation tester pressures"]], ["Fluid contacts", "Contact from pressure-depth intersections", ["pressure points"]]], "Wireline Cased Hole": [["CBL amplitude interpretation basis", "Qualitative cement quality vs free pipe baseline", ["CBL amplitude"]], ["VDL travel time checks", "Bond signature timing comparison", ["VDL waveform"]], ["PLT spinner rate conversion", "q from spinner calibration", ["spinner freq", "calibration"]], ["Temperature log anomaly", "\u0394T vs baseline for inflow/behind-pipe movement", ["temperature profile"]], ["Noise log triangulation", "Source depth from amplitude/arrival pattern", ["noise data"]], ["Casing inspection metal loss", "Wall loss = nominal wall - measured wall", ["nominal thickness", "inspection data"]]], "Production": [["Oil PI", "PI = q / (Pr - Pwf)", ["rate", "reservoir pressure", "flowing pressure"]], ["Gas deliverability", "q = C(Pr\u00b2 - Pwf\u00b2)^n", ["test data C,n", "pressures"]], ["AOF", "At Pwf\u22480 using deliverability equation", ["deliverability constants"]], ["GOR", "GOR = gas rate / oil rate", ["gas rate", "oil rate"]], ["Water cut", "WC = water / total liquid \u00d7 100", ["water rate", "liquid rate"]], ["BSW", "BSW = BS&W volume / sample volume \u00d7 100", ["sample test"]], ["Liquid rate from tank", "q = volume / time", ["tank increments", "time"]], ["API gravity", "API = 141.5/SG - 131.5", ["specific gravity at 60\u00b0F"]], ["Gas specific gravity", "\u03b3g = MWgas / 28.97", ["gas molecular weight"]], ["Flowing gradient", "Gradient = \u0394P / \u0394TVD", ["pressure survey"]], ["Productivity decline", "Exponential/hyperbolic/harmonic decline equations", ["qi", "Di", "b"]], ["Separator efficiency / retention", "t = vessel volume / flow", ["vessel volume", "flow rate"]]], "Well Testing & DST": [["Build-up Horner ratio", "H = (tp + \u0394t)/\u0394t", ["flow time", "shut-in time"]], ["Permeability from build-up", "k from semilog slope m", ["rate", "viscosity", "B", "thickness", "slope"]], ["Skin", "s from intercept + pressure data", ["pressure data", "k", "\u03c6", "\u03bc", "ct", "rw"]], ["Initial reservoir pressure", "Pi from extrapolated semilog / derivative analysis", ["pressure data"]], ["Radius of investigation", "ri \u2248 \u221a(0.000264kt/\u03c6\u03bcct)", ["k", "time", "\u03c6", "\u03bc", "ct"]], ["Transmissibility", "kh/\u03bcB from slope", ["test slope"]], ["Storability", "\u03c6cth from transient match", ["pressure transient data"]], ["PI from test", "PI = q/(Pi-Pwf)", ["test rate", "pressures"]], ["Gas pseudopressure method", "m(p) analysis for gas wells", ["gas PVT", "pressure data"]], ["Isochronal / modified isochronal", "n and C from multi-rate data", ["rate-pressure test data"]], ["DST hydrostatic gauge check", "\u0394Pcalc = gradient \u00d7 gauge spacing", ["fluid gradient", "gauge spacing"]], ["Wellbore storage coefficient", "C from early-time response", ["pressure transient"]], ["Cleanup efficiency", "Compare recovered fluids / rates over time", ["recovery volumes", "samples"]]], "Surface Well Testing": [["Oil rate by meter", "q = pulses or volume / time", ["meter factor", "time"]], ["Gas rate by orifice", "AGA/orifice relationship", ["\u0394P", "P", "T", "gas gravity", "beta"]], ["Choke flow estimate gas", "q = f(choke, upstream P, T, \u03b3g)", ["choke size", "upstream pressure", "temperature", "gas gravity"]], ["Choke flow estimate oil", "Gilbert / Ros type correlation", ["choke size", "THP", "GOR"]], ["Separator retention time", "t = vessel liquid volume / liquid rate", ["vessel volume", "rate"]], ["Flare line velocity", "v = Q / area", ["gas rate", "line ID"]], ["Erosion velocity", "ve = C / \u221a\u03c1", ["density", "material/service factor"]], ["Burner boom liquid loading", "Check oil/gas rate vs boom capacity", ["boom rating", "rates"]], ["Transfer pump time", "t = tank volume / pump rate", ["volume", "pump rate"]], ["Sand concentration", "ppm or lb/bbl from collected sand and throughput", ["sand mass", "fluid volume"]]], "Sampling & PVT": [["Sample line purge volume", "V = line capacity \u00d7 purge factor", ["line ID", "length"]], ["Recombination GOR", "GOR = gas added / oil used for recombination", ["lab recombination volumes"]], ["Oil formation volume factor", "Bo = reservoir oil vol / stock tank oil vol", ["PVT lab data"]], ["Gas formation volume factor", "Bg = reservoir gas vol / standard gas vol", ["P,T,z"]], ["Compressibility factor", "z from EOS/correlation", ["P", "T", "gas composition"]], ["Solution GOR", "Rs from PVT correlation or lab", ["pressure", "temperature", "API", "gas gravity"]], ["Dew point / bubble point", "From EOS or lab differential liberation/CVD", ["composition", "temperature"]], ["Sample contamination", "Contam% from OBM filtrate marker or composition", ["sample analysis"]]], "Acidizing & Stimulation": [["Acid volume by interval", "V = gal/ft \u00d7 interval", ["design gallons per foot", "interval"]], ["Preflush/Main/Postflush", "Stage volume from design schedule", ["schedule inputs"]], ["Pump time", "t = total volume / rate", ["volume", "rate"]], ["Bottomhole treating pressure", "BHTP = WHP + hydrostatic + friction \u00b1 perforation friction", ["surface P", "gradient", "friction"]], ["Maximum allowable surface pressure", "MASP = frac limit - hydrostatic - friction", ["frac pressure", "hydrostatic", "friction"]], ["Injectivity index", "II = q / (Pinj - Pres)", ["injection rate", "pressures"]], ["Acid contact time", "t = volume in interval / leakoff-adjusted rate", ["stage volume", "effective rate"]], ["Diverter concentration", "Conc = diverter mass / carrier volume", ["mass", "volume"]], ["Spent acid neutralization", "chemical requirement from stoichiometry / field factor", ["acid volume", "acid strength"]]], "General Utilities & Converters": [["Pressure", "psi \u2194 kPa \u2194 bar \u2194 MPa \u2194 atm", ["pressure"]], ["Length", "ft \u2194 m \u2194 in \u2194 mm", ["length"]], ["Area", "ft\u00b2 \u2194 m\u00b2", ["area"]], ["Volume", "bbl \u2194 m\u00b3 \u2194 ft\u00b3 \u2194 gal", ["volume"]], ["Rate", "bbl/d \u2194 m\u00b3/d; gpm \u2194 L/min; MMSCFD \u2194 m\u00b3/d", ["rate"]], ["Density", "ppg \u2194 SG \u2194 kg/m\u00b3 \u2194 lb/ft\u00b3", ["density"]], ["Gradient", "psi/ft \u2194 kPa/m \u2194 bar/m", ["gradient"]], ["Temperature", "\u00b0F \u2194 \u00b0C \u2194 K", ["temperature"]], ["Viscosity", "cP \u2194 Pa\u00b7s", ["viscosity"]], ["Mass", "lb \u2194 kg \u2194 ton", ["mass"]], ["Force", "lbf \u2194 kN", ["force"]], ["Energy/Power", "Btu \u2194 J; hp \u2194 kW", ["energy", "power"]], ["Oilfield ratios", "GOR/GLR/CGR/WGR common unit swaps", ["ratio values"]]]};
+const nav = document.getElementById('nav');
+const library = document.getElementById('library');
+const search = document.getElementById('search');
+const segCount = document.getElementById('segCount');
+const calcCount = document.getElementById('calcCount');
+const themeBtn = document.getElementById('themeBtn');
+
+const segmentNames = Object.keys(calcData);
+segCount.textContent = segmentNames.length;
+calcCount.textContent = segmentNames.reduce((a,k)=>a+calcData[k].length,0);
+
+function renderNav(active='All'){
+  nav.innerHTML='';
+  const allBtn = document.createElement('button');
+  allBtn.textContent = 'All segments';
+  allBtn.className = active==='All' ? 'active' : '';
+  allBtn.onclick = ()=>renderLibrary('All', search.value.trim().toLowerCase());
+  nav.appendChild(allBtn);
+  segmentNames.forEach(name=>{
+    const b = document.createElement('button');
+    b.textContent = `${name} (${calcData[name].length})`;
+    b.className = active===name ? 'active' : '';
+    b.onclick = ()=>renderLibrary(name, search.value.trim().toLowerCase());
+    nav.appendChild(b);
+  });
+}
+
+function renderLibrary(segment='All', term=''){
+  renderNav(segment);
+  library.innerHTML='';
+  const names = segment==='All' ? segmentNames : [segment];
+  names.forEach(name=>{
+    const rows = calcData[name].filter(r=>!term || (name+' '+r[0]+' '+r[1]+' '+r[2].join(' ')).toLowerCase().includes(term));
+    if(!rows.length) return;
+    const section = document.createElement('section');
+    section.className='card';
+    const chips = rows.slice(0,8).map(r=>`<span class="pill">${r[0]}</span>`).join('');
+    section.innerHTML = `<div class="section-title"><div><h3 style="margin:0">${name}</h3><div class="muted">${rows.length} listed calculations</div></div></div>${chips}<div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Calculation</th><th>Formula / method</th><th>Primary inputs</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${r[0]}</strong></td><td><code>${r[1]}</code></td><td>${r[2].map(x=>`<span class="pill">${x}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table></div>`;
+    library.appendChild(section);
+  });
+  if(!library.children.length){
+    library.innerHTML = '<div class="card"><h3>No matches</h3><p class="muted">Try a broader term such as pressure, annulus, buildup, cement, choke, or density.</p></div>';
+  }
+}
+search.addEventListener('input',()=>{
+  const active = document.querySelector('.nav button.active');
+  const name = active ? (active.textContent==='All segments' ? 'All' : active.textContent.replace(/ \(.+\)$/,'')) : 'All';
+  renderLibrary(name, search.value.trim().toLowerCase());
+});
+
+const converterFamilies = {
+  pressure: {psi:1, kPa:6.894757, bar:0.06894757, MPa:0.006894757, atm:0.068046},
+  length: {ft:1, m:0.3048, in:12, mm:304.8},
+  volume: {bbl:1, m3:0.158987295, ft3:5.614583, gal_us:42},
+  rate_liquid: {bbl_d:1, m3_d:0.158987295, gpm:0.0291667, L_min:4.41632},
+  density: {ppg:1, sg:1/8.345404, kg_m3:119.826427, lb_ft3:7.48052},
+  gradient: {psi_ft:1, kPa_m:22.6206, bar_m:0.226206},
+  temperature: null,
+  force: {lbf:1, kN:0.00444822},
+  power: {hp:1, kW:0.7457},
+  gas_rate: {MMSCFD:1, MSCFD:1000, sm3_d:28316.8466}
+};
+const familySel = document.getElementById('family');
+const fromUnit = document.getElementById('fromUnit');
+const toUnit = document.getElementById('toUnit');
+const fromValue = document.getElementById('fromValue');
+const convResult = document.getElementById('convResult');
+Object.keys(converterFamilies).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k.replace('_',' ');familySel.appendChild(o);});
+function fillUnits(){
+  const fam = familySel.value;
+  fromUnit.innerHTML=''; toUnit.innerHTML='';
+  const units = fam==='temperature' ? ['C','F','K'] : Object.keys(converterFamilies[fam]);
+  units.forEach((u,i)=>{
+    const a=document.createElement('option');a.value=u;a.textContent=u;fromUnit.appendChild(a);
+    const b=document.createElement('option');b.value=u;b.textContent=u;toUnit.appendChild(b);
+    if(i===1) toUnit.value=u;
+  });
+  convert();
+}
+function convert(){
+  const fam = familySel.value; const v = parseFloat(fromValue.value);
+  if(Number.isNaN(v)){convResult.textContent='Enter a number'; return;}
+  let result;
+  if(fam==='temperature'){
+    const f=fromUnit.value,t=toUnit.value;
+    let c = f==='C'?v:(f==='F'?(v-32)*5/9:v-273.15);
+    result = t==='C'?c:(t==='F'?(c*9/5+32):c+273.15);
+  } else {
+    const base = v / converterFamilies[fam][fromUnit.value];
+    result = base * converterFamilies[fam][toUnit.value];
+  }
+  convResult.textContent = `${result.toLocaleString(undefined,{maximumFractionDigits:6})} ${toUnit.value}`;
+}
+familySel.onchange=fillUnits; fromUnit.onchange=convert; toUnit.onchange=convert; fromValue.oninput=convert; fillUnits();
+
+const quickDefs = {
+  hydrostatic_pressure: {label:'Hydrostatic pressure', inputs:[['MW_ppg','Mud weight, ppg'],['TVD_ft','TVD, ft']], fn:v=>0.052*v.MW_ppg*v.TVD_ft, unit:'psi'},
+  kill_mud_weight: {label:'Kill mud weight', inputs:[['OMW_ppg','Original MW, ppg'],['SIDPP_psi','SIDPP, psi'],['TVD_ft','TVD, ft']], fn:v=>v.OMW_ppg + v.SIDPP_psi/(0.052*v.TVD_ft), unit:'ppg'},
+  annular_volume: {label:'Annular volume', inputs:[['HoleID_in','Hole ID, in'],['PipeOD_in','Pipe OD, in'],['Length_ft','Length, ft']], fn:v=>((v.HoleID_in**2 - v.PipeOD_in**2)/1029.4)*v.Length_ft, unit:'bbl'},
+  pump_output: {label:'Pump output', inputs:[['Liner_in','Liner ID, in'],['Stroke_in','Stroke, in']], fn:v=>(v.Liner_in**2*v.Stroke_in)/1029.4, unit:'bbl/stk'},
+  oil_PI: {label:'Oil productivity index', inputs:[['q_bpd','Rate, bpd'],['Pr_psi','Reservoir pressure, psi'],['Pwf_psi','Flowing BHP, psi']], fn:v=>v.q_bpd/(v.Pr_psi-v.Pwf_psi), unit:'bpd/psi'}
+};
+const quickCalc = document.getElementById('quickCalc');
+const quickFields = document.getElementById('quickFields');
+const calcResult = document.getElementById('calcResult');
+Object.entries(quickDefs).forEach(([k,d])=>{const o=document.createElement('option');o.value=k;o.textContent=d.label;quickCalc.appendChild(o);});
+function fillQuickFields(){
+  const d=quickDefs[quickCalc.value];
+  quickFields.innerHTML='';
+  d.inputs.forEach(([key,label])=>{
+    const wrap=document.createElement('div'); wrap.className='field';
+    wrap.innerHTML=`<label>${label}</label><input type="number" step="any" data-key="${key}">`;
+    quickFields.appendChild(wrap);
+  });
+  calcResult.textContent='—';
+}
+quickCalc.onchange=fillQuickFields; fillQuickFields();
+document.getElementById('runCalc').onclick=()=>{
+  const d=quickDefs[quickCalc.value]; const vals={}; let ok=true;
+  quickFields.querySelectorAll('input').forEach(inp=>{const n=parseFloat(inp.value); if(Number.isNaN(n)) ok=false; vals[inp.dataset.key]=n;});
+  if(!ok){calcResult.textContent='Enter all inputs'; return;}
+  const out=d.fn(vals); calcResult.textContent=`${out.toLocaleString(undefined,{maximumFractionDigits:6})} ${d.unit}`;
+};
+document.getElementById('resetCalc').onclick=()=>fillQuickFields();
+
+themeBtn.onclick=()=>{document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='dark' ? 'light':'dark');};
+renderNav(); renderLibrary();
+</script>
+</body>
+</html>
