@@ -4,204 +4,1064 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Upstream Calculations App</title>
+<meta name="description" content="Offshore upstream oil & gas engineering calculator — DST, CT, wireline, stimulation">
+<meta name="theme-color" content="#01696f">
+<link rel="manifest" id="appManifest" href="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root,[data-theme="light"]{--text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);--text-base:clamp(1rem,.95rem + .25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);--space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;--space-20:5rem;--radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--color-bg:#f7f6f2;--color-surface:#f9f8f5;--color-surface-2:#fbfbf9;--color-surface-offset:#f3f0ec;--color-border:#d4d1ca;--color-divider:#dcd9d5;--color-text:#28251d;--color-text-muted:#66645f;--color-text-faint:#9a978f;--color-primary:#01696f;--color-primary-hover:#0c4e54;--color-primary-highlight:#cedcd8;--color-success:#437a22;--color-warning:#964219;--color-error:#a12c7b;--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow-md:0 8px 24px rgba(0,0,0,.08);--font-body:'IBM Plex Sans',sans-serif;--font-mono:'IBM Plex Mono',monospace;}
-[data-theme="dark"]{--color-bg:#171614;--color-surface:#1c1b19;--color-surface-2:#201f1d;--color-surface-offset:#22211f;--color-border:#393836;--color-divider:#262523;--color-text:#e1dfda;--color-text-muted:#aaa7a0;--color-text-faint:#706d66;--color-primary:#4f98a3;--color-primary-hover:#227f8b;--color-primary-highlight:#313b3b;--color-success:#6daa45;--color-warning:#bb653b;--color-error:#d163a7;--shadow-sm:0 1px 2px rgba(0,0,0,.25);--shadow-md:0 8px 24px rgba(0,0,0,.35);}
-*{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;font-family:var(--font-body);font-size:var(--text-base);background:var(--color-bg);color:var(--color-text);line-height:1.5} button,input,select,textarea{font:inherit} a{color:inherit} .app{display:grid;grid-template-columns:300px 1fr;min-height:100dvh} .sidebar{background:var(--color-surface);border-right:1px solid var(--color-border);padding:var(--space-6);position:sticky;top:0;height:100dvh;overflow:auto} .main{padding:var(--space-6)} .brand{display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-6)} .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));display:grid;place-items:center;color:#fff;font-weight:700} .muted{color:var(--color-text-muted)} .tiny{font-size:var(--text-xs);color:var(--color-text-faint)} .search{width:100%;padding:.8rem .9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-2);color:var(--color-text)} .nav{display:flex;flex-direction:column;gap:.35rem;margin-top:var(--space-4)} .nav button{text-align:left;padding:.7rem .8rem;border-radius:10px;border:1px solid transparent} .nav button.active,.nav button:hover{background:var(--color-primary-highlight);color:var(--color-primary)} .toolbar{display:flex;gap:var(--space-3);justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:var(--space-6)} .hero{background:linear-gradient(180deg,var(--color-surface),var(--color-surface-2));border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-8);box-shadow:var(--shadow-sm)} .hero h1{font-size:var(--text-2xl);line-height:1.05;margin:0 0 .5rem} .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-4);margin-top:var(--space-6)} .card{grid-column:span 12;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm)} .card h2,.card h3{margin:.1rem 0 .5rem} .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-top:var(--space-4)} .stat{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:14px;padding:var(--space-4)} .table-wrap{overflow:auto;border:1px solid var(--color-border);border-radius:14px} table{width:100%;border-collapse:collapse;min-width:860px} th,td{padding:.8rem;border-bottom:1px solid var(--color-divider);vertical-align:top;text-align:left} th{font-size:var(--text-sm);background:var(--color-surface-offset);position:sticky;top:0} code{font-family:var(--font-mono);font-size:.92em;background:var(--color-surface-offset);padding:.1rem .3rem;border-radius:6px} .controls{display:flex;gap:var(--space-3);flex-wrap:wrap} .btn{padding:.7rem .95rem;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface-2)} .btn.primary{background:var(--color-primary);color:#fff;border-color:var(--color-primary)} .btn.primary:hover{background:var(--color-primary-hover)} .converter,.mini-calc{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3)} .field{display:flex;flex-direction:column;gap:.4rem} .field input,.field select{padding:.75rem .8rem;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-2);color:var(--color-text)} .pill{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:var(--color-primary-highlight);color:var(--color-primary);font-size:var(--text-xs);margin:.15rem .2rem .15rem 0} .section-title{display:flex;justify-content:space-between;align-items:end;gap:var(--space-4);margin:var(--space-6) 0 var(--space-4)} .list{display:grid;gap:var(--space-4)} .calc{border:1px solid var(--color-border);border-radius:16px;padding:var(--space-4);background:var(--color-surface-2)} .calc h4{margin:.1rem 0 .5rem} .footer-note{margin-top:var(--space-6);padding:var(--space-4);border-radius:14px;background:var(--color-surface-offset);border:1px solid var(--color-border)} @media (max-width: 980px){.app{grid-template-columns:1fr} .sidebar{position:relative;height:auto;border-right:none;border-bottom:1px solid var(--color-border)} .stats{grid-template-columns:repeat(2,1fr)} .converter,.mini-calc{grid-template-columns:1fr 1fr}} @media (max-width: 640px){.main,.sidebar{padding:var(--space-4)} .stats{grid-template-columns:1fr} .converter,.mini-calc{grid-template-columns:1fr} .hero{padding:var(--space-5)}}
+:root,[data-theme="light"]{--text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);--text-base:clamp(1rem,.95rem + .25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);--space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--color-bg:#f7f6f2;--color-surface:#f9f8f5;--color-surface-2:#fbfbf9;--color-surface-offset:#f3f0ec;--color-border:#d4d1ca;--color-divider:#dcd9d5;--color-text:#28251d;--color-text-muted:#66645f;--color-text-faint:#9a978f;--color-primary:#01696f;--color-primary-hover:#0c4e54;--color-primary-highlight:#cedcd8;--color-success:#437a22;--color-warning:#964219;--color-error:#a12c7b;--color-highlight:#fff3a6;--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow-md:0 8px 24px rgba(0,0,0,.08);--font-body:'IBM Plex Sans',sans-serif;--font-mono:'IBM Plex Mono',monospace;--sidebar-w:300px;--history-w:340px;--header-h:auto}
+[data-theme="dark"]{--color-bg:#171614;--color-surface:#1c1b19;--color-surface-2:#201f1d;--color-surface-offset:#22211f;--color-border:#393836;--color-divider:#262523;--color-text:#e1dfda;--color-text-muted:#aaa7a0;--color-text-faint:#706d66;--color-primary:#4f98a3;--color-primary-hover:#227f8b;--color-primary-highlight:#313b3b;--color-success:#6daa45;--color-warning:#bb653b;--color-error:#d163a7;--color-highlight:#4a4520;--shadow-sm:0 1px 2px rgba(0,0,0,.25);--shadow-md:0 8px 24px rgba(0,0,0,.35)}
+[data-theme="contrast"]{--color-bg:#fff;--color-surface:#fff;--color-surface-2:#fff;--color-surface-offset:#f0f0f0;--color-border:#000;--color-divider:#000;--color-text:#000;--color-text-muted:#222;--color-text-faint:#444;--color-primary:#000;--color-primary-hover:#333;--color-primary-highlight:#e8e8e8;--color-success:#006400;--color-warning:#8b4513;--color-error:#8b0000;--color-highlight:#ff0;--shadow-sm:none;--shadow-md:none}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;font-size:16px}
+body{margin:0;font-family:var(--font-body);font-size:var(--text-base);background:var(--color-bg);color:var(--color-text);line-height:1.5;min-height:100dvh}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.app-shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr var(--history-w);min-height:100dvh}
+.sidebar{background:var(--color-surface);border-right:1px solid var(--color-border);padding:var(--space-4);position:sticky;top:0;height:100dvh;overflow:auto;z-index:20}
+.history-panel{background:var(--color-surface);border-left:1px solid var(--color-border);padding:var(--space-4);position:sticky;top:0;height:100dvh;overflow:auto;transition:transform .25s ease}
+.history-panel.collapsed{display:none}
+.main{padding:var(--space-4);min-width:0}
+.brand{display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-4)}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));display:grid;place-items:center;color:#fff;font-weight:700;font-size:var(--text-sm)}
+.muted{color:var(--color-text-muted)}.tiny{font-size:var(--text-xs);color:var(--color-text-faint)}
+.search{width:100%;padding:.85rem .9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-2);color:var(--color-text);min-height:44px}
+.nav{display:flex;flex-direction:column;gap:.35rem;margin-top:var(--space-3)}
+.nav button{text-align:left;padding:.75rem .85rem;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;min-height:44px}
+.nav button.active,.nav button:hover{background:var(--color-primary-highlight);color:var(--color-primary)}
+.topbar{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;margin-bottom:var(--space-4)}
+.controls{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
+.btn{padding:.7rem .95rem;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface-2);cursor:pointer;min-height:44px}
+.btn.primary{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+.btn.primary:hover{background:var(--color-primary-hover)}
+.btn.icon{padding:.55rem .7rem;min-width:44px}
+.hero{background:linear-gradient(180deg,var(--color-surface),var(--color-surface-2));border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);box-shadow:var(--shadow-sm);margin-bottom:var(--space-4)}
+.hero h1{font-size:var(--text-xl);line-height:1.15;margin:0 0 .5rem}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-4)}
+.card{grid-column:span 12;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+.card h2,.card h3{margin:.1rem 0 .5rem}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-top:var(--space-4)}
+.stat{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:14px;padding:var(--space-4)}
+.table-wrap{overflow:auto;border:1px solid var(--color-border);border-radius:14px}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th,td{padding:.75rem;border-bottom:1px solid var(--color-divider);vertical-align:top;text-align:left}
+th{font-size:var(--text-sm);background:var(--color-surface-offset);position:sticky;top:0;z-index:1}
+code,.mono{font-family:var(--font-mono);font-size:.92em;background:var(--color-surface-offset);padding:.1rem .35rem;border-radius:6px}
+.field{display:flex;flex-direction:column;gap:.35rem}
+.field-row{display:grid;grid-template-columns:1fr auto;gap:.35rem;align-items:end}
+.field input,.field select{padding:.75rem .8rem;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-2);color:var(--color-text);min-height:44px;width:100%}
+.field select.unit-sel{min-width:5.5rem;width:auto}
+.pill{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:var(--color-primary-highlight);color:var(--color-primary);font-size:var(--text-xs);margin:.15rem .2rem .15rem 0}
+.section-title{display:flex;justify-content:space-between;align-items:end;gap:var(--space-4);margin:var(--space-5) 0 var(--space-3);flex-wrap:wrap}
+.list{display:grid;gap:var(--space-4)}
+.calc{border:1px solid var(--color-border);border-radius:16px;padding:var(--space-4);background:var(--color-surface-2)}
+.calc h4{margin:.1rem 0 .5rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.footer-note{margin-top:var(--space-4);padding:var(--space-4);border-radius:14px;background:var(--color-surface-offset);border:1px solid var(--color-border)}
+.converter,.mini-calc,.calc-inputs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-3)}
+mark,.hl{background:var(--color-highlight);color:inherit;padding:0 .1em;border-radius:2px}
+.star-btn{background:none;border:none;cursor:pointer;font-size:1.2rem;padding:.2rem;line-height:1;min-height:auto}
+.star-btn.on{color:#e6a800}
+.expand-row td{background:var(--color-surface-offset)}
+.eq-block{font-size:var(--text-lg);padding:var(--space-3);border-left:3px solid var(--color-primary);margin:.5rem 0}
+.assump-list{margin:.5rem 0 0;padding-left:1.2rem}
+.chart-box{border:1px solid var(--color-border);border-radius:12px;padding:var(--space-3);background:var(--color-surface);margin-top:var(--space-3);overflow:auto}
+.chart-box svg{display:block;max-width:100%;height:auto}
+.chart-legend{display:flex;gap:var(--space-3);flex-wrap:wrap;font-size:var(--text-sm);margin-top:var(--space-2)}
+.legend-item{display:flex;align-items:center;gap:.35rem}
+.legend-swatch{width:14px;height:3px;border-radius:2px}
+.well-panel{border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-4);margin-bottom:var(--space-4);background:var(--color-surface)}
+.well-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-3)}
+.well-panel summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.history-item{border:1px solid var(--color-border);border-radius:10px;padding:var(--space-3);margin-bottom:var(--space-2);font-size:var(--text-sm)}
+.history-item time{display:block;color:var(--color-text-faint);font-size:var(--text-xs)}
+.history-item .res{font-weight:600;color:var(--color-primary)}
+.toggle-formula{font-size:var(--text-sm);color:var(--color-primary);cursor:pointer;background:none;border:none;text-decoration:underline;padding:0;min-height:auto}
+.formula-panel{display:none;margin-top:var(--space-3);padding:var(--space-3);border:1px dashed var(--color-border);border-radius:10px}
+.formula-panel.open{display:block}
+.result-box{margin-top:var(--space-3);padding:var(--space-3);border-radius:10px;background:var(--color-primary-highlight);font-weight:600}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+.overlay.open{display:block}
+.hamburger{display:none}
+.report-preview{display:none}
+@media(max-width:1200px){.app-shell{grid-template-columns:var(--sidebar-w) 1fr}.history-panel{position:fixed;right:0;top:0;width:min(340px,92vw);box-shadow:var(--shadow-md);transform:translateX(100%);z-index:40}.history-panel.open{transform:translateX(0);display:block}}
+@media(max-width:900px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;left:0;top:0;width:min(300px,88vw);transform:translateX(-100%);transition:transform .25s;z-index:40;box-shadow:var(--shadow-md)}.sidebar.open{transform:translateX(0)}.hamburger{display:inline-flex}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.main,.sidebar,.history-panel{padding:var(--space-3)}.stats{grid-template-columns:1fr}.hero{padding:var(--space-4)}}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .sidebar,.history-panel,.topbar,.hamburger,.overlay,.no-print{display:none!important}
+  .app-shell{display:block}
+  .main{padding:0}
+  .report-preview{display:block!important}
+  .card,.calc{break-inside:avoid;border:1px solid #ccc;box-shadow:none}
+  @page{size:A4;margin:15mm}
+}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand"><div class="logo">UC</div><div><div><strong>Upstream Calculations</strong></div><div class="tiny">Reference + quick tools</div></div></div>
-    <input id="search" class="search" placeholder="Search segment, formula, keyword">
+<div class="overlay" id="overlay"></div>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">UC</div><div><div><strong>Upstream Calculations</strong></div><div class="tiny">Interactive field calculator</div></div></div>
+    <input id="search" class="search" placeholder="Search segment, formula, keyword" aria-label="Search calculations">
     <div class="nav" id="nav"></div>
   </aside>
   <main class="main">
-    <div class="toolbar">
-      <div class="hero" style="flex:1 1 760px;">
-        <div class="controls" style="justify-content:space-between;align-items:center;">
-          <span class="pill">Upstream oil & gas</span>
-          <button class="btn" id="themeBtn" aria-label="Toggle theme">Toggle theme</button>
-        </div>
-        <h1>Field calculator index for drilling, completions, production, well testing, DST, wireline, CT, cementing, stimulation, and unit conversion.</h1>
-        <p class="muted">This app is a structured engineering reference, not a substitute for operator procedures, OEM manuals, test packages, or formal simulation software. Use it for screening, preparation, and quick checks only.</p>
-        <div class="stats">
-          <div class="stat"><div class="tiny">Segments</div><div id="segCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
-          <div class="stat"><div class="tiny">Calculation entries</div><div id="calcCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
-          <div class="stat"><div class="tiny">Included tools</div><div style="font-size:var(--text-xl);font-weight:700">Converter + quick calc</div></div>
-          <div class="stat"><div class="tiny">Priority</div><div style="font-size:var(--text-xl);font-weight:700">Safety first</div></div>
-        </div>
+    <div class="topbar no-print">
+      <button class="btn icon hamburger" id="menuBtn" aria-label="Open navigation menu">☰</button>
+      <div class="controls">
+        <label class="tiny">Unit system</label>
+        <select id="unitSystemSel" class="btn" aria-label="Preferred unit system">
+          <option value="field">Field</option><option value="si">SI</option><option value="metric">Metric</option>
+        </select>
+        <button class="btn" id="themeBtn" aria-label="Cycle theme">Theme</button>
+        <button class="btn" id="histBtn" aria-label="Open session log">Session log</button>
+        <button class="btn" id="exportCsvBtn" aria-label="Export session log CSV">Export CSV</button>
+        <button class="btn primary" id="reportBtn" aria-label="Generate printable report">Generate Report</button>
       </div>
     </div>
-
-    <section class="grid">
-      <div class="card" style="grid-column:span 12">
-        <h2>Quick tools</h2>
-        <p class="muted">The converter covers common field units. The quick calculator includes high-use formulas for hydrostatic pressure, kill mud weight, annular volume, pump output, and productivity index.</p>
+    <details class="well-panel no-print" open>
+      <summary>Well Context</summary>
+      <div class="well-grid" style="margin-top:var(--space-3)">
+        <div class="field"><label for="wellName">Well Name</label><input id="wellName" aria-label="Well name"></div>
+        <div class="field"><label for="field">Field</label><input id="field" aria-label="Field name"></div>
+        <div class="field"><label for="operator">Operator</label><input id="operator" aria-label="Operator"></div>
+        <div class="field"><label for="testDate">Test Date</label><input id="testDate" type="date" aria-label="Test date"></div>
+        <div class="field"><label for="reservoir">Reservoir</label><input id="reservoir" aria-label="Reservoir"></div>
+        <div class="field"><label for="engineer">Engineer Name</label><input id="engineer" aria-label="Engineer name"></div>
       </div>
-      <div class="card" style="grid-column:span 7">
-        <h3>Unit converter</h3>
+    </details>
+    <div class="hero no-print">
+      <span class="pill">Upstream oil &amp; gas — Abu Dhabi offshore ready</span>
+      <h1>Interactive calculator for drilling, completions, production, well testing, DST, wireline, CT, cementing, stimulation, and unit conversion.</h1>
+      <p class="muted">Field screening tool — not a substitute for operator procedures, OEM manuals, or formal simulation. Works offline after first load.</p>
+      <div class="stats">
+        <div class="stat"><div class="tiny">Segments</div><div id="segCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
+        <div class="stat"><div class="tiny">Calculations</div><div id="calcCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
+        <div class="stat"><div class="tiny">Tools</div><div style="font-size:var(--text-xl);font-weight:700">Charts + nodal + Horner</div></div>
+        <div class="stat"><div class="tiny">Priority</div><div style="font-size:var(--text-xl);font-weight:700">Safety first</div></div>
+      </div>
+    </div>
+    <section class="grid no-print">
+      <div class="card" style="grid-column:span 12"><h2>Quick tools</h2><p class="muted">Unit converter plus 15 high-use field formulas including ri, skin, C, Gilbert choke, ECD, Bg, API, WC, and GOR.</p></div>
+      <div class="card" style="grid-column:span 7"><h3>Unit converter</h3>
         <div class="converter">
-          <div class="field"><label>Family</label><select id="family"></select></div>
-          <div class="field"><label>From</label><select id="fromUnit"></select></div>
-          <div class="field"><label>To</label><select id="toUnit"></select></div>
-          <div class="field"><label>Value</label><input id="fromValue" type="number" step="any" value="1"></div>
+          <div class="field"><label for="family">Family</label><select id="family" aria-label="Conversion family"></select></div>
+          <div class="field"><label for="fromUnit">From</label><select id="fromUnit" aria-label="From unit"></select></div>
+          <div class="field"><label for="toUnit">To</label><select id="toUnit" aria-label="To unit"></select></div>
+          <div class="field"><label for="fromValue">Value</label><input id="fromValue" type="number" step="any" value="1" aria-label="Value to convert"></div>
         </div>
         <div class="footer-note"><strong>Result:</strong> <span id="convResult">—</span></div>
       </div>
-      <div class="card" style="grid-column:span 5">
-        <h3>Quick calculator</h3>
-        <div class="field" style="margin-bottom:var(--space-3)"><label>Formula</label><select id="quickCalc"></select></div>
+      <div class="card" style="grid-column:span 5"><h3>Quick calculator</h3>
+        <div class="field" style="margin-bottom:var(--space-3)"><label for="quickCalc">Formula</label><select id="quickCalc" aria-label="Quick formula"></select></div>
         <div id="quickFields" class="mini-calc"></div>
         <div class="controls" style="margin-top:var(--space-3)">
-          <button class="btn primary" id="runCalc">Calculate</button>
-          <button class="btn" id="resetCalc">Reset</button>
+          <button class="btn primary" id="runCalc" aria-label="Run quick calculation">Calculate</button>
+          <button class="btn" id="resetCalc" aria-label="Reset quick calculator">Reset</button>
         </div>
         <div class="footer-note"><strong>Output:</strong> <span id="calcResult">—</span></div>
       </div>
     </section>
-
-    <section>
-      <div class="section-title"><div><h2 style="margin:0">Calculation library</h2><div class="muted">Browse by segment. Filtered live from the search box.</div></div></div>
+    <section class="no-print">
+      <div class="section-title"><div><h2 style="margin:0">Calculation library</h2><div class="muted">Expand any row for live calculator, formula derivation, and charts.</div></div></div>
       <div id="library"></div>
     </section>
-
-    <div class="footer-note">Engineering note: many upstream calculations are scenario-dependent and require fluid PVT, geometry, well trajectory, tool ratings, real-time pressures, and lab correlations. The formulas listed here include exact equations where they are standard and short descriptions where field practice depends on proprietary correlations or job software.</div>
+    <div class="footer-note no-print">Engineering note: upstream calculations are scenario-dependent. Confirm fluid PVT, geometry, trajectory, tool ratings, and real-time pressures before operational decisions.</div>
+    <div id="reportPreview" class="report-preview"></div>
   </main>
+  <aside class="history-panel" id="historyPanel">
+    <h3 style="margin-top:0">Session log</h3>
+    <p class="tiny muted">Last 20 calculations with well context.</p>
+    <div id="historyList"></div>
+  </aside>
 </div>
 <script>
-const calcData = {"Drilling": [["Hydrostatic pressure", "P = 0.052 \u00d7 MW(ppg) \u00d7 TVD(ft)", ["mud weight", "TVD"]], ["Pressure gradient", "Gradient = P / TVD", ["pressure", "depth"]], ["Equivalent mud weight", "EMW = P / (0.052 \u00d7 TVD)", ["pressure", "TVD"]], ["Annular capacity", "Cap = (Dh\u00b2 - Dp\u00b2) / 1029.4  bbl/ft", ["hole ID", "pipe OD"]], ["Pipe capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["pipe ID"]], ["Displacement", "Disp = OD\u00b2 / 1029.4  bbl/ft", ["pipe OD"]], ["Volume", "V = capacity \u00d7 length", ["capacity", "length"]], ["Pump output", "bbl/stk = liner\u00b2 \u00d7 stroke / 1029.4", ["liner ID", "stroke"]], ["SPM for target rate", "SPM = Q / pump output", ["rate", "pump output"]], ["Annular velocity", "AV(ft/min) = 24.51 \u00d7 Q(gpm) / (Dh\u00b2 - Dp\u00b2)", ["flow rate", "hole ID", "pipe OD"]], ["Jet velocity", "V(ft/s) = 0.3208 \u00d7 Q(gpm) / nozzle area(in\u00b2)", ["flow rate", "nozzle area"]], ["Bit hydraulic horsepower", "HHP = Q(gpm) \u00d7 \u0394P(psi) / 1714", ["flow rate", "pressure loss"]], ["Bit impact force", "IF = 0.01823 \u00d7 Q \u00d7 sqrt(MW \u00d7 \u0394P)", ["flow rate", "mud weight", "bit \u0394P"]], ["ROP", "ROP = drilled footage / drilling time", ["footage", "time"]], ["Ton-mile", "Ton-mile = load \u00d7 distance / 5280", ["hook load", "travel distance"]], ["Buoyancy factor", "BF = 1 - MW(ppg)/65.5", ["mud weight"]], ["Maximum overpull / stretch", "\u0394L = F \u00d7 L / (A \u00d7 E)", ["force", "length", "area", "Young\u2019s modulus"]], ["ECD", "ECD = MW + annular loss / (0.052 \u00d7 TVD)", ["mud weight", "annular pressure loss", "TVD"]], ["Surge / swab estimate", "\u0394P \u221d rheology \u00d7 velocity \u00d7 length / clearance", ["pipe speed", "rheology", "geometry"]], ["Lag strokes / lag time", "Lag = annular volume / pump output", ["annular volume", "pump output"]]], "Well Control": [["Kill mud weight", "KMW = OMW + SIDPP / (0.052 \u00d7 TVD)", ["original mud weight", "SIDPP", "TVD"]], ["Formation pressure", "Pf = 0.052 \u00d7 MW \u00d7 TVD + SIDPP", ["mud weight", "TVD", "SIDPP"]], ["MAASP", "MAASP = LOT pressure - annulus hydrostatic at shoe", ["LOT/FIT", "annular hydrostatic"]], ["ICP", "ICP = SCR pressure + SIDPP", ["slow circulating pressure", "SIDPP"]], ["FCP", "FCP = SCR pressure \u00d7 KMW/OMW", ["SCR", "kill MW", "original MW"]], ["Gas influx height", "h = influx volume / annular capacity", ["influx volume", "annular capacity"]], ["Kick tolerance", "KT from allowable pressure margin and influx type/geometry", ["FIT/LOT", "mud weight", "pore pressure", "annulus geometry"]], ["Trip margin", "TM = chosen additional hydrostatic margin", ["risk basis"]], ["Bullheading pressure", "Psurf = target downhole pressure - hydrostatic", ["target BHP", "fluid gradient"]], ["Choke line friction", "CLF from circulation tests", ["rate", "friction data"]], ["Pressure while stripping", "Hydrostatic change \u00b1 displacement \u00b1 friction", ["pipe volume", "mud weight", "friction"]]], "Completion": [["Tubing capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["tubing ID"]], ["Annulus capacity", "Cap = (casing ID\u00b2 - tubing OD\u00b2)/1029.4", ["casing ID", "tubing OD"]], ["Packer fluid hydrostatic", "P = 0.052 \u00d7 MW \u00d7 TVD", ["fluid density", "depth"]], ["Tubing stretch", "\u0394L = F \u00d7 L / (A \u00d7 E)", ["load", "length", "area", "E"]], ["Thermal expansion", "\u0394L = \u03b1 \u00d7 L \u00d7 \u0394T", ["coefficient", "length", "temperature change"]], ["Tubing movement due to piston effect", "F = \u0394P \u00d7 effective area", ["pressure change", "seal area"]], ["Burst / collapse / tension check", "SF = rating / applied load", ["tool rating", "load case"]], ["Perforation friction estimate", "\u0394Ppf \u2248 C \u00d7 q\u00b2 / perf_density\u00b2", ["rate", "shot density", "perf diameter"]], ["Nodal inflow/outflow match", "Find q where IPR = VLP", ["reservoir data", "tubing data"]], ["Kill fluid volume", "Volume = string + annulus + contingency", ["capacities", "lengths"]]], "Cementing": [["Slurry yield", "Yield = slurry volume / sack", ["water", "cement", "additives"]], ["Sacks required", "sx = required slurry volume / yield", ["annular volume", "excess", "yield"]], ["Annular cement volume", "V = annular capacity \u00d7 interval \u00d7 (1+excess)", ["capacity", "interval", "excess"]], ["Displacement volume", "V = pipe capacity \u00d7 length", ["pipe capacity", "length"]], ["Mix water", "Water = sx \u00d7 gal/sk", ["sacks", "mix water per sack"]], ["TOC after pumping", "TOC = pumped excess slurry / annular capacity", ["slurry volume", "annular capacity"]], ["Balanced plug volumes", "Inside pipe = outside pipe at balance depth", ["pipe cap", "annulus cap", "plug length"]], ["Spacer / flush volumes", "V = capacity \u00d7 interval + contingency", ["capacity", "length"]], ["Equivalent circulating density during cementing", "ECD = MW + annular loss /(0.052\u00d7TVD)", ["density", "friction", "TVD"]], ["Bump pressure differential", "\u0394P = final pressure - circulating pressure", ["surface pressures"]]], "Coiled Tubing": [["CT internal capacity", "Cap = ID\u00b2 / 1029.4  bbl/ft", ["CT ID"]], ["CT displacement", "Disp = OD\u00b2 / 1029.4  bbl/ft", ["CT OD"]], ["CT velocity", "v = Q / area", ["rate", "ID"]], ["Circulating friction", "\u0394P = f(L, rate, density, ID)", ["length", "rate", "density", "ID"]], ["Lock-up depth / helical buckling", "From axial force + well geometry model", ["weight", "pressure", "trajectory"]], ["Burst / collapse with pressure", "Check differential against rating", ["internal pressure", "external pressure"]], ["Pump time to bottom", "t = CT volume / pump rate", ["CT capacity", "pump rate"]], ["Nitrogen lift rate", "From required gas rate and hydrostatic unloading objective", ["well pressure", "fluid gradient", "CT depth"]], ["Overpull / slackoff", "Measured vs modeled forces", ["weight indicator", "friction model"]], ["Acid placement volume", "CT volume to target depth + stage volumes", ["CT cap", "depth", "acid schedule"]]], "Wireline Perforation": [["Shot density", "SPF = shots / perforated ft", ["shots", "interval length"]], ["Perforated interval height", "h = bottom depth - top depth", ["top", "bottom"]], ["Gun string length", "Total = gun sections + accessories", ["component lengths"]], ["Correlation offset", "Offset = log marker depth - reference depth", ["CCL/GR correlation"]], ["Explosive pressure test", "Test to procedure pressure and hold time", ["expected pressure"]], ["Underbalance / overbalance", "\u0394P = reservoir pressure - wellbore pressure", ["Pres", "Pwb"]], ["Perforation tunnel penetration basis", "Vendor charge performance corrected for casing/cement/rock", ["charge type", "casing", "cement", "UCS"]], ["Gun clearance", "Clearance = conduit ID - gun OD", ["conduit drift", "gun OD"]]], "Wireline Open Hole": [["True vertical depth", "TVD from survey", ["MD", "inclination survey"]], ["Porosity from density", "\u03c6d = (\u03c1ma - \u03c1b)/(\u03c1ma - \u03c1f)", ["matrix density", "bulk density", "fluid density"]], ["Porosity from neutron/sonic", "Tool-specific transform", ["neutron or sonic data"]], ["Water saturation (Archie)", "Sw^n = aRw / (\u03c6^m Rt)", ["Rw", "\u03c6", "Rt", "a,m,n"]], ["Shale volume", "Vsh from GR or other model", ["GR log", "clean/shale baselines"]], ["Net pay", "Apply cutoffs to \u03c6, Sw, Vsh", ["cutoffs", "interpreted logs"]], ["Permeability from NMR/core correlation", "k = empirical correlation", ["NMR/core data"]], ["Pressure gradient from MDT", "Gradient = \u0394P/\u0394TVD", ["formation tester pressures"]], ["Fluid contacts", "Contact from pressure-depth intersections", ["pressure points"]]], "Wireline Cased Hole": [["CBL amplitude interpretation basis", "Qualitative cement quality vs free pipe baseline", ["CBL amplitude"]], ["VDL travel time checks", "Bond signature timing comparison", ["VDL waveform"]], ["PLT spinner rate conversion", "q from spinner calibration", ["spinner freq", "calibration"]], ["Temperature log anomaly", "\u0394T vs baseline for inflow/behind-pipe movement", ["temperature profile"]], ["Noise log triangulation", "Source depth from amplitude/arrival pattern", ["noise data"]], ["Casing inspection metal loss", "Wall loss = nominal wall - measured wall", ["nominal thickness", "inspection data"]]], "Production": [["Oil PI", "PI = q / (Pr - Pwf)", ["rate", "reservoir pressure", "flowing pressure"]], ["Gas deliverability", "q = C(Pr\u00b2 - Pwf\u00b2)^n", ["test data C,n", "pressures"]], ["AOF", "At Pwf\u22480 using deliverability equation", ["deliverability constants"]], ["GOR", "GOR = gas rate / oil rate", ["gas rate", "oil rate"]], ["Water cut", "WC = water / total liquid \u00d7 100", ["water rate", "liquid rate"]], ["BSW", "BSW = BS&W volume / sample volume \u00d7 100", ["sample test"]], ["Liquid rate from tank", "q = volume / time", ["tank increments", "time"]], ["API gravity", "API = 141.5/SG - 131.5", ["specific gravity at 60\u00b0F"]], ["Gas specific gravity", "\u03b3g = MWgas / 28.97", ["gas molecular weight"]], ["Flowing gradient", "Gradient = \u0394P / \u0394TVD", ["pressure survey"]], ["Productivity decline", "Exponential/hyperbolic/harmonic decline equations", ["qi", "Di", "b"]], ["Separator efficiency / retention", "t = vessel volume / flow", ["vessel volume", "flow rate"]]], "Well Testing & DST": [["Build-up Horner ratio", "H = (tp + \u0394t)/\u0394t", ["flow time", "shut-in time"]], ["Permeability from build-up", "k from semilog slope m", ["rate", "viscosity", "B", "thickness", "slope"]], ["Skin", "s from intercept + pressure data", ["pressure data", "k", "\u03c6", "\u03bc", "ct", "rw"]], ["Initial reservoir pressure", "Pi from extrapolated semilog / derivative analysis", ["pressure data"]], ["Radius of investigation", "ri \u2248 \u221a(0.000264kt/\u03c6\u03bcct)", ["k", "time", "\u03c6", "\u03bc", "ct"]], ["Transmissibility", "kh/\u03bcB from slope", ["test slope"]], ["Storability", "\u03c6cth from transient match", ["pressure transient data"]], ["PI from test", "PI = q/(Pi-Pwf)", ["test rate", "pressures"]], ["Gas pseudopressure method", "m(p) analysis for gas wells", ["gas PVT", "pressure data"]], ["Isochronal / modified isochronal", "n and C from multi-rate data", ["rate-pressure test data"]], ["DST hydrostatic gauge check", "\u0394Pcalc = gradient \u00d7 gauge spacing", ["fluid gradient", "gauge spacing"]], ["Wellbore storage coefficient", "C from early-time response", ["pressure transient"]], ["Cleanup efficiency", "Compare recovered fluids / rates over time", ["recovery volumes", "samples"]]], "Surface Well Testing": [["Oil rate by meter", "q = pulses or volume / time", ["meter factor", "time"]], ["Gas rate by orifice", "AGA/orifice relationship", ["\u0394P", "P", "T", "gas gravity", "beta"]], ["Choke flow estimate gas", "q = f(choke, upstream P, T, \u03b3g)", ["choke size", "upstream pressure", "temperature", "gas gravity"]], ["Choke flow estimate oil", "Gilbert / Ros type correlation", ["choke size", "THP", "GOR"]], ["Separator retention time", "t = vessel liquid volume / liquid rate", ["vessel volume", "rate"]], ["Flare line velocity", "v = Q / area", ["gas rate", "line ID"]], ["Erosion velocity", "ve = C / \u221a\u03c1", ["density", "material/service factor"]], ["Burner boom liquid loading", "Check oil/gas rate vs boom capacity", ["boom rating", "rates"]], ["Transfer pump time", "t = tank volume / pump rate", ["volume", "pump rate"]], ["Sand concentration", "ppm or lb/bbl from collected sand and throughput", ["sand mass", "fluid volume"]]], "Sampling & PVT": [["Sample line purge volume", "V = line capacity \u00d7 purge factor", ["line ID", "length"]], ["Recombination GOR", "GOR = gas added / oil used for recombination", ["lab recombination volumes"]], ["Oil formation volume factor", "Bo = reservoir oil vol / stock tank oil vol", ["PVT lab data"]], ["Gas formation volume factor", "Bg = reservoir gas vol / standard gas vol", ["P,T,z"]], ["Compressibility factor", "z from EOS/correlation", ["P", "T", "gas composition"]], ["Solution GOR", "Rs from PVT correlation or lab", ["pressure", "temperature", "API", "gas gravity"]], ["Dew point / bubble point", "From EOS or lab differential liberation/CVD", ["composition", "temperature"]], ["Sample contamination", "Contam% from OBM filtrate marker or composition", ["sample analysis"]]], "Acidizing & Stimulation": [["Acid volume by interval", "V = gal/ft \u00d7 interval", ["design gallons per foot", "interval"]], ["Preflush/Main/Postflush", "Stage volume from design schedule", ["schedule inputs"]], ["Pump time", "t = total volume / rate", ["volume", "rate"]], ["Bottomhole treating pressure", "BHTP = WHP + hydrostatic + friction \u00b1 perforation friction", ["surface P", "gradient", "friction"]], ["Maximum allowable surface pressure", "MASP = frac limit - hydrostatic - friction", ["frac pressure", "hydrostatic", "friction"]], ["Injectivity index", "II = q / (Pinj - Pres)", ["injection rate", "pressures"]], ["Acid contact time", "t = volume in interval / leakoff-adjusted rate", ["stage volume", "effective rate"]], ["Diverter concentration", "Conc = diverter mass / carrier volume", ["mass", "volume"]], ["Spent acid neutralization", "chemical requirement from stoichiometry / field factor", ["acid volume", "acid strength"]]], "General Utilities & Converters": [["Pressure", "psi \u2194 kPa \u2194 bar \u2194 MPa \u2194 atm", ["pressure"]], ["Length", "ft \u2194 m \u2194 in \u2194 mm", ["length"]], ["Area", "ft\u00b2 \u2194 m\u00b2", ["area"]], ["Volume", "bbl \u2194 m\u00b3 \u2194 ft\u00b3 \u2194 gal", ["volume"]], ["Rate", "bbl/d \u2194 m\u00b3/d; gpm \u2194 L/min; MMSCFD \u2194 m\u00b3/d", ["rate"]], ["Density", "ppg \u2194 SG \u2194 kg/m\u00b3 \u2194 lb/ft\u00b3", ["density"]], ["Gradient", "psi/ft \u2194 kPa/m \u2194 bar/m", ["gradient"]], ["Temperature", "\u00b0F \u2194 \u00b0C \u2194 K", ["temperature"]], ["Viscosity", "cP \u2194 Pa\u00b7s", ["viscosity"]], ["Mass", "lb \u2194 kg \u2194 ton", ["mass"]], ["Force", "lbf \u2194 kN", ["force"]], ["Energy/Power", "Btu \u2194 J; hp \u2194 kW", ["energy", "power"]], ["Oilfield ratios", "GOR/GLR/CGR/WGR common unit swaps", ["ratio values"]]]};
-const nav = document.getElementById('nav');
-const library = document.getElementById('library');
-const search = document.getElementById('search');
-const segCount = document.getElementById('segCount');
-const calcCount = document.getElementById('calcCount');
-const themeBtn = document.getElementById('themeBtn');
+const calcData = {"Drilling":[["Hydrostatic pressure","P = 0.052 \u00d7 MW(ppg) \u00d7 TVD(ft)",["mud weight","TVD"]],["Pressure gradient","Gradient = P / TVD",["pressure","depth"]],["Equivalent mud weight","EMW = P / (0.052 \u00d7 TVD)",["pressure","TVD"]],["Annular capacity","Cap = (Dh\u00b2 - Dp\u00b2) / 1029.4  bbl/ft",["hole ID","pipe OD"]],["Pipe capacity","Cap = ID\u00b2 / 1029.4  bbl/ft",["pipe ID"]],["Displacement","Disp = OD\u00b2 / 1029.4  bbl/ft",["pipe OD"]],["Volume","V = capacity \u00d7 length",["capacity","length"]],["Pump output","bbl/stk = liner\u00b2 \u00d7 stroke / 1029.4",["liner ID","stroke"]],["SPM for target rate","SPM = Q / pump output",["rate","pump output"]],["Annular velocity","AV(ft/min) = 24.51 \u00d7 Q(gpm) / (Dh\u00b2 - Dp\u00b2)",["flow rate","hole ID","pipe OD"]],["Jet velocity","V(ft/s) = 0.3208 \u00d7 Q(gpm) / nozzle area(in\u00b2)",["flow rate","nozzle area"]],["Bit hydraulic horsepower","HHP = Q(gpm) \u00d7 \u0394P(psi) / 1714",["flow rate","pressure loss"]],["Bit impact force","IF = 0.01823 \u00d7 Q \u00d7 sqrt(MW \u00d7 \u0394P)",["flow rate","mud weight","bit \u0394P"]],["ROP","ROP = drilled footage / drilling time",["footage","time"]],["Ton-mile","Ton-mile = load \u00d7 distance / 5280",["hook load","travel distance"]],["Buoyancy factor","BF = 1 - MW(ppg)/65.5",["mud weight"]],["Maximum overpull / stretch","\u0394L = F \u00d7 L / (A \u00d7 E)",["force","length","area","Young\u2019s modulus"]],["ECD","ECD = MW + annular loss / (0.052 \u00d7 TVD)",["mud weight","annular pressure loss","TVD"]],["Surge / swab estimate","\u0394P \u221d rheology \u00d7 velocity \u00d7 length / clearance",["pipe speed","rheology","geometry"]],["Lag strokes / lag time","Lag = annular volume / pump output",["annular volume","pump output"]]],"Well Control":[["Kill mud weight","KMW = OMW + SIDPP / (0.052 \u00d7 TVD)",["original mud weight","SIDPP","TVD"]],["Formation pressure","Pf = 0.052 \u00d7 MW \u00d7 TVD + SIDPP",["mud weight","TVD","SIDPP"]],["MAASP","MAASP = LOT pressure - annulus hydrostatic at shoe",["LOT/FIT","annular hydrostatic"]],["ICP","ICP = SCR pressure + SIDPP",["slow circulating pressure","SIDPP"]],["FCP","FCP = SCR pressure \u00d7 KMW/OMW",["SCR","kill MW","original MW"]],["Gas influx height","h = influx volume / annular capacity",["influx volume","annular capacity"]],["Kick tolerance","KT from allowable pressure margin and influx type/geometry",["FIT/LOT","mud weight","pore pressure","annulus geometry"]],["Trip margin","TM = chosen additional hydrostatic margin",["risk basis"]],["Bullheading pressure","Psurf = target downhole pressure - hydrostatic",["target BHP","fluid gradient"]],["Choke line friction","CLF from circulation tests",["rate","friction data"]],["Pressure while stripping","Hydrostatic change \u00b1 displacement \u00b1 friction",["pipe volume","mud weight","friction"]]],"Completion":[["Tubing capacity","Cap = ID\u00b2 / 1029.4  bbl/ft",["tubing ID"]],["Annulus capacity","Cap = (casing ID\u00b2 - tubing OD\u00b2)/1029.4",["casing ID","tubing OD"]],["Packer fluid hydrostatic","P = 0.052 \u00d7 MW \u00d7 TVD",["fluid density","depth"]],["Tubing stretch","\u0394L = F \u00d7 L / (A \u00d7 E)",["load","length","area","E"]],["Thermal expansion","\u0394L = \u03b1 \u00d7 L \u00d7 \u0394T",["coefficient","length","temperature change"]],["Tubing movement due to piston effect","F = \u0394P \u00d7 effective area",["pressure change","seal area"]],["Burst / collapse / tension check","SF = rating / applied load",["tool rating","load case"]],["Perforation friction estimate","\u0394Ppf \u2248 C \u00d7 q\u00b2 / perf_density\u00b2",["rate","shot density","perf diameter"]],["Nodal inflow/outflow match","Find q where IPR = VLP",["reservoir data","tubing data"]],["Kill fluid volume","Volume = string + annulus + contingency",["capacities","lengths"]]],"Cementing":[["Slurry yield","Yield = slurry volume / sack",["water","cement","additives"]],["Sacks required","sx = required slurry volume / yield",["annular volume","excess","yield"]],["Annular cement volume","V = annular capacity \u00d7 interval \u00d7 (1+excess)",["capacity","interval","excess"]],["Displacement volume","V = pipe capacity \u00d7 length",["pipe capacity","length"]],["Mix water","Water = sx \u00d7 gal/sk",["sacks","mix water per sack"]],["TOC after pumping","TOC = pumped excess slurry / annular capacity",["slurry volume","annular capacity"]],["Balanced plug volumes","Inside pipe = outside pipe at balance depth",["pipe cap","annulus cap","plug length"]],["Spacer / flush volumes","V = capacity \u00d7 interval + contingency",["capacity","length"]],["Equivalent circulating density during cementing","ECD = MW + annular loss /(0.052\u00d7TVD)",["density","friction","TVD"]],["Bump pressure differential","\u0394P = final pressure - circulating pressure",["surface pressures"]]],"Coiled Tubing":[["CT internal capacity","Cap = ID\u00b2 / 1029.4  bbl/ft",["CT ID"]],["CT displacement","Disp = OD\u00b2 / 1029.4  bbl/ft",["CT OD"]],["CT velocity","v = Q / area",["rate","ID"]],["Circulating friction","\u0394P = f(L, rate, density, ID)",["length","rate","density","ID"]],["Lock-up depth / helical buckling","From axial force + well geometry model",["weight","pressure","trajectory"]],["Burst / collapse with pressure","Check differential against rating",["internal pressure","external pressure"]],["Pump time to bottom","t = CT volume / pump rate",["CT capacity","pump rate"]],["Nitrogen lift rate","From required gas rate and hydrostatic unloading objective",["well pressure","fluid gradient","CT depth"]],["Overpull / slackoff","Measured vs modeled forces",["weight indicator","friction model"]],["Acid placement volume","CT volume to target depth + stage volumes",["CT cap","depth","acid schedule"]]],"Wireline Perforation":[["Shot density","SPF = shots / perforated ft",["shots","interval length"]],["Perforated interval height","h = bottom depth - top depth",["top","bottom"]],["Gun string length","Total = gun sections + accessories",["component lengths"]],["Correlation offset","Offset = log marker depth - reference depth",["CCL/GR correlation"]],["Explosive pressure test","Test to procedure pressure and hold time",["expected pressure"]],["Underbalance / overbalance","\u0394P = reservoir pressure - wellbore pressure",["Pres","Pwb"]],["Perforation tunnel penetration basis","Vendor charge performance corrected for casing/cement/rock",["charge type","casing","cement","UCS"]],["Gun clearance","Clearance = conduit ID - gun OD",["conduit drift","gun OD"]]],"Wireline Open Hole":[["True vertical depth","TVD from survey",["MD","inclination survey"]],["Porosity from density","\u03c6d = (\u03c1ma - \u03c1b)/(\u03c1ma - \u03c1f)",["matrix density","bulk density","fluid density"]],["Porosity from neutron/sonic","Tool-specific transform",["neutron or sonic data"]],["Water saturation (Archie)","Sw^n = aRw / (\u03c6^m Rt)",["Rw","\u03c6","Rt","a,m,n"]],["Shale volume","Vsh from GR or other model",["GR log","clean/shale baselines"]],["Net pay","Apply cutoffs to \u03c6, Sw, Vsh",["cutoffs","interpreted logs"]],["Permeability from NMR/core correlation","k = empirical correlation",["NMR/core data"]],["Pressure gradient from MDT","Gradient = \u0394P/\u0394TVD",["formation tester pressures"]],["Fluid contacts","Contact from pressure-depth intersections",["pressure points"]]],"Wireline Cased Hole":[["CBL amplitude interpretation basis","Qualitative cement quality vs free pipe baseline",["CBL amplitude"]],["VDL travel time checks","Bond signature timing comparison",["VDL waveform"]],["PLT spinner rate conversion","q from spinner calibration",["spinner freq","calibration"]],["Temperature log anomaly","\u0394T vs baseline for inflow/behind-pipe movement",["temperature profile"]],["Noise log triangulation","Source depth from amplitude/arrival pattern",["noise data"]],["Casing inspection metal loss","Wall loss = nominal wall - measured wall",["nominal thickness","inspection data"]]],"Production":[["Oil PI","PI = q / (Pr - Pwf)",["rate","reservoir pressure","flowing pressure"]],["Gas deliverability","q = C(Pr\u00b2 - Pwf\u00b2)^n",["test data C,n","pressures"]],["AOF","At Pwf\u22480 using deliverability equation",["deliverability constants"]],["GOR","GOR = gas rate / oil rate",["gas rate","oil rate"]],["Water cut","WC = water / total liquid \u00d7 100",["water rate","liquid rate"]],["BSW","BSW = BS&W volume / sample volume \u00d7 100",["sample test"]],["Liquid rate from tank","q = volume / time",["tank increments","time"]],["API gravity","API = 141.5/SG - 131.5",["specific gravity at 60\u00b0F"]],["Gas specific gravity","\u03b3g = MWgas / 28.97",["gas molecular weight"]],["Flowing gradient","Gradient = \u0394P / \u0394TVD",["pressure survey"]],["Productivity decline","Exponential/hyperbolic/harmonic decline equations",["qi","Di","b"]],["Separator efficiency / retention","t = vessel volume / flow",["vessel volume","flow rate"]]],"Well Testing & DST":[["Build-up Horner ratio","H = (tp + \u0394t)/\u0394t",["flow time","shut-in time"]],["Permeability from build-up","k from semilog slope m",["rate","viscosity","B","thickness","slope"]],["Skin","s from intercept + pressure data",["pressure data","k","\u03c6","\u03bc","ct","rw"]],["Initial reservoir pressure","Pi from extrapolated semilog / derivative analysis",["pressure data"]],["Radius of investigation","ri \u2248 \u221a(0.000264kt/\u03c6\u03bcct)",["k","time","\u03c6","\u03bc","ct"]],["Transmissibility","kh/\u03bcB from slope",["test slope"]],["Storability","\u03c6cth from transient match",["pressure transient data"]],["PI from test","PI = q/(Pi-Pwf)",["test rate","pressures"]],["Gas pseudopressure method","m(p) analysis for gas wells",["gas PVT","pressure data"]],["Isochronal / modified isochronal","n and C from multi-rate data",["rate-pressure test data"]],["DST hydrostatic gauge check","\u0394Pcalc = gradient \u00d7 gauge spacing",["fluid gradient","gauge spacing"]],["Wellbore storage coefficient","C from early-time response",["pressure transient"]],["Cleanup efficiency","Compare recovered fluids / rates over time",["recovery volumes","samples"]]],"Surface Well Testing":[["Oil rate by meter","q = pulses or volume / time",["meter factor","time"]],["Gas rate by orifice","AGA/orifice relationship",["\u0394P","P","T","gas gravity","beta"]],["Choke flow estimate gas","q = f(choke, upstream P, T, \u03b3g)",["choke size","upstream pressure","temperature","gas gravity"]],["Choke flow estimate oil","Gilbert / Ros type correlation",["choke size","THP","GOR"]],["Separator retention time","t = vessel liquid volume / liquid rate",["vessel volume","rate"]],["Flare line velocity","v = Q / area",["gas rate","line ID"]],["Erosion velocity","ve = C / \u221a\u03c1",["density","material/service factor"]],["Burner boom liquid loading","Check oil/gas rate vs boom capacity",["boom rating","rates"]],["Transfer pump time","t = tank volume / pump rate",["volume","pump rate"]],["Sand concentration","ppm or lb/bbl from collected sand and throughput",["sand mass","fluid volume"]]],"Sampling & PVT":[["Sample line purge volume","V = line capacity \u00d7 purge factor",["line ID","length"]],["Recombination GOR","GOR = gas added / oil used for recombination",["lab recombination volumes"]],["Oil formation volume factor","Bo = reservoir oil vol / stock tank oil vol",["PVT lab data"]],["Gas formation volume factor","Bg = reservoir gas vol / standard gas vol",["P,T,z"]],["Compressibility factor","z from EOS/correlation",["P","T","gas composition"]],["Solution GOR","Rs from PVT correlation or lab",["pressure","temperature","API","gas gravity"]],["Dew point / bubble point","From EOS or lab differential liberation/CVD",["composition","temperature"]],["Sample contamination","Contam% from OBM filtrate marker or composition",["sample analysis"]]],"Acidizing & Stimulation":[["Acid volume by interval","V = gal/ft \u00d7 interval",["design gallons per foot","interval"]],["Preflush/Main/Postflush","Stage volume from design schedule",["schedule inputs"]],["Pump time","t = total volume / rate",["volume","rate"]],["Bottomhole treating pressure","BHTP = WHP + hydrostatic + friction \u00b1 perforation friction",["surface P","gradient","friction"]],["Maximum allowable surface pressure","MASP = frac limit - hydrostatic - friction",["frac pressure","hydrostatic","friction"]],["Injectivity index","II = q / (Pinj - Pres)",["injection rate","pressures"]],["Acid contact time","t = volume in interval / leakoff-adjusted rate",["stage volume","effective rate"]],["Diverter concentration","Conc = diverter mass / carrier volume",["mass","volume"]],["Spent acid neutralization","chemical requirement from stoichiometry / field factor",["acid volume","acid strength"]]],"General Utilities & Converters":[["Pressure","psi \u2194 kPa \u2194 bar \u2194 MPa \u2194 atm",["pressure"]],["Length","ft \u2194 m \u2194 in \u2194 mm",["length"]],["Area","ft\u00b2 \u2194 m\u00b2",["area"]],["Volume","bbl \u2194 m\u00b3 \u2194 ft\u00b3 \u2194 gal",["volume"]],["Rate","bbl/d \u2194 m\u00b3/d; gpm \u2194 L/min; MMSCFD \u2194 m\u00b3/d",["rate"]],["Density","ppg \u2194 SG \u2194 kg/m\u00b3 \u2194 lb/ft\u00b3",["density"]],["Gradient","psi/ft \u2194 kPa/m \u2194 bar/m",["gradient"]],["Temperature","\u00b0F \u2194 \u00b0C \u2194 K",["temperature"]],["Viscosity","cP \u2194 Pa\u00b7s",["viscosity"]],["Mass","lb \u2194 kg \u2194 ton",["mass"]],["Force","lbf \u2194 kN",["force"]],["Energy/Power","Btu \u2194 J; hp \u2194 kW",["energy","power"]],["Oilfield ratios","GOR/GLR/CGR/WGR common unit swaps",["ratio values"]]]};
+const calcRegistry = {"Drilling|Hydrostatic pressure":{"inputs":[["mw","Mud weight","density"],["tvd","TVD","length"]],"formula":"P = 0.052 \u00d7 MW \u00d7 TVD","assumptions":["Static column","Single fluid"],"compute":"return 0.052 * v.mw * v.tvd","out":["pressure","Pressure"],"notes":"Single-phase fluid column; temperature/MW variation not included.","segment":"Drilling","name":"Hydrostatic pressure"},"Drilling|Pressure gradient":{"inputs":[["p","Pressure","pressure"],["d","Depth/TVD","length"]],"formula":"Gradient = P / TVD","assumptions":["Linear gradient"],"compute":"return v.p / v.d","out":["gradient","Gradient"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Pressure gradient"},"Drilling|Equivalent mud weight":{"inputs":[["p","Pressure","pressure"],["tvd","TVD","length"]],"formula":"EMW = P / (0.052 \u00d7 TVD)","assumptions":["Static"],"compute":"return v.p / (0.052 * v.tvd)","out":["density","EMW"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Equivalent mud weight"},"Drilling|Annular capacity":{"inputs":[["dh","Hole ID","diameter"],["dp","Pipe OD","diameter"]],"formula":"Cap = (Dh\u00b2 \u2212 Dp\u00b2) / 1029.4 bbl/ft","assumptions":["Circular annulus"],"compute":"return (v.dh**2 - v.dp**2) / 1029.4","out":["vol_per_length","Capacity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Annular capacity"},"Drilling|Pipe capacity":{"inputs":[["id","Pipe ID","diameter"]],"formula":"Cap = ID\u00b2 / 1029.4 bbl/ft","assumptions":["Circular pipe"],"compute":"return v.id**2 / 1029.4","out":["vol_per_length","Capacity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Pipe capacity"},"Drilling|Displacement":{"inputs":[["od","Pipe OD","diameter"]],"formula":"Disp = OD\u00b2 / 1029.4 bbl/ft","assumptions":["Circular pipe"],"compute":"return v.od**2 / 1029.4","out":["vol_per_length","Displacement"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Displacement"},"Drilling|Volume":{"inputs":[["cap","Capacity","vol_per_length"],["len","Length","length"]],"formula":"V = capacity \u00d7 length","assumptions":["Constant ID"],"compute":"return v.cap * v.len","out":["volume","Volume"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Volume"},"Drilling|Pump output":{"inputs":[["liner","Liner ID","diameter"],["stroke","Stroke","length"]],"formula":"bbl/stk = liner\u00b2 \u00d7 stroke / 1029.4","assumptions":["Single acting pump"],"compute":"return (v.liner**2 * v.stroke) / 1029.4","out":["pump_output","Pump output"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Pump output"},"Drilling|SPM for target rate":{"inputs":[["q","Target rate","rate_liquid"],["po","Pump output","pump_output"]],"formula":"SPM = Q / pump output","assumptions":["Constant pump efficiency"],"compute":"return v.q / v.po","out":["spm","SPM"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"SPM for target rate"},"Drilling|Annular velocity":{"inputs":[["q","Flow rate","rate_gpm"],["dh","Hole ID","diameter"],["dp","Pipe OD","diameter"]],"formula":"AV = 24.51 \u00d7 Q / (Dh\u00b2 \u2212 Dp\u00b2) ft/min","assumptions":["Laminar/turbulent not distinguished"],"compute":"return 24.51 * v.q / (v.dh**2 - v.dp**2)","out":["velocity","Annular velocity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Annular velocity"},"Drilling|Jet velocity":{"inputs":[["q","Flow rate","rate_gpm"],["area","Nozzle area","area_in2"]],"formula":"V = 0.3208 \u00d7 Q / nozzle area","assumptions":["Incompressible flow"],"compute":"return 0.3208 * v.q / v.area","out":["velocity_fps","Jet velocity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Jet velocity"},"Drilling|Bit hydraulic horsepower":{"inputs":[["q","Flow rate","rate_gpm"],["dp","Bit \u0394P","pressure"]],"formula":"HHP = Q \u00d7 \u0394P / 1714","assumptions":["Steady flow"],"compute":"return v.q * v.dp / 1714","out":["power_hp","HHP"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Bit hydraulic horsepower"},"Drilling|Bit impact force":{"inputs":[["q","Flow rate","rate_gpm"],["mw","Mud weight","density"],["dp","Bit \u0394P","pressure"]],"formula":"IF = 0.01823 \u00d7 Q \u00d7 \u221a(MW \u00d7 \u0394P)","assumptions":["Field correlation"],"compute":"return 0.01823 * v.q * Math.sqrt(v.mw * v.dp)","out":["force","Impact force"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Bit impact force"},"Drilling|ROP":{"inputs":[["ft","Footage","length"],["t","Time","time_hr"]],"formula":"ROP = footage / time","assumptions":["Constant conditions"],"compute":"return v.ft / v.t","out":["rop","ROP"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"ROP"},"Drilling|Ton-mile":{"inputs":[["load","Hook load","force"],["dist","Travel distance","length"]],"formula":"Ton-mile = load \u00d7 distance / 5280","assumptions":["Vertical component approximation"],"compute":"return v.load * v.dist / 5280","out":["ton_mile","Ton-mile"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Ton-mile"},"Drilling|Buoyancy factor":{"inputs":[["mw","Mud weight","density"]],"formula":"BF = 1 \u2212 MW/65.5","assumptions":["Steel in mud"],"compute":"return 1 - v.mw / 65.5","out":["dimensionless","Buoyancy factor"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Buoyancy factor"},"Drilling|Maximum overpull / stretch":{"inputs":[["f","Force","force"],["l","Length","length"],["a","Cross-section area","area_in2"],["e","Young's modulus","modulus"]],"formula":"\u0394L = F \u00d7 L / (A \u00d7 E)","assumptions":["Elastic deformation"],"compute":"return v.f * v.l / (v.a * v.e)","out":["length","Stretch"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Maximum overpull / stretch"},"Drilling|ECD":{"inputs":[["mw","Mud weight","density"],["loss","Annular pressure loss","pressure"],["tvd","TVD","length"]],"formula":"ECD = MW + annular loss / (0.052 \u00d7 TVD)","assumptions":["Vertical well"],"compute":"return v.mw + v.loss / (0.052 * v.tvd)","out":["density","ECD"],"notes":"Uses simplified annular loss; validate with hydraulics model for HPHT.","segment":"Drilling","name":"ECD"},"Drilling|Surge / swab estimate":{"inputs":[["x1","pipe speed","dimensionless"],["x2","rheology","dimensionless"],["x3","geometry","dimensionless"]],"formula":"\u0394P \u221d rheology \u00d7 velocity \u00d7 length / clearance","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Surge / swab estimate"},"Drilling|Lag strokes / lag time":{"inputs":[["av","Annular volume","volume"],["po","Pump output","pump_output"]],"formula":"Lag = annular volume / pump output","assumptions":["Full circulation"],"compute":"return v.av / v.po","out":["strokes","Lag strokes"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Drilling","name":"Lag strokes / lag time"},"Well Control|Kill mud weight":{"inputs":[["omw","Original MW","density"],["sidpp","SIDPP","pressure"],["tvd","TVD","length"]],"formula":"KMW = OMW + SIDPP / (0.052 \u00d7 TVD)","assumptions":["Static kill basis"],"compute":"return v.omw + v.sidpp / (0.052 * v.tvd)","out":["density","Kill MW"],"notes":"Assumes static well; dynamic circulating kill requires additional margin.","segment":"Well Control","name":"Kill mud weight"},"Well Control|Formation pressure":{"inputs":[["mw","Mud weight","density"],["tvd","TVD","length"],["sidpp","SIDPP","pressure"]],"formula":"Pf = 0.052 \u00d7 MW \u00d7 TVD + SIDPP","assumptions":["Static"],"compute":"return 0.052 * v.mw * v.tvd + v.sidpp","out":["pressure","Formation pressure"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Formation pressure"},"Well Control|MAASP":{"inputs":[["x1","LOT/FIT","dimensionless"],["x2","annular hydrostatic","dimensionless"]],"formula":"MAASP = LOT pressure - annulus hydrostatic at shoe","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Use most recent LOT/FIT at casing shoe; include choke line friction if applicable.","segment":"Well Control","name":"MAASP"},"Well Control|ICP":{"inputs":[["scr","SCR pressure","pressure"],["sidpp","SIDPP","pressure"]],"formula":"ICP = SCR + SIDPP","assumptions":["Driller's method start"],"compute":"return v.scr + v.sidpp","out":["pressure","ICP"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"ICP"},"Well Control|FCP":{"inputs":[["scr","SCR pressure","pressure"],["kmw","Kill MW","density"],["omw","Original MW","density"]],"formula":"FCP = SCR \u00d7 KMW/OMW","assumptions":["Constant pump rate"],"compute":"return v.scr * v.kmw / v.omw","out":["pressure","FCP"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"FCP"},"Well Control|Gas influx height":{"inputs":[["vol","Influx volume","volume"],["cap","Annular capacity","vol_per_length"]],"formula":"h = influx volume / annular capacity","assumptions":["Gas at top of annulus"],"compute":"return v.vol / v.cap","out":["length","Influx height"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Gas influx height"},"Well Control|Kick tolerance":{"inputs":[["x1","FIT/LOT","dimensionless"],["x2","mud weight","dimensionless"],["x3","pore pressure","dimensionless"],["x4","annulus geometry","dimensionless"]],"formula":"KT from allowable pressure margin and influx type/geometry","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Kick tolerance"},"Well Control|Trip margin":{"inputs":[["margin","Additional MW margin","density"]],"formula":"TM = additional hydrostatic margin","assumptions":["Operator-defined"],"compute":"return v.margin","out":["density","Trip margin"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Trip margin"},"Well Control|Bullheading pressure":{"inputs":[["bhp","Target BHP","pressure"],["hyd","Hydrostatic","pressure"]],"formula":"Psurf = target BHP \u2212 hydrostatic","assumptions":["Static fluid column"],"compute":"return v.bhp - v.hyd","out":["pressure","Surface pressure"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Bullheading pressure"},"Well Control|Choke line friction":{"inputs":[["x1","rate","dimensionless"],["x2","friction data","dimensionless"]],"formula":"CLF from circulation tests","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Choke line friction"},"Well Control|Pressure while stripping":{"inputs":[["x1","pipe volume","dimensionless"],["x2","mud weight","dimensionless"],["x3","friction","dimensionless"]],"formula":"Hydrostatic change \u00b1 displacement \u00b1 friction","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Control","name":"Pressure while stripping"},"Completion|Tubing capacity":{"inputs":[["id","Tubing ID","diameter"]],"formula":"Cap = ID\u00b2 / 1029.4","assumptions":["Circular tubing"],"compute":"return v.id**2 / 1029.4","out":["vol_per_length","Capacity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Tubing capacity"},"Completion|Annulus capacity":{"inputs":[["cid","Casing ID","diameter"],["tod","Tubing OD","diameter"]],"formula":"Cap = (casing ID\u00b2 \u2212 tubing OD\u00b2)/1029.4","assumptions":["Concentric"],"compute":"return (v.cid**2 - v.tod**2) / 1029.4","out":["vol_per_length","Capacity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Annulus capacity"},"Completion|Packer fluid hydrostatic":{"inputs":[["mw","Fluid density","density"],["tvd","TVD","length"]],"formula":"P = 0.052 \u00d7 MW \u00d7 TVD","assumptions":["Static"],"compute":"return 0.052 * v.mw * v.tvd","out":["pressure","Hydrostatic"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Packer fluid hydrostatic"},"Completion|Tubing stretch":{"inputs":[["f","Load","force"],["l","Length","length"],["a","Area","area_in2"],["e","E","modulus"]],"formula":"\u0394L = F \u00d7 L / (A \u00d7 E)","assumptions":["Elastic"],"compute":"return v.f * v.l / (v.a * v.e)","out":["length","Stretch"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Tubing stretch"},"Completion|Thermal expansion":{"inputs":[["alpha","Coefficient \u03b1","thermal_exp"],["l","Length","length"],["dt","\u0394T","temperature_delta"]],"formula":"\u0394L = \u03b1 \u00d7 L \u00d7 \u0394T","assumptions":["Linear expansion"],"compute":"return v.alpha * v.l * v.dt","out":["length","Expansion"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Thermal expansion"},"Completion|Tubing movement due to piston effect":{"inputs":[["dp","\u0394P","pressure"],["area","Effective area","area_in2"]],"formula":"F = \u0394P \u00d7 effective area","assumptions":["Sealed annulus"],"compute":"return v.dp * v.area","out":["force","Force"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Tubing movement due to piston effect"},"Completion|Burst / collapse / tension check":{"inputs":[["rating","Rating","pressure"],["load","Applied load","pressure"]],"formula":"SF = rating / applied load","assumptions":["SF > 1 required"],"compute":"return v.rating / v.load","out":["dimensionless","Safety factor"],"notes":"Compare worst-case loads to rated values; apply design SF per operator standard.","segment":"Completion","name":"Burst / collapse / tension check"},"Completion|Perforation friction estimate":{"inputs":[["c","C coefficient","dimensionless"],["q","Rate","rate_liquid"],["spf","Shot density","spf"],["d","Perf diameter","diameter"]],"formula":"\u0394Ppf \u2248 C \u00d7 q\u00b2 / perf_density\u00b2","assumptions":["Empirical"],"compute":"return v.c * v.q**2 / (v.spf**2)","out":["pressure","Perf friction"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Perforation friction estimate"},"Completion|Nodal inflow/outflow match":{"inputs":[["pr","Pr","pressure"],["pi","PI","pi"],["q","Rate","rate_liquid"]],"formula":"Linear IPR: Pwf = Pr \u2212 q/PI","assumptions":["Use nodal plotter for Vogel + VLP"],"compute":"return v.pr - v.q / v.pi","out":["pressure","Pwf"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Nodal inflow/outflow match"},"Completion|Kill fluid volume":{"inputs":[["x1","capacities","dimensionless"],["x2","lengths","dimensionless"]],"formula":"Volume = string + annulus + contingency","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Completion","name":"Kill fluid volume"},"Cementing|Slurry yield":{"inputs":[["x1","water","dimensionless"],["x2","cement","dimensionless"],["x3","additives","dimensionless"]],"formula":"Yield = slurry volume / sack","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Slurry yield"},"Cementing|Sacks required":{"inputs":[["vol","Required slurry volume","volume"],["yield","Yield","yield_vol"]],"formula":"sx = volume / yield","assumptions":["Known yield"],"compute":"return v.vol / v.yield","out":["sacks","Sacks"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Sacks required"},"Cementing|Annular cement volume":{"inputs":[["cap","Annular capacity","vol_per_length"],["intv","Interval","length"],["ex","Excess fraction","dimensionless"]],"formula":"V = cap \u00d7 interval \u00d7 (1+excess)","assumptions":["Circular annulus"],"compute":"return v.cap * v.intv * (1 + v.ex)","out":["volume","Volume"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Annular cement volume"},"Cementing|Displacement volume":{"inputs":[["cap","Pipe capacity","vol_per_length"],["len","Length","length"]],"formula":"V = capacity \u00d7 length","assumptions":["Full string fill"],"compute":"return v.cap * v.len","out":["volume","Volume"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Displacement volume"},"Cementing|Mix water":{"inputs":[["sx","Sacks","sacks"],["wps","Water per sack","vol_per_sack"]],"formula":"Water = sacks \u00d7 gal/sk","assumptions":["Field mix sheet"],"compute":"return v.sx * v.wps","out":["volume_gal","Mix water"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Mix water"},"Cementing|TOC after pumping":{"inputs":[["vol","Slurry volume","volume"],["cap","Annular capacity","vol_per_length"]],"formula":"TOC = slurry volume / annular capacity","assumptions":["No losses"],"compute":"return v.vol / v.cap","out":["length","TOC length"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"TOC after pumping"},"Cementing|Balanced plug volumes":{"inputs":[["x1","pipe cap","dimensionless"],["x2","annulus cap","dimensionless"],["x3","plug length","dimensionless"]],"formula":"Inside pipe = outside pipe at balance depth","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Balanced plug volumes"},"Cementing|Spacer / flush volumes":{"inputs":[["x1","capacity","dimensionless"],["x2","length","dimensionless"]],"formula":"V = capacity \u00d7 interval + contingency","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Spacer / flush volumes"},"Cementing|Equivalent circulating density during cementing":{"inputs":[["mw","Density","density"],["loss","Friction","pressure"],["tvd","TVD","length"]],"formula":"ECD = MW + loss/(0.052\u00d7TVD)","assumptions":["Vertical"],"compute":"return v.mw + v.loss / (0.052 * v.tvd)","out":["density","ECD"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Equivalent circulating density during cementing"},"Cementing|Bump pressure differential":{"inputs":[["fp","Final pressure","pressure"],["cp","Circulating pressure","pressure"]],"formula":"\u0394P = final \u2212 circulating","assumptions":["At bump"],"compute":"return v.fp - v.cp","out":["pressure","\u0394P"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Cementing","name":"Bump pressure differential"},"Coiled Tubing|CT internal capacity":{"inputs":[["id","CT ID","diameter"]],"formula":"Cap = ID\u00b2 / 1029.4","assumptions":["Circular"],"compute":"return v.id**2 / 1029.4","out":["vol_per_length","Capacity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"CT internal capacity"},"Coiled Tubing|CT displacement":{"inputs":[["od","CT OD","diameter"]],"formula":"Disp = OD\u00b2 / 1029.4","assumptions":["Circular"],"compute":"return v.od**2 / 1029.4","out":["vol_per_length","Displacement"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"CT displacement"},"Coiled Tubing|CT velocity":{"inputs":[["x1","rate","dimensionless"],["x2","ID","dimensionless"]],"formula":"v = Q / area","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"CT velocity"},"Coiled Tubing|Circulating friction":{"inputs":[["x1","length","dimensionless"],["x2","rate","dimensionless"],["x3","density","dimensionless"],["x4","ID","dimensionless"]],"formula":"\u0394P = f(L, rate, density, ID)","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Circulating friction"},"Coiled Tubing|Lock-up depth / helical buckling":{"inputs":[["x1","weight","dimensionless"],["x2","pressure","dimensionless"],["x3","trajectory","dimensionless"]],"formula":"From axial force + well geometry model","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Lock-up depth / helical buckling"},"Coiled Tubing|Burst / collapse with pressure":{"inputs":[["x1","internal pressure","dimensionless"],["x2","external pressure","dimensionless"]],"formula":"Check differential against rating","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Burst / collapse with pressure"},"Coiled Tubing|Pump time to bottom":{"inputs":[["vol","CT volume","volume"],["rate","Pump rate","rate_liquid"]],"formula":"t = volume / rate","assumptions":["Constant rate"],"compute":"return v.vol / v.rate","out":["time_hr","Pump time"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Pump time to bottom"},"Coiled Tubing|Nitrogen lift rate":{"inputs":[["x1","well pressure","dimensionless"],["x2","fluid gradient","dimensionless"],["x3","CT depth","dimensionless"]],"formula":"From required gas rate and hydrostatic unloading objective","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Nitrogen lift rate"},"Coiled Tubing|Overpull / slackoff":{"inputs":[["x1","weight indicator","dimensionless"],["x2","friction model","dimensionless"]],"formula":"Measured vs modeled forces","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Overpull / slackoff"},"Coiled Tubing|Acid placement volume":{"inputs":[["x1","CT cap","dimensionless"],["x2","depth","dimensionless"],["x3","acid schedule","dimensionless"]],"formula":"CT volume to target depth + stage volumes","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Coiled Tubing","name":"Acid placement volume"},"Wireline Perforation|Shot density":{"inputs":[["shots","Shots","count"],["len","Interval length","length"]],"formula":"SPF = shots / ft","assumptions":["Even distribution"],"compute":"return v.shots / v.len","out":["spf","SPF"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Shot density"},"Wireline Perforation|Perforated interval height":{"inputs":[["top","Top depth","length"],["bot","Bottom depth","length"]],"formula":"h = bottom \u2212 top","assumptions":["Measured depth"],"compute":"return v.bot - v.top","out":["length","Height"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Perforated interval height"},"Wireline Perforation|Gun string length":{"inputs":[["x1","component lengths","dimensionless"]],"formula":"Total = gun sections + accessories","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Gun string length"},"Wireline Perforation|Correlation offset":{"inputs":[["x1","CCL/GR correlation","dimensionless"]],"formula":"Offset = log marker depth - reference depth","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Correlation offset"},"Wireline Perforation|Explosive pressure test":{"inputs":[["x1","expected pressure","dimensionless"]],"formula":"Test to procedure pressure and hold time","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Explosive pressure test"},"Wireline Perforation|Underbalance / overbalance":{"inputs":[["pres","Reservoir pressure","pressure"],["pwb","Wellbore pressure","pressure"]],"formula":"\u0394P = Pres \u2212 Pwb","assumptions":["Static"],"compute":"return v.pres - v.pwb","out":["pressure","\u0394P"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Underbalance / overbalance"},"Wireline Perforation|Perforation tunnel penetration basis":{"inputs":[["x1","charge type","dimensionless"],["x2","casing","dimensionless"],["x3","cement","dimensionless"],["x4","UCS","dimensionless"]],"formula":"Vendor charge performance corrected for casing/cement/rock","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Perforation tunnel penetration basis"},"Wireline Perforation|Gun clearance":{"inputs":[["cid","Conduit ID","diameter"],["god","Gun OD","diameter"]],"formula":"Clearance = conduit ID \u2212 gun OD","assumptions":["Concentric"],"compute":"return v.cid - v.god","out":["length_in","Clearance"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Perforation","name":"Gun clearance"},"Wireline Open Hole|True vertical depth":{"inputs":[["x1","MD","dimensionless"],["x2","inclination survey","dimensionless"]],"formula":"TVD from survey","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"True vertical depth"},"Wireline Open Hole|Porosity from density":{"inputs":[["rhoma","Matrix density","density_gcc"],["rhob","Bulk density","density_gcc"],["rhof","Fluid density","density_gcc"]],"formula":"\u03c6d = (\u03c1ma \u2212 \u03c1b)/(\u03c1ma \u2212 \u03c1f)","assumptions":["Known matrix/fluid"],"compute":"return (v.rhoma - v.rhob) / (v.rhoma - v.rhof)","out":["fraction","Porosity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Porosity from density"},"Wireline Open Hole|Porosity from neutron/sonic":{"inputs":[["x1","neutron or sonic data","dimensionless"]],"formula":"Tool-specific transform","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Porosity from neutron/sonic"},"Wireline Open Hole|Water saturation (Archie)":{"inputs":[["a","a","dimensionless"],["rw","Rw","resistivity"],["phi","Porosity","fraction"],["m","m","dimensionless"],["rt","Rt","resistivity"],["n","n","dimensionless"]],"formula":"Sw = (a\u00d7Rw/(\u03c6^m\u00d7Rt))^(1/n)","assumptions":["Clean formation Archie"],"compute":"return Math.pow(v.a * v.rw / (Math.pow(v.phi, v.m) * v.rt), 1/v.n)","out":["fraction","Sw"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Water saturation (Archie)"},"Wireline Open Hole|Shale volume":{"inputs":[["x1","GR log","dimensionless"],["x2","clean/shale baselines","dimensionless"]],"formula":"Vsh from GR or other model","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Shale volume"},"Wireline Open Hole|Net pay":{"inputs":[["x1","cutoffs","dimensionless"],["x2","interpreted logs","dimensionless"]],"formula":"Apply cutoffs to \u03c6, Sw, Vsh","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Net pay"},"Wireline Open Hole|Permeability from NMR/core correlation":{"inputs":[["x1","NMR/core data","dimensionless"]],"formula":"k = empirical correlation","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Permeability from NMR/core correlation"},"Wireline Open Hole|Pressure gradient from MDT":{"inputs":[["x1","formation tester pressures","dimensionless"]],"formula":"Gradient = \u0394P/\u0394TVD","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Pressure gradient from MDT"},"Wireline Open Hole|Fluid contacts":{"inputs":[["x1","pressure points","dimensionless"]],"formula":"Contact from pressure-depth intersections","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Open Hole","name":"Fluid contacts"},"Wireline Cased Hole|CBL amplitude interpretation basis":{"inputs":[["x1","CBL amplitude","dimensionless"]],"formula":"Qualitative cement quality vs free pipe baseline","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"CBL amplitude interpretation basis"},"Wireline Cased Hole|VDL travel time checks":{"inputs":[["x1","VDL waveform","dimensionless"]],"formula":"Bond signature timing comparison","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"VDL travel time checks"},"Wireline Cased Hole|PLT spinner rate conversion":{"inputs":[["x1","spinner freq","dimensionless"],["x2","calibration","dimensionless"]],"formula":"q from spinner calibration","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"PLT spinner rate conversion"},"Wireline Cased Hole|Temperature log anomaly":{"inputs":[["x1","temperature profile","dimensionless"]],"formula":"\u0394T vs baseline for inflow/behind-pipe movement","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"Temperature log anomaly"},"Wireline Cased Hole|Noise log triangulation":{"inputs":[["x1","noise data","dimensionless"]],"formula":"Source depth from amplitude/arrival pattern","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"Noise log triangulation"},"Wireline Cased Hole|Casing inspection metal loss":{"inputs":[["x1","nominal thickness","dimensionless"],["x2","inspection data","dimensionless"]],"formula":"Wall loss = nominal wall - measured wall","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Wireline Cased Hole","name":"Casing inspection metal loss"},"Production|Oil PI":{"inputs":[["q","Rate","rate_liquid"],["pr","Pr","pressure"],["pwf","Pwf","pressure"]],"formula":"PI = q / (Pr \u2212 Pwf)","assumptions":["Steady state, single phase oil"],"compute":"return v.q / (v.pr - v.pwf)","out":["pi","PI"],"notes":"Valid for stabilized flow above bubble point; use pseudopressure for gas.","segment":"Production","name":"Oil PI"},"Production|Gas deliverability":{"inputs":[["c","C","deliverability_c"],["pr","Pr","pressure"],["pwf","Pwf","pressure"],["n","n","dimensionless"]],"formula":"q = C(Pr\u00b2 \u2212 Pwf\u00b2)^n","assumptions":["Empirical deliverability"],"compute":"return v.c * Math.pow(v.pr**2 - v.pwf**2, v.n)","out":["rate_gas","Gas rate"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Gas deliverability"},"Production|AOF":{"inputs":[["x1","deliverability constants","dimensionless"]],"formula":"At Pwf\u22480 using deliverability equation","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"AOF"},"Production|GOR":{"inputs":[["qg","Gas rate","rate_gas"],["qo","Oil rate","rate_liquid"]],"formula":"GOR = Qg / Qo","assumptions":["Separator conditions"],"compute":"return v.qg / v.qo","out":["gor","GOR"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"GOR"},"Production|Water cut":{"inputs":[["qw","Water rate","rate_liquid"],["ql","Total liquid rate","rate_liquid"]],"formula":"WC = Qw / Ql \u00d7 100","assumptions":["Surface rates"],"compute":"return 100 * v.qw / v.ql","out":["percent","Water cut"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Water cut"},"Production|BSW":{"inputs":[["bsw","BS&W volume","volume"],["sample","Sample volume","volume"]],"formula":"BSW = BS&W / sample \u00d7 100","assumptions":["Representative sample"],"compute":"return 100 * v.bsw / v.sample","out":["percent","BSW"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"BSW"},"Production|Liquid rate from tank":{"inputs":[["vol","Volume","volume"],["t","Time","time_hr"]],"formula":"q = volume / time","assumptions":["Constant accumulation"],"compute":"return v.vol / v.t","out":["rate_liquid","Liquid rate"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Liquid rate from tank"},"Production|API gravity":{"inputs":[["sg","Specific gravity @60\u00b0F","sg"]],"formula":"API = 141.5/SG \u2212 131.5","assumptions":["60\u00b0F reference"],"compute":"return 141.5 / v.sg - 131.5","out":["api","API gravity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"API gravity"},"Production|Gas specific gravity":{"inputs":[["mw","Gas MW","mw"]],"formula":"\u03b3g = MW / 28.97","assumptions":["Ideal gas basis"],"compute":"return v.mw / 28.97","out":["sg","Gas SG"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Gas specific gravity"},"Production|Flowing gradient":{"inputs":[["dp","\u0394P","pressure"],["dtvd","\u0394TVD","length"]],"formula":"Gradient = \u0394P / \u0394TVD","assumptions":["Single phase approximation"],"compute":"return v.dp / v.dtvd","out":["gradient","Gradient"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Flowing gradient"},"Production|Productivity decline":{"inputs":[["qi","qi","rate_liquid"],["di","Di (1/day)","dimensionless"],["t","Time (days)","time_hr"],["b","b factor","dimensionless"]],"formula":"Hyperbolic: q=qi/(1+bDi t)^(1/b); Exp: q=qi e^(\u2212Di t)","assumptions":["Use plotter below for full curve"],"compute":"return v.b > 0 ? v.qi / Math.pow(1 + v.b * v.di * v.t, 1/v.b) : v.qi * Math.exp(-v.di * v.t)","out":["rate_liquid","Rate"],"notes":"Select decline model based on drive mechanism and b-factor diagnostics.","segment":"Production","name":"Productivity decline"},"Production|Separator efficiency / retention":{"inputs":[["vol","Vessel volume","volume"],["q","Flow rate","rate_liquid"]],"formula":"t = volume / flow","assumptions":["Plug flow approximation"],"compute":"return v.vol / v.q","out":["time_hr","Retention time"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Production","name":"Separator efficiency / retention"},"Well Testing & DST|Build-up Horner ratio":{"inputs":[["tp","Flow time tp","time_hr"],["dt","Shut-in \u0394t","time_hr"]],"formula":"H = (tp + \u0394t) / \u0394t","assumptions":["Constant rate prior to shut-in"],"compute":"return (v.tp + v.dt) / v.dt","out":["dimensionless","Horner ratio"],"notes":"Requires prior constant-rate drawdown tp before shut-in.","segment":"Well Testing & DST","name":"Build-up Horner ratio"},"Well Testing & DST|Permeability from build-up":{"inputs":[["q","Rate","rate_liquid"],["mu","Viscosity","viscosity"],["b","FVF","rb_stb"],["h","Net pay","length"],["m","Semilog slope","slope_psi"]],"formula":"k = 162.6 qB\u03bc / (m h)","assumptions":["Infinite-acting radial flow, oil units"],"compute":"return 162.6 * v.q * v.b * v.mu / (v.m * v.h)","out":["perm","Permeability"],"notes":"Valid for infinite-acting radial flow; check for boundaries/phase change.","segment":"Well Testing & DST","name":"Permeability from build-up"},"Well Testing & DST|Skin":{"inputs":[["pstar","P*","pressure"],["pi","Pi","pressure"],["m","Slope m","slope_psi"],["k","k","perm"],["phi","Porosity","fraction"],["mu","Viscosity","viscosity"],["ct","ct","compressibility"],["rw","rw","length"]],"formula":"s = 1.151[(P*\u2212Pi)/m \u2212 log(k/(\u03c6\u03bcct rw\u00b2)) + 3.23]","assumptions":["Oilfield Horner analysis units"],"compute":"return 1.151 * ((v.pstar - v.pi) / v.m - Math.log10(v.k / (v.phi * v.mu * v.ct * v.rw**2)) + 3.23)","out":["dimensionless","Skin"],"notes":"s > -3 often indicates stimulation; large positive s suggests damage.","segment":"Well Testing & DST","name":"Skin"},"Well Testing & DST|Initial reservoir pressure":{"inputs":[["x1","pressure data","dimensionless"]],"formula":"Pi from extrapolated semilog / derivative analysis","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Initial reservoir pressure"},"Well Testing & DST|Radius of investigation":{"inputs":[["k","Permeability","perm"],["t","Time","time_hr"],["phi","Porosity","fraction"],["mu","Viscosity","viscosity"],["ct","Total compressibility","compressibility"]],"formula":"ri \u2248 \u221a(0.000264 k t / (\u03c6 \u03bc ct))","assumptions":["Homogeneous reservoir"],"compute":"return Math.sqrt(0.000264 * v.k * v.t / (v.phi * v.mu * v.ct))","out":["length","ri"],"notes":"Approximate; affected by layering, faults, and dual porosity.","segment":"Well Testing & DST","name":"Radius of investigation"},"Well Testing & DST|Transmissibility":{"inputs":[["x1","test slope","dimensionless"]],"formula":"kh/\u03bcB from slope","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Transmissibility"},"Well Testing & DST|Storability":{"inputs":[["x1","pressure transient data","dimensionless"]],"formula":"\u03c6cth from transient match","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Storability"},"Well Testing & DST|PI from test":{"inputs":[["q","Test rate","rate_liquid"],["pi","Pi","pressure"],["pwf","Pwf","pressure"]],"formula":"PI = q / (Pi \u2212 Pwf)","assumptions":["Stabilized drawdown/buildup"],"compute":"return v.q / (v.pi - v.pwf)","out":["pi","PI"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"PI from test"},"Well Testing & DST|Gas pseudopressure method":{"inputs":[["x1","gas PVT","dimensionless"],["x2","pressure data","dimensionless"]],"formula":"m(p) analysis for gas wells","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Gas pseudopressure method"},"Well Testing & DST|Isochronal / modified isochronal":{"inputs":[["x1","rate-pressure test data","dimensionless"]],"formula":"n and C from multi-rate data","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Isochronal / modified isochronal"},"Well Testing & DST|DST hydrostatic gauge check":{"inputs":[["grad","Fluid gradient","gradient"],["spacing","Gauge spacing","length"]],"formula":"\u0394P = gradient \u00d7 spacing","assumptions":["Static fluid"],"compute":"return v.grad * v.spacing","out":["pressure","\u0394P"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"DST hydrostatic gauge check"},"Well Testing & DST|Wellbore storage coefficient":{"inputs":[["q","Rate","rate_liquid"],["dt","Early \u0394t","time_hr"],["dp","Early \u0394P","pressure"]],"formula":"C \u2248 q\u00b7\u0394t / (24\u00b7\u0394P)","assumptions":["Unit-converted oilfield approximation"],"compute":"return (v.q * v.dt) / (24 * v.dp)","out":["dimensionless","C"],"notes":"Early-time dominated; use log-log derivative to identify end of storage.","segment":"Well Testing & DST","name":"Wellbore storage coefficient"},"Well Testing & DST|Cleanup efficiency":{"inputs":[["x1","recovery volumes","dimensionless"],["x2","samples","dimensionless"]],"formula":"Compare recovered fluids / rates over time","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Well Testing & DST","name":"Cleanup efficiency"},"Surface Well Testing|Oil rate by meter":{"inputs":[["x1","meter factor","dimensionless"],["x2","time","dimensionless"]],"formula":"q = pulses or volume / time","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Oil rate by meter"},"Surface Well Testing|Gas rate by orifice":{"inputs":[["x1","\u0394P","dimensionless"],["x2","P","dimensionless"],["x3","T","dimensionless"],["x4","gas gravity","dimensionless"],["x5","beta","dimensionless"]],"formula":"AGA/orifice relationship","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Gas rate by orifice"},"Surface Well Testing|Choke flow estimate gas":{"inputs":[["d","Choke ID","diameter"],["p1","Upstream P","pressure"],["p2","Downstream P","pressure"],["t","Temp R","temp_R"],["gamma","Gas gravity","sg"]],"formula":"q \u2248 879 d\u00b2 P1 / \u221a(\u03b3 T) when P2/P1 \u2264 0.55","assumptions":["Gilbert-type critical flow"],"compute":"return (v.p2/v.p1 <= 0.55) ? 879*(v.d**2)*v.p1/Math.sqrt(v.gamma*v.t) : NaN","out":["rate_gas","Critical rate"],"notes":"Gilbert-type correlation; verify against field calibration.","segment":"Surface Well Testing","name":"Choke flow estimate gas"},"Surface Well Testing|Choke flow estimate oil":{"inputs":[["x1","choke size","dimensionless"],["x2","THP","dimensionless"],["x3","GOR","dimensionless"]],"formula":"Gilbert / Ros type correlation","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Choke flow estimate oil"},"Surface Well Testing|Separator retention time":{"inputs":[["vol","Liquid volume","volume"],["q","Liquid rate","rate_liquid"]],"formula":"t = volume / rate","assumptions":["Constant rate"],"compute":"return v.vol / v.q","out":["time_hr","Retention"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Separator retention time"},"Surface Well Testing|Flare line velocity":{"inputs":[["q","Gas rate","rate_gas"],["id","Line ID","diameter"]],"formula":"v = Q / area","assumptions":["Ideal gas approx at conditions"],"compute":"const area=Math.PI*(v.id/24)**2; return v.q / area","out":["velocity_fps","Velocity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Flare line velocity"},"Surface Well Testing|Erosion velocity":{"inputs":[["c","C factor","dimensionless"],["rho","Density","density_lbft3"]],"formula":"ve = C / \u221a\u03c1","assumptions":["API RP 14E basis"],"compute":"return v.c / Math.sqrt(v.rho)","out":["velocity_fps","Erosion velocity"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Erosion velocity"},"Surface Well Testing|Burner boom liquid loading":{"inputs":[["x1","boom rating","dimensionless"],["x2","rates","dimensionless"]],"formula":"Check oil/gas rate vs boom capacity","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Burner boom liquid loading"},"Surface Well Testing|Transfer pump time":{"inputs":[["vol","Tank volume","volume"],["rate","Pump rate","rate_liquid"]],"formula":"t = volume / rate","assumptions":["Constant rate"],"compute":"return v.vol / v.rate","out":["time_hr","Time"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Transfer pump time"},"Surface Well Testing|Sand concentration":{"inputs":[["x1","sand mass","dimensionless"],["x2","fluid volume","dimensionless"]],"formula":"ppm or lb/bbl from collected sand and throughput","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Surface Well Testing","name":"Sand concentration"},"Sampling & PVT|Sample line purge volume":{"inputs":[["id","Line ID","diameter"],["len","Length","length"],["factor","Purge factor","dimensionless"]],"formula":"V = line cap \u00d7 purge factor","assumptions":["Circular line"],"compute":"return (v.id**2/1029.4)*v.len*v.factor","out":["volume","Purge volume"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Sample line purge volume"},"Sampling & PVT|Recombination GOR":{"inputs":[["x1","lab recombination volumes","dimensionless"]],"formula":"GOR = gas added / oil used for recombination","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Recombination GOR"},"Sampling & PVT|Oil formation volume factor":{"inputs":[["res","Reservoir oil vol","volume"],["st","Stock tank vol","volume"]],"formula":"Bo = res vol / ST vol","assumptions":["Lab measurement"],"compute":"return v.res / v.st","out":["rb_stb","Bo"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Oil formation volume factor"},"Sampling & PVT|Gas formation volume factor":{"inputs":[["p","Pressure","pressure"],["t","Temperature","temp_R"],["z","Z-factor","dimensionless"]],"formula":"Bg \u2248 0.02827 z T / P (rcf/scf)","assumptions":["Ideal gas with z correction"],"compute":"return 0.02827 * v.z * v.t / v.p","out":["rcf_scf","Bg"],"notes":"Use z-factor correlation appropriate for composition and P,T range.","segment":"Sampling & PVT","name":"Gas formation volume factor"},"Sampling & PVT|Compressibility factor":{"inputs":[["x1","P","dimensionless"],["x2","T","dimensionless"],["x3","gas composition","dimensionless"]],"formula":"z from EOS/correlation","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"EOS selection critical near critical point; lab validation preferred.","segment":"Sampling & PVT","name":"Compressibility factor"},"Sampling & PVT|Solution GOR":{"inputs":[["x1","pressure","dimensionless"],["x2","temperature","dimensionless"],["x3","API","dimensionless"],["x4","gas gravity","dimensionless"]],"formula":"Rs from PVT correlation or lab","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Solution GOR"},"Sampling & PVT|Dew point / bubble point":{"inputs":[["x1","composition","dimensionless"],["x2","temperature","dimensionless"]],"formula":"From EOS or lab differential liberation/CVD","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Dew point / bubble point"},"Sampling & PVT|Sample contamination":{"inputs":[["x1","sample analysis","dimensionless"]],"formula":"Contam% from OBM filtrate marker or composition","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Sampling & PVT","name":"Sample contamination"},"Acidizing & Stimulation|Acid volume by interval":{"inputs":[["gpf","Gal/ft","vol_per_length_gal"],["intv","Interval","length"]],"formula":"V = gal/ft \u00d7 interval","assumptions":["Design basis"],"compute":"return v.gpf * v.intv","out":["volume_gal","Volume"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Acid volume by interval"},"Acidizing & Stimulation|Preflush/Main/Postflush":{"inputs":[["x1","schedule inputs","dimensionless"]],"formula":"Stage volume from design schedule","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Preflush/Main/Postflush"},"Acidizing & Stimulation|Pump time":{"inputs":[["vol","Volume","volume_gal"],["rate","Rate","rate_gpm"]],"formula":"t = volume / rate","assumptions":["Constant rate"],"compute":"return v.vol / v.rate","out":["time_hr","Pump time"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Pump time"},"Acidizing & Stimulation|Bottomhole treating pressure":{"inputs":[["whp","WHP","pressure"],["hyd","Hydrostatic","pressure"],["fric","Friction","pressure"],["pf","Perf friction","pressure"]],"formula":"BHTP = WHP + hydrostatic + friction + perf friction","assumptions":["Injection"],"compute":"return v.whp + v.hyd + v.fric + v.pf","out":["pressure","BHTP"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Bottomhole treating pressure"},"Acidizing & Stimulation|Maximum allowable surface pressure":{"inputs":[["frac","Frac limit","pressure"],["hyd","Hydrostatic","pressure"],["fric","Friction","pressure"]],"formula":"MASP = frac limit \u2212 hydrostatic \u2212 friction","assumptions":["No breakdown desired"],"compute":"return v.frac - v.hyd - v.fric","out":["pressure","MASP"],"notes":"Respect frac gradient and completion pressure ratings.","segment":"Acidizing & Stimulation","name":"Maximum allowable surface pressure"},"Acidizing & Stimulation|Injectivity index":{"inputs":[["q","Injection rate","rate_liquid"],["pinj","Pinj","pressure"],["pres","Pres","pressure"]],"formula":"II = q / (Pinj \u2212 Pres)","assumptions":["Steady injection"],"compute":"return v.q / (v.pinj - v.pres)","out":["ii","II"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Injectivity index"},"Acidizing & Stimulation|Acid contact time":{"inputs":[["x1","stage volume","dimensionless"],["x2","effective rate","dimensionless"]],"formula":"t = volume in interval / leakoff-adjusted rate","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Acid contact time"},"Acidizing & Stimulation|Diverter concentration":{"inputs":[["mass","Diverter mass","mass"],["vol","Carrier volume","volume_gal"]],"formula":"Conc = mass / volume","assumptions":["Uniform slurry"],"compute":"return v.mass / v.vol","out":["conc","Concentration"],"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Diverter concentration"},"Acidizing & Stimulation|Spent acid neutralization":{"inputs":[["x1","acid volume","dimensionless"],["x2","acid strength","dimensionless"]],"formula":"chemical requirement from stoichiometry / field factor","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"Acidizing & Stimulation","name":"Spent acid neutralization"},"General Utilities & Converters|Pressure":{"inputs":[["x1","pressure","dimensionless"]],"formula":"psi \u2194 kPa \u2194 bar \u2194 MPa \u2194 atm","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Pressure"},"General Utilities & Converters|Length":{"inputs":[["x1","length","dimensionless"]],"formula":"ft \u2194 m \u2194 in \u2194 mm","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Length"},"General Utilities & Converters|Area":{"inputs":[["x1","area","dimensionless"]],"formula":"ft\u00b2 \u2194 m\u00b2","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Area"},"General Utilities & Converters|Volume":{"inputs":[["x1","volume","dimensionless"]],"formula":"bbl \u2194 m\u00b3 \u2194 ft\u00b3 \u2194 gal","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Volume"},"General Utilities & Converters|Rate":{"inputs":[["x1","rate","dimensionless"]],"formula":"bbl/d \u2194 m\u00b3/d; gpm \u2194 L/min; MMSCFD \u2194 m\u00b3/d","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Rate"},"General Utilities & Converters|Density":{"inputs":[["x1","density","dimensionless"]],"formula":"ppg \u2194 SG \u2194 kg/m\u00b3 \u2194 lb/ft\u00b3","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Density"},"General Utilities & Converters|Gradient":{"inputs":[["x1","gradient","dimensionless"]],"formula":"psi/ft \u2194 kPa/m \u2194 bar/m","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Gradient"},"General Utilities & Converters|Temperature":{"inputs":[["x1","temperature","dimensionless"]],"formula":"\u00b0F \u2194 \u00b0C \u2194 K","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Temperature"},"General Utilities & Converters|Viscosity":{"inputs":[["x1","viscosity","dimensionless"]],"formula":"cP \u2194 Pa\u00b7s","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Viscosity"},"General Utilities & Converters|Mass":{"inputs":[["x1","mass","dimensionless"]],"formula":"lb \u2194 kg \u2194 ton","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Mass"},"General Utilities & Converters|Force":{"inputs":[["x1","force","dimensionless"]],"formula":"lbf \u2194 kN","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Force"},"General Utilities & Converters|Energy/Power":{"inputs":[["x1","energy","dimensionless"],["x2","power","dimensionless"]],"formula":"Btu \u2194 J; hp \u2194 kW","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Energy/Power"},"General Utilities & Converters|Oilfield ratios":{"inputs":[["x1","ratio values","dimensionless"]],"formula":"GOR/GLR/CGR/WGR common unit swaps","assumptions":["Manual/interpretive calculation \u2014 enter parameters per field procedure"],"compute":"return Object.values(v).reduce((a,b)=>a+b,0)/Object.keys(v).length","out":["dimensionless","Result (avg of inputs \u2014 replace with job-specific method)"],"generic":true,"notes":"Screening calculation only; confirm with operator procedures, OEM limits, and calibrated software.","segment":"General Utilities & Converters","name":"Oilfield ratios"}};
+/* Upstream Calculations App — core modules */
+'use strict';
 
-const segmentNames = Object.keys(calcData);
-segCount.textContent = segmentNames.length;
-calcCount.textContent = segmentNames.reduce((a,k)=>a+calcData[k].length,0);
+const STORAGE_KEYS = {
+  theme: 'uc_theme',
+  unitSystem: 'uc_unit_system',
+  favorites: 'uc_favorites',
+  history: 'uc_history',
+  wellContext: 'uc_well_context',
+};
 
-function renderNav(active='All'){
-  nav.innerHTML='';
-  const allBtn = document.createElement('button');
-  allBtn.textContent = 'All segments';
-  allBtn.className = active==='All' ? 'active' : '';
-  allBtn.onclick = ()=>renderLibrary('All', search.value.trim().toLowerCase());
-  nav.appendChild(allBtn);
-  segmentNames.forEach(name=>{
-    const b = document.createElement('button');
-    b.textContent = `${name} (${calcData[name].length})`;
-    b.className = active===name ? 'active' : '';
-    b.onclick = ()=>renderLibrary(name, search.value.trim().toLowerCase());
-    nav.appendChild(b);
+const UNIT_FAMILIES = {
+  pressure: { base: 'psi', field: 'psi', si: 'kPa', metric: 'bar', units: { psi: 1, kPa: 6.894757, bar: 0.06894757, MPa: 0.006894757, atm: 0.068046 } },
+  length: { base: 'ft', field: 'ft', si: 'm', metric: 'm', units: { ft: 1, m: 0.3048, in: 12, mm: 304.8 } },
+  diameter: { base: 'in', field: 'in', si: 'in', metric: 'in', units: { in: 1, mm: 25.4 } },
+  volume: { base: 'bbl', field: 'bbl', si: 'm3', metric: 'm3', units: { bbl: 1, m3: 0.158987295, ft3: 5.614583, gal_us: 42 } },
+  volume_gal: { base: 'gal', field: 'gal', si: 'L', metric: 'L', units: { gal: 1, L: 3.78541, bbl: 42 } },
+  rate_liquid: { base: 'bbl_d', field: 'bbl_d', si: 'm3_d', metric: 'm3_d', units: { bbl_d: 1, m3_d: 0.158987295, gpm: 0.0291667, L_min: 4.41632, stb_d: 1 } },
+  rate_gpm: { base: 'gpm', field: 'gpm', si: 'L_min', metric: 'L_min', units: { gpm: 1, L_min: 3.78541 } },
+  rate_gas: { base: 'MMSCFD', field: 'MMSCFD', si: 'sm3_d', metric: 'sm3_d', units: { MMSCFD: 1, MSCFD: 1000, SCFD: 1e6, sm3_d: 28316.8466 } },
+  density: { base: 'ppg', field: 'ppg', si: 'kg_m3', metric: 'kg_m3', units: { ppg: 1, sg: 1 / 8.345404, kg_m3: 119.826427, lb_ft3: 7.48052 } },
+  density_gcc: { base: 'g_cc', field: 'g_cc', si: 'g_cc', metric: 'g_cc', units: { g_cc: 1, kg_m3: 0.001 } },
+  density_lbft3: { base: 'lb_ft3', field: 'lb_ft3', si: 'kg_m3', metric: 'kg_m3', units: { lb_ft3: 1, kg_m3: 0.06242796 } },
+  gradient: { base: 'psi_ft', field: 'psi_ft', si: 'kPa_m', metric: 'bar_m', units: { psi_ft: 1, kPa_m: 22.6206, bar_m: 0.226206 } },
+  viscosity: { base: 'cP', field: 'cP', si: 'cP', si2: 'Pa_s', metric: 'cP', units: { cP: 1, Pa_s: 0.001 } },
+  perm: { base: 'mD', field: 'mD', si: 'mD', metric: 'mD', units: { mD: 1 } },
+  force: { base: 'lbf', field: 'lbf', si: 'kN', metric: 'kN', units: { lbf: 1, kN: 0.00444822 } },
+  power_hp: { base: 'hp', field: 'hp', si: 'kW', metric: 'kW', units: { hp: 1, kW: 0.7457 } },
+  area_in2: { base: 'in2', field: 'in2', si: 'in2', metric: 'in2', units: { in2: 1, cm2: 0.155 } },
+  area: { base: 'in2', field: 'in2', si: 'cm2', metric: 'cm2', units: { in2: 1, cm2: 0.155, ft2: 144 } },
+  modulus: { base: 'psi_mod', field: 'psi_mod', si: 'GPa', metric: 'GPa', units: { psi_mod: 1, GPa: 145037.7377 } },
+  compressibility: { base: 'psi_inv', field: 'psi_inv', si: 'kPa_inv', metric: 'bar_inv', units: { psi_inv: 1, kPa_inv: 6.894757, bar_inv: 0.06894757 } },
+  time_hr: { base: 'hr', field: 'hr', si: 'hr', metric: 'hr', units: { hr: 1, min: 1 / 60, sec: 1 / 3600, day: 24 } },
+  temp_R: { base: 'R', field: 'R', si: 'K', metric: 'K', units: { R: 1, K: 1.8, F: 1, C: 1.8 } },
+  temperature_delta: { base: 'F', field: 'F', si: 'C', metric: 'C', units: { F: 1, C: 1.8, K: 1.8 } },
+  thermal_exp: { base: 'per_F', field: 'per_F', si: 'per_C', metric: 'per_C', units: { per_F: 1, per_C: 1.8 } },
+  fraction: { base: 'frac', field: 'frac', si: 'frac', metric: 'frac', units: { frac: 1, pct: 0.01 } },
+  percent: { base: 'pct', field: 'pct', si: 'pct', metric: 'pct', units: { pct: 1, frac: 100 } },
+  dimensionless: { base: '—', field: '—', si: '—', metric: '—', units: { '—': 1 } },
+  spf: { base: 'spf', field: 'spf', si: 'spm', metric: 'spm', units: { spf: 1, spm: 1 / 0.3048 } },
+  pi: { base: 'bpd_psi', field: 'bpd_psi', si: 'm3d_kPa', metric: 'm3d_kPa', units: { bpd_psi: 1 } },
+  ii: { base: 'bpd_psi', field: 'bpd_psi', si: 'm3d_kPa', metric: 'm3d_kPa', units: { bpd_psi: 1 } },
+  deliverability_c: { base: 'c', field: 'c', si: 'c', metric: 'c', units: { c: 1 } },
+  slope_psi: { base: 'psi_cycle', field: 'psi_cycle', si: 'kPa_cycle', metric: 'bar_cycle', units: { psi_cycle: 1, kPa_cycle: 6.894757, bar_cycle: 0.06894757 } },
+  rb_stb: { base: 'rb_stb', field: 'rb_stb', si: 'rm3_sm3', metric: 'rm3_sm3', units: { rb_stb: 1 } },
+  rcf_scf: { base: 'rcf_scf', field: 'rcf_scf', si: 'rcf_scf', metric: 'rcf_scf', units: { rcf_scf: 1 } },
+  vol_per_length: { base: 'bbl_ft', field: 'bbl_ft', si: 'm3_m', metric: 'm3_m', units: { bbl_ft: 1, m3_m: 0.521611 } },
+  vol_per_length_gal: { base: 'gal_ft', field: 'gal_ft', si: 'L_m', metric: 'L_m', units: { gal_ft: 1, L_m: 12.419 } },
+  vol_per_sack: { base: 'gal_sk', field: 'gal_sk', si: 'L_sk', metric: 'L_sk', units: { gal_sk: 1, L_sk: 3.78541 } },
+  pump_output: { base: 'bbl_stk', field: 'bbl_stk', si: 'm3_stk', metric: 'm3_stk', units: { bbl_stk: 1, m3_stk: 0.158987295 } },
+  velocity: { base: 'ft_min', field: 'ft_min', si: 'm_min', metric: 'm_min', units: { ft_min: 1, m_min: 0.3048 } },
+  velocity_fps: { base: 'ft_s', field: 'ft_s', si: 'm_s', metric: 'm_s', units: { ft_s: 1, m_s: 0.3048 } },
+  rop: { base: 'ft_hr', field: 'ft_hr', si: 'm_hr', metric: 'm_hr', units: { ft_hr: 1, m_hr: 0.3048 } },
+  ton_mile: { base: 'ton_mi', field: 'ton_mi', si: 'ton_mi', metric: 'ton_mi', units: { ton_mi: 1 } },
+  spm: { base: 'spm', field: 'spm', si: 'spm', metric: 'spm', units: { spm: 1 } },
+  strokes: { base: 'stk', field: 'stk', si: 'stk', metric: 'stk', units: { stk: 1 } },
+  sacks: { base: 'sx', field: 'sx', si: 'sx', metric: 'sx', units: { sx: 1 } },
+  yield_vol: { base: 'ft3_sk', field: 'ft3_sk', si: 'm3_sk', metric: 'm3_sk', units: { ft3_sk: 1, m3_sk: 0.0283168 } },
+  count: { base: 'n', field: 'n', si: 'n', metric: 'n', units: { n: 1 } },
+  length_in: { base: 'in', field: 'in', si: 'mm', metric: 'mm', units: { in: 1, mm: 25.4 } },
+  resistivity: { base: 'ohm_m', field: 'ohm_m', si: 'ohm_m', metric: 'ohm_m', units: { ohm_m: 1 } },
+  sg: { base: 'sg', field: 'sg', si: 'sg', metric: 'sg', units: { sg: 1 } },
+  api: { base: 'API', field: 'API', si: 'API', metric: 'API', units: { API: 1 } },
+  gor: { base: 'scf_stb', field: 'scf_stb', si: 'sm3_sm3', metric: 'sm3_sm3', units: { scf_stb: 1 } },
+  mw: { base: 'g_mol', field: 'g_mol', si: 'g_mol', metric: 'g_mol', units: { g_mol: 1 } },
+  conc: { base: 'lb_gal', field: 'lb_gal', si: 'kg_L', metric: 'kg_L', units: { lb_gal: 1, kg_L: 0.119826 } },
+  mass: { base: 'lb', field: 'lb', si: 'kg', metric: 'kg', units: { lb: 1, kg: 0.453592 } },
+};
+
+const OUTPUT_LABELS = {
+  pressure: 'Pressure', gradient: 'Gradient', density: 'Density', volume: 'Volume', vol_per_length: 'Capacity',
+  pump_output: 'Pump output', velocity: 'Velocity', velocity_fps: 'Velocity', force: 'Force', power_hp: 'HHP',
+  length: 'Length', perm: 'Permeability', pi: 'PI', percent: 'Percent', fraction: 'Porosity/Saturation',
+  dimensionless: 'Value', api: 'API', gor: 'GOR', time_hr: 'Time', rate_liquid: 'Rate', rate_gas: 'Gas rate',
+  ii: 'Injectivity index', rcf_scf: 'Bg', rb_stb: 'Bo', strokes: 'Strokes', spm: 'SPM', rop: 'ROP',
+  ton_mile: 'Ton-mile', spf: 'SPF', sacks: 'Sacks', volume_gal: 'Volume (gal)', conc: 'Concentration',
+};
+
+const UnitConv = {
+  getPreferredUnit(family, system) {
+    const f = UNIT_FAMILIES[family] || UNIT_FAMILIES.dimensionless;
+    if (system === 'si') return f.si || f.base;
+    if (system === 'metric') return f.metric || f.base;
+    return f.field || f.base;
+  },
+  toBase(val, unit, family) {
+    const f = UNIT_FAMILIES[family];
+    if (!f || !f.units[unit]) return val;
+    return val / f.units[unit];
+  },
+  fromBase(val, unit, family) {
+    const f = UNIT_FAMILIES[family];
+    if (!f || !f.units[unit]) return val;
+    return val * f.units[unit];
+  },
+  convert(val, fromU, toU, family) {
+    return this.fromBase(this.toBase(val, fromU, family), toU, family);
+  },
+};
+
+const Store = {
+  get(k, def) {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; }
+  },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+function calcKey(seg, name) { return `${seg}|${name}`; }
+
+function highlightText(text, term) {
+  if (!term) return escapeHtml(text);
+  const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return escapeHtml(text).replace(re, '<mark class="hl">$1</mark>');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtNum(n, digits = 4) {
+  if (!Number.isFinite(n)) return '—';
+  const a = Math.abs(n);
+  if (a !== 0 && (a < 1e-4 || a >= 1e7)) return n.toExponential(digits);
+  return n.toLocaleString(undefined, { maximumFractionDigits: digits });
+}
+
+function getWellContext() {
+  return Store.get(STORAGE_KEYS.wellContext, {
+    wellName: '', field: '', operator: '', testDate: '', reservoir: '', engineer: '',
   });
 }
 
-function renderLibrary(segment='All', term=''){
-  renderNav(segment);
-  library.innerHTML='';
-  const names = segment==='All' ? segmentNames : [segment];
-  names.forEach(name=>{
-    const rows = calcData[name].filter(r=>!term || (name+' '+r[0]+' '+r[1]+' '+r[2].join(' ')).toLowerCase().includes(term));
-    if(!rows.length) return;
-    const section = document.createElement('section');
-    section.className='card';
-    const chips = rows.slice(0,8).map(r=>`<span class="pill">${r[0]}</span>`).join('');
-    section.innerHTML = `<div class="section-title"><div><h3 style="margin:0">${name}</h3><div class="muted">${rows.length} listed calculations</div></div></div>${chips}<div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Calculation</th><th>Formula / method</th><th>Primary inputs</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${r[0]}</strong></td><td><code>${r[1]}</code></td><td>${r[2].map(x=>`<span class="pill">${x}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table></div>`;
-    library.appendChild(section);
+function saveWellContext(ctx) { Store.set(STORAGE_KEYS.wellContext, ctx); }
+
+function logHistory(entry) {
+  const ctx = getWellContext();
+  const hist = Store.get(STORAGE_KEYS.history, []);
+  hist.unshift({
+    ...entry,
+    well: ctx.wellName || '—',
+    field: ctx.field || '—',
+    ts: new Date().toISOString(),
   });
-  if(!library.children.length){
-    library.innerHTML = '<div class="card"><h3>No matches</h3><p class="muted">Try a broader term such as pressure, annulus, buildup, cement, choke, or density.</p></div>';
+  Store.set(STORAGE_KEYS.history, hist.slice(0, 20));
+  renderHistory();
+}
+
+function getFavorites() { return Store.get(STORAGE_KEYS.favorites, []); }
+function toggleFavorite(key) {
+  const fav = getFavorites();
+  const i = fav.indexOf(key);
+  if (i >= 0) fav.splice(i, 1); else fav.push(key);
+  Store.set(STORAGE_KEYS.favorites, fav);
+  return fav.includes(key);
+}
+
+function buildComputeFn(computeStr) {
+  try { return new Function('v', computeStr); } catch { return () => NaN; }
+}
+
+const computeCache = {};
+function getCompute(key, spec) {
+  if (!computeCache[key]) computeCache[key] = buildComputeFn(spec.compute);
+  return computeCache[key];
+}
+
+function runCalcEngine(key, spec, rawVals, unitSelections, unitSystem) {
+  const baseVals = {};
+  spec.inputs.forEach(([id, , family], i) => {
+    const u = unitSelections[id] || UnitConv.getPreferredUnit(family, unitSystem);
+    baseVals[id] = UnitConv.toBase(parseFloat(rawVals[id]), u, family);
+  });
+  const fn = getCompute(key, spec);
+  const resultBase = fn(baseVals);
+  const [outFamily] = spec.out;
+  const outUnit = UnitConv.getPreferredUnit(outFamily, unitSystem);
+  const result = UnitConv.fromBase(resultBase, outUnit, outFamily);
+  return { result, resultBase, outUnit, outFamily: spec.out[0], outLabel: spec.out[1] || OUTPUT_LABELS[spec.out[0]] || 'Result' };
+}
+
+function createUnitField(id, label, family, unitSystem, ariaPrefix, inputKey) {
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const row = document.createElement('div');
+  row.className = 'field-row';
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.step = 'any';
+  inp.id = id;
+  inp.dataset.key = inputKey || id;
+  inp.dataset.family = family;
+  inp.setAttribute('aria-label', `${ariaPrefix} ${label}`);
+  const sel = document.createElement('select');
+  sel.className = 'unit-sel';
+  sel.dataset.key = inputKey || id;
+  sel.dataset.family = family;
+  sel.setAttribute('aria-label', `${label} unit`);
+  const fam = UNIT_FAMILIES[family] || UNIT_FAMILIES.dimensionless;
+  Object.keys(fam.units).forEach(u => {
+    const o = document.createElement('option');
+    o.value = u; o.textContent = u; sel.appendChild(o);
+  });
+  sel.value = UnitConv.getPreferredUnit(family, unitSystem);
+  sel.addEventListener('change', () => {
+    const v = parseFloat(inp.value);
+    if (Number.isNaN(v)) return;
+    const prev = sel.dataset.prevUnit || sel.value;
+    const converted = UnitConv.convert(v, prev, sel.value, family);
+    inp.value = fmtNum(converted, 6);
+    sel.dataset.prevUnit = sel.value;
+  });
+  sel.dataset.prevUnit = sel.value;
+  const lbl = document.createElement('label');
+  lbl.htmlFor = id;
+  lbl.textContent = label;
+  row.appendChild(inp);
+  row.appendChild(sel);
+  wrap.appendChild(lbl);
+  wrap.appendChild(row);
+  return wrap;
+}
+
+/* ---- Charts (inline SVG) ---- */
+const Charts = {
+  pad: { t: 30, r: 20, b: 50, l: 60 },
+  svg(w, h) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    el.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    el.setAttribute('width', w);
+    el.setAttribute('height', h);
+    el.setAttribute('role', 'img');
+    return el;
+  },
+  line(svg, x1, y1, x2, y2, stroke, sw = 2) {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke); l.setAttribute('stroke-width', sw);
+    svg.appendChild(l);
+  },
+  text(svg, x, y, txt, anchor = 'middle', size = 11) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('text-anchor', anchor);
+    t.setAttribute('fill', 'currentColor'); t.setAttribute('font-size', size);
+    t.textContent = txt;
+    svg.appendChild(t);
+  },
+  horner(container, tp, points, params) {
+    container.innerHTML = '';
+    const W = 560, H = 320, p = this.pad;
+    const svg = this.svg(W, H);
+    const data = points.filter(pt => pt.dt > 0).map(pt => ({
+      x: Math.log10((tp + pt.dt) / pt.dt),
+      y: pt.pwf,
+      dt: pt.dt,
+    })).sort((a, b) => a.x - b.x);
+    if (data.length < 2) {
+      container.textContent = 'Enter at least 2 valid Δt / Pwf points.';
+      return null;
+    }
+    const xs = data.map(d => d.x), ys = data.map(d => d.y);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    const ymin = Math.min(...ys), ymax = Math.max(...ys);
+    const xR = xmax - xmin || 1, yR = ymax - ymin || 1;
+    const tx = x => p.l + ((x - xmin) / xR) * (W - p.l - p.r);
+    const ty = y => p.t + (1 - (y - ymin) / yR) * (H - p.t - p.b);
+    this.line(svg, p.l, H - p.b, W - p.r, H - p.b, 'var(--color-border)');
+    this.line(svg, p.l, p.t, p.l, H - p.b, 'var(--color-border)');
+    data.forEach(d => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', tx(d.x)); c.setAttribute('cy', ty(d.y)); c.setAttribute('r', 4);
+      c.setAttribute('fill', 'var(--color-primary)');
+      svg.appendChild(c);
+    });
+    const n = data.length;
+    let sx = 0, sy = 0, sxy = 0, sxx = 0;
+    data.forEach(d => { sx += d.x; sy += d.y; sxy += d.x * d.y; sxx += d.x * d.x; });
+    const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    const intercept = (sy - slope * sx) / n;
+    this.line(svg, tx(xmin), ty(slope * xmin + intercept), tx(xmax), ty(slope * xmax + intercept), 'var(--color-error)', 2);
+    this.text(svg, W / 2, H - 8, 'log₁₀[(tp+Δt)/Δt]');
+    this.text(svg, 14, H / 2, 'Pwf', 'middle');
+    container.appendChild(svg);
+    const q = params.q || 0, mu = params.mu || 1, b = params.b || 1, h = params.h || 1;
+    const rw = params.rw || 0.25, phi = params.phi || 0.2, ct = params.ct || 1e-5;
+    const m = Math.abs(slope);
+    const k = m > 0 ? (162.6 * q * b * mu) / (m * h) : NaN;
+    const t1hr = Math.log10((tp + 1) / 1);
+    const p1hr = slope * t1hr + intercept;
+    const pStar = p1hr + m * Math.log10((tp + 1) / tp);
+    const skin = Number.isFinite(k) ? 1.151 * ((pStar - params.pi) / m - Math.log10(k / (phi * mu * ct * rw * rw)) + 3.23) : NaN;
+    return { slope: m, k, skin, intercept, p1hr };
+  },
+  decline(container, type, qi, Di, b, tMax) {
+    container.innerHTML = '';
+    const W = 560, H = 280, p = this.pad;
+    const svg = this.svg(W, H);
+    const steps = 80;
+    const ts = [], qs = [], nps = [];
+    let np = 0, dt = tMax / steps;
+    for (let i = 0; i <= steps; i++) {
+      const t = i * dt;
+      let q;
+      if (type === 'exp') q = qi * Math.exp(-Di * t);
+      else if (type === 'harm') q = qi / (1 + Di * t);
+      else q = qi / Math.pow(1 + b * Di * t, 1 / b);
+      if (i > 0) np += ((qs[i - 1] ?? qi) + q) / 2 * dt;
+      ts.push(t); qs.push(q); nps.push(np);
+    }
+    const qmax = Math.max(...qs), npmax = Math.max(...nps, 1);
+    const tx = t => p.l + (t / tMax) * (W - p.l - p.r);
+    const tyQ = q => p.t + (1 - q / qmax) * (H * 0.45 - p.t);
+    const tyN = n => H * 0.55 + (1 - n / npmax) * (H - p.b - H * 0.55);
+    qs.forEach((q, i) => {
+      if (i === 0) return;
+      this.line(svg, tx(ts[i - 1]), tyQ(qs[i - 1]), tx(ts[i]), tyQ(q), '#01696f', 2);
+      this.line(svg, tx(ts[i - 1]), tyN(nps[i - 1]), tx(ts[i]), tyN(nps[i]), '#964219', 2);
+    });
+    this.text(svg, W / 2, H - 6, 'Time');
+    this.text(svg, W / 2, 16, `${type} decline — blue: q(t), orange: Np(t)`);
+    container.appendChild(svg);
+  },
+  nodal(container, iprType, pr, qmax, pi, vlpPoints) {
+    container.innerHTML = '';
+    const W = 560, H = 320, p = this.pad;
+    const svg = this.svg(W, H);
+    const ipr = [];
+    const n = 40;
+    for (let i = 0; i <= n; i++) {
+      const q = (qmax || pr * pi) * i / n;
+      let pwf;
+      if (iprType === 'vogel') pwf = pr - (pr / (qmax || 1)) * (q + 0.2 * Math.sqrt(qmax * q));
+      else pwf = pr - q / pi;
+      ipr.push({ q, pwf });
+    }
+    const all = [...ipr, ...vlpPoints];
+    const qMax = Math.max(...all.map(d => d.q), 1);
+    const pMin = Math.min(...all.map(d => d.pwf), 0);
+    const pMax = Math.max(...all.map(d => d.pwf), pr);
+    const tx = q => p.l + (q / qMax) * (W - p.l - p.r);
+    const ty = pwf => p.t + (1 - (pwf - pMin) / (pMax - pMin || 1)) * (H - p.t - p.b);
+    for (let i = 1; i < ipr.length; i++)
+      this.line(svg, tx(ipr[i - 1].q), ty(ipr[i - 1].pwf), tx(ipr[i].q), ty(ipr[i].pwf), '#01696f', 2);
+    for (let i = 1; i < vlpPoints.length; i++)
+      this.line(svg, tx(vlpPoints[i - 1].q), ty(vlpPoints[i - 1].pwf), tx(vlpPoints[i].q), ty(vlpPoints[i].pwf), '#964219', 2);
+    let match = null, best = Infinity;
+    ipr.forEach(a => vlpPoints.forEach(b => {
+      const d = Math.hypot(a.q - b.q, a.pwf - b.pwf);
+      if (d < best) { best = d; match = { q: (a.q + b.q) / 2, pwf: (a.pwf + b.pwf) / 2 }; }
+    }));
+    if (match) {
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', tx(match.q)); c.setAttribute('cy', ty(match.pwf)); c.setAttribute('r', 6);
+      c.setAttribute('fill', 'var(--color-error)'); svg.appendChild(c);
+    }
+    this.text(svg, W / 2, H - 8, 'Rate');
+    this.text(svg, 14, H / 2, 'Pwf', 'middle');
+    container.appendChild(svg);
+    return match;
+  },
+};
+
+/* ---- Quick calcs ---- */
+function buildQuickDefs() {
+  return {
+    hydrostatic_pressure: {
+      label: 'Hydrostatic pressure', inputs: [['mw', 'Mud weight', 'density'], ['tvd', 'TVD', 'length']],
+      fn: v => 0.052 * v.mw * v.tvd, outFamily: 'pressure', outLabel: 'Pressure',
+    },
+    kill_mud_weight: {
+      label: 'Kill mud weight', inputs: [['omw', 'Original MW', 'density'], ['sidpp', 'SIDPP', 'pressure'], ['tvd', 'TVD', 'length']],
+      fn: v => v.omw + v.sidpp / (0.052 * v.tvd), outFamily: 'density', outLabel: 'Kill MW',
+    },
+    annular_volume: {
+      label: 'Annular volume', inputs: [['dh', 'Hole ID', 'diameter'], ['dp', 'Pipe OD', 'diameter'], ['len', 'Length', 'length']],
+      fn: v => ((v.dh ** 2 - v.dp ** 2) / 1029.4) * v.len, outFamily: 'volume', outLabel: 'Volume',
+    },
+    pump_output: {
+      label: 'Pump output', inputs: [['liner', 'Liner ID', 'diameter'], ['stroke', 'Stroke', 'length']],
+      fn: v => (v.liner ** 2 * v.stroke) / 1029.4, outFamily: 'pump_output', outLabel: 'Pump output',
+    },
+    oil_PI: {
+      label: 'Oil productivity index', inputs: [['q', 'Rate', 'rate_liquid'], ['pr', 'Pr', 'pressure'], ['pwf', 'Pwf', 'pressure']],
+      fn: v => v.q / (v.pr - v.pwf), outFamily: 'pi', outLabel: 'PI',
+    },
+    radius_investigation: {
+      label: 'Radius of investigation', inputs: [['k', 'Permeability', 'perm'], ['t', 'Time', 'time_hr'], ['phi', 'Porosity', 'fraction'], ['mu', 'Viscosity', 'viscosity'], ['ct', 'Total compressibility', 'compressibility']],
+      fn: v => Math.sqrt(0.000264 * v.k * v.t / (v.phi * v.mu * v.ct)), outFamily: 'length', outLabel: 'ri',
+    },
+    skin_buildup: {
+      label: 'Skin from buildup intercept', inputs: [['pstar', 'P*', 'pressure'], ['pi', 'Pi', 'pressure'], ['m', 'Slope m', 'slope_psi'], ['k', 'k', 'perm'], ['phi', 'Porosity', 'fraction'], ['mu', 'Viscosity', 'viscosity'], ['ct', 'ct', 'compressibility'], ['rw', 'rw', 'length']],
+      fn: v => 1.151 * ((v.pstar - v.pi) / v.m - Math.log10(v.k / (v.phi * v.mu * v.ct * v.rw ** 2)) + 3.23), outFamily: 'dimensionless', outLabel: 'Skin',
+    },
+    wellbore_storage: {
+      label: 'Wellbore storage coefficient C', inputs: [['q', 'Rate', 'rate_liquid'], ['dt', 'Δt early', 'time_hr'], ['dp', 'ΔP early', 'pressure']],
+      fn: v => (v.q * v.dt) / (24 * v.dp), outFamily: 'dimensionless', outLabel: 'C (bbl/psi approx)',
+    },
+    choke_critical_gas: {
+      label: 'Choke critical flow (gas — Gilbert)', inputs: [['d', 'Choke ID', 'diameter'], ['p1', 'Upstream P', 'pressure'], ['p2', 'Downstream P', 'pressure'], ['t', 'Temp R', 'temp_R'], ['gamma', 'Gas gravity', 'sg']],
+      fn: v => {
+        const crit = v.p2 / v.p1 <= 0.55;
+        if (!crit) return NaN;
+        return 879 * (v.d ** 2) * v.p1 / Math.sqrt(v.gamma * v.t);
+      },
+      outFamily: 'rate_gas', outLabel: 'Critical rate (MMSCFD approx)',
+    },
+    ecd: {
+      label: 'ECD', inputs: [['mw', 'MW', 'density'], ['loss', 'Annular loss', 'pressure'], ['tvd', 'TVD', 'length']],
+      fn: v => v.mw + v.loss / (0.052 * v.tvd), outFamily: 'density', outLabel: 'ECD',
+    },
+    burst_collapse_sf: {
+      label: 'Burst / Collapse safety factor', inputs: [['rating', 'Rating', 'pressure'], ['load', 'Applied load', 'pressure']],
+      fn: v => v.rating / v.load, outFamily: 'dimensionless', outLabel: 'Safety factor',
+    },
+    gas_fvf: {
+      label: 'Gas FVF (Bg)', inputs: [['p', 'Pressure', 'pressure'], ['t', 'Temp R', 'temp_R'], ['z', 'Z-factor', 'dimensionless']],
+      fn: v => 0.02827 * v.z * v.t / v.p, outFamily: 'rcf_scf', outLabel: 'Bg',
+    },
+    api_gravity: {
+      label: 'API gravity from SG', inputs: [['sg', 'SG @60°F', 'sg']],
+      fn: v => 141.5 / v.sg - 131.5, outFamily: 'api', outLabel: 'API',
+    },
+    water_cut: {
+      label: 'Water cut', inputs: [['qw', 'Water rate', 'rate_liquid'], ['ql', 'Total liquid', 'rate_liquid']],
+      fn: v => 100 * v.qw / v.ql, outFamily: 'percent', outLabel: 'Water cut %',
+    },
+    gor_calc: {
+      label: 'GOR', inputs: [['qg', 'Gas rate', 'rate_gas'], ['qo', 'Oil rate', 'rate_liquid']],
+      fn: v => v.qg / v.qo, outFamily: 'gor', outLabel: 'GOR',
+    },
+  };
+}
+
+function registerPWA() {
+  const manifest = {
+    name: 'Upstream Calculations App',
+    short_name: 'Upstream Calc',
+    description: 'Oil & gas upstream engineering calculator for DST, CT, wireline',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#f7f6f2',
+    theme_color: '#01696f',
+    icons: [{ src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect fill="%2301696f" width="128" height="128" rx="24"/><text x="50%" y="54%" fill="white" font-size="48" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">UC</text></svg>'), sizes: '128x128', type: 'image/svg+xml' }],
+  };
+  document.getElementById('appManifest').href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+  if (!('serviceWorker' in navigator)) return;
+  const sw = `
+    self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open('uc-v1').then(c => c.addAll([self.location.href]))); });
+    self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+    self.addEventListener('fetch', e => { e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))); });
+  `;
+  const blob = new Blob([sw], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+function exportHistoryCSV() {
+  const hist = Store.get(STORAGE_KEYS.history, []);
+  const ctx = getWellContext();
+  const rows = [['Timestamp', 'Well', 'Field', 'Operator', 'Engineer', 'Calculation', 'Formula', 'Inputs', 'Result', 'Units']];
+  hist.forEach(h => rows.push([h.ts, h.well, h.field, ctx.operator, ctx.engineer, h.name, h.formula, h.inputs, h.result, h.unit]));
+  const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `upstream-calc-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+}
+
+function generateReport() {
+  const hist = Store.get(STORAGE_KEYS.history, []);
+  const ctx = getWellContext();
+  const el = document.getElementById('reportPreview');
+  el.innerHTML = `
+    <div class="card" style="margin-top:1rem">
+      <h2>Upstream Calculations Report</h2>
+      <p><strong>Well:</strong> ${escapeHtml(ctx.wellName || '—')} &nbsp; <strong>Field:</strong> ${escapeHtml(ctx.field || '—')}<br>
+      <strong>Operator:</strong> ${escapeHtml(ctx.operator || '—')} &nbsp; <strong>Engineer:</strong> ${escapeHtml(ctx.engineer || '—')}<br>
+      <strong>Reservoir:</strong> ${escapeHtml(ctx.reservoir || '—')} &nbsp; <strong>Test Date:</strong> ${escapeHtml(ctx.testDate || '—')}<br>
+      <strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+      <table><thead><tr><th>Time</th><th>Calculation</th><th>Inputs</th><th>Result</th></tr></thead>
+      <tbody>${hist.map(h => `<tr><td>${escapeHtml(h.ts)}</td><td>${escapeHtml(h.name)}</td><td>${escapeHtml(h.inputs)}</td><td><strong>${escapeHtml(h.result)} ${escapeHtml(h.unit || '')}</strong></td></tr>`).join('') || '<tr><td colspan="4">No calculations in session.</td></tr>'}
+      </tbody></table>
+    </div>`;
+  window.print();
+}
+
+function renderHistory() {
+  const panel = document.getElementById('historyList');
+  if (!panel) return;
+  const hist = Store.get(STORAGE_KEYS.history, []);
+  panel.innerHTML = hist.length ? hist.map(h => `
+    <div class="history-item">
+      <time>${escapeHtml(new Date(h.ts).toLocaleString())}</time>
+      <div><strong>${escapeHtml(h.well)}</strong> — ${escapeHtml(h.name)}</div>
+      <div class="muted tiny">${escapeHtml(h.inputs)}</div>
+      <div class="res">${escapeHtml(h.result)} ${escapeHtml(h.unit || '')}</div>
+    </div>`).join('') : '<p class="muted">No calculations yet.</p>';
+}
+
+/* App init — called from inline bootstrap with calcData + calcRegistry */
+function initUpstreamApp(calcData, calcRegistry) {
+  const quickDefs = buildQuickDefs();
+  let unitSystem = Store.get(STORAGE_KEYS.unitSystem, 'field');
+  let activeSegment = 'All';
+  let searchTerm = '';
+
+  const els = {
+    nav: document.getElementById('nav'),
+    library: document.getElementById('library'),
+    search: document.getElementById('search'),
+    segCount: document.getElementById('segCount'),
+    calcCount: document.getElementById('calcCount'),
+    themeBtn: document.getElementById('themeBtn'),
+    unitSystemSel: document.getElementById('unitSystemSel'),
+    quickCalc: document.getElementById('quickCalc'),
+    quickFields: document.getElementById('quickFields'),
+    calcResult: document.getElementById('calcResult'),
+    sidebar: document.getElementById('sidebar'),
+    historyPanel: document.getElementById('historyPanel'),
+    overlay: document.getElementById('overlay'),
+    menuBtn: document.getElementById('menuBtn'),
+    histBtn: document.getElementById('histBtn'),
+  };
+
+  const segmentNames = Object.keys(calcData);
+  els.segCount.textContent = segmentNames.length;
+  els.calcCount.textContent = segmentNames.reduce((a, k) => a + calcData[k].length, 0);
+
+  const themes = ['light', 'dark', 'contrast'];
+  let themeIdx = themes.indexOf(Store.get(STORAGE_KEYS.theme, 'light'));
+  if (themeIdx < 0) themeIdx = 0;
+  document.documentElement.setAttribute('data-theme', themes[themeIdx]);
+
+  function applyUnitSystem() {
+    Store.set(STORAGE_KEYS.unitSystem, unitSystem);
+    document.querySelectorAll('.unit-sel').forEach(sel => {
+      const fam = UNIT_FAMILIES[sel.closest('.field')?.querySelector('input')?.dataset.family];
+      if (fam) sel.value = UnitConv.getPreferredUnit(sel.closest('.field').querySelector('input').dataset.family, unitSystem);
+    });
   }
-}
-search.addEventListener('input',()=>{
-  const active = document.querySelector('.nav button.active');
-  const name = active ? (active.textContent==='All segments' ? 'All' : active.textContent.replace(/ \(.+\)$/,'')) : 'All';
-  renderLibrary(name, search.value.trim().toLowerCase());
-});
 
-const converterFamilies = {
-  pressure: {psi:1, kPa:6.894757, bar:0.06894757, MPa:0.006894757, atm:0.068046},
-  length: {ft:1, m:0.3048, in:12, mm:304.8},
-  volume: {bbl:1, m3:0.158987295, ft3:5.614583, gal_us:42},
-  rate_liquid: {bbl_d:1, m3_d:0.158987295, gpm:0.0291667, L_min:4.41632},
-  density: {ppg:1, sg:1/8.345404, kg_m3:119.826427, lb_ft3:7.48052},
-  gradient: {psi_ft:1, kPa_m:22.6206, bar_m:0.226206},
-  temperature: null,
-  force: {lbf:1, kN:0.00444822},
-  power: {hp:1, kW:0.7457},
-  gas_rate: {MMSCFD:1, MSCFD:1000, sm3_d:28316.8466}
-};
-const familySel = document.getElementById('family');
-const fromUnit = document.getElementById('fromUnit');
-const toUnit = document.getElementById('toUnit');
-const fromValue = document.getElementById('fromValue');
-const convResult = document.getElementById('convResult');
-Object.keys(converterFamilies).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k.replace('_',' ');familySel.appendChild(o);});
-function fillUnits(){
-  const fam = familySel.value;
-  fromUnit.innerHTML=''; toUnit.innerHTML='';
-  const units = fam==='temperature' ? ['C','F','K'] : Object.keys(converterFamilies[fam]);
-  units.forEach((u,i)=>{
-    const a=document.createElement('option');a.value=u;a.textContent=u;fromUnit.appendChild(a);
-    const b=document.createElement('option');b.value=u;b.textContent=u;toUnit.appendChild(b);
-    if(i===1) toUnit.value=u;
-  });
-  convert();
-}
-function convert(){
-  const fam = familySel.value; const v = parseFloat(fromValue.value);
-  if(Number.isNaN(v)){convResult.textContent='Enter a number'; return;}
-  let result;
-  if(fam==='temperature'){
-    const f=fromUnit.value,t=toUnit.value;
-    let c = f==='C'?v:(f==='F'?(v-32)*5/9:v-273.15);
-    result = t==='C'?c:(t==='F'?(c*9/5+32):c+273.15);
-  } else {
-    const base = v / converterFamilies[fam][fromUnit.value];
-    result = base * converterFamilies[fam][toUnit.value];
+  function renderNav(active = 'All') {
+    els.nav.innerHTML = '';
+    const fav = getFavorites();
+    if (fav.length) {
+      const fb = document.createElement('button');
+      fb.textContent = `⭐ Favorites (${fav.length})`;
+      fb.className = active === 'Favorites' ? 'active' : '';
+      fb.onclick = () => renderLibrary('Favorites', searchTerm);
+      els.nav.appendChild(fb);
+    }
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All segments';
+    allBtn.className = active === 'All' ? 'active' : '';
+    allBtn.onclick = () => renderLibrary('All', searchTerm);
+    els.nav.appendChild(allBtn);
+    segmentNames.forEach(name => {
+      const b = document.createElement('button');
+      b.textContent = `${name} (${calcData[name].length})`;
+      b.className = active === name ? 'active' : '';
+      b.onclick = () => renderLibrary(name, searchTerm);
+      els.nav.appendChild(b);
+    });
   }
-  convResult.textContent = `${result.toLocaleString(undefined,{maximumFractionDigits:6})} ${toUnit.value}`;
-}
-familySel.onchange=fillUnits; fromUnit.onchange=convert; toUnit.onchange=convert; fromValue.oninput=convert; fillUnits();
 
-const quickDefs = {
-  hydrostatic_pressure: {label:'Hydrostatic pressure', inputs:[['MW_ppg','Mud weight, ppg'],['TVD_ft','TVD, ft']], fn:v=>0.052*v.MW_ppg*v.TVD_ft, unit:'psi'},
-  kill_mud_weight: {label:'Kill mud weight', inputs:[['OMW_ppg','Original MW, ppg'],['SIDPP_psi','SIDPP, psi'],['TVD_ft','TVD, ft']], fn:v=>v.OMW_ppg + v.SIDPP_psi/(0.052*v.TVD_ft), unit:'ppg'},
-  annular_volume: {label:'Annular volume', inputs:[['HoleID_in','Hole ID, in'],['PipeOD_in','Pipe OD, in'],['Length_ft','Length, ft']], fn:v=>((v.HoleID_in**2 - v.PipeOD_in**2)/1029.4)*v.Length_ft, unit:'bbl'},
-  pump_output: {label:'Pump output', inputs:[['Liner_in','Liner ID, in'],['Stroke_in','Stroke, in']], fn:v=>(v.Liner_in**2*v.Stroke_in)/1029.4, unit:'bbl/stk'},
-  oil_PI: {label:'Oil productivity index', inputs:[['q_bpd','Rate, bpd'],['Pr_psi','Reservoir pressure, psi'],['Pwf_psi','Flowing BHP, psi']], fn:v=>v.q_bpd/(v.Pr_psi-v.Pwf_psi), unit:'bpd/psi'}
-};
-const quickCalc = document.getElementById('quickCalc');
-const quickFields = document.getElementById('quickFields');
-const calcResult = document.getElementById('calcResult');
-Object.entries(quickDefs).forEach(([k,d])=>{const o=document.createElement('option');o.value=k;o.textContent=d.label;quickCalc.appendChild(o);});
-function fillQuickFields(){
-  const d=quickDefs[quickCalc.value];
-  quickFields.innerHTML='';
-  d.inputs.forEach(([key,label])=>{
-    const wrap=document.createElement('div'); wrap.className='field';
-    wrap.innerHTML=`<label>${label}</label><input type="number" step="any" data-key="${key}">`;
-    quickFields.appendChild(wrap);
+  function renderInteractiveCalc(seg, name, formula, spec) {
+    const key = calcKey(seg, name);
+    const div = document.createElement('div');
+    div.className = 'calc';
+    div.dataset.key = key;
+    const isFav = getFavorites().includes(key);
+    div.innerHTML = `<h4><button type="button" class="star-btn ${isFav ? 'on' : ''}" aria-label="Toggle favorite" data-fav="${escapeHtml(key)}">${isFav ? '★' : '☆'}</button>${escapeHtml(name)}</h4>`;
+    const inputsWrap = document.createElement('div');
+    inputsWrap.className = 'calc-inputs';
+    const unitSelections = {};
+    spec.inputs.forEach(([id, lbl, family]) => {
+      inputsWrap.appendChild(createUnitField(`calc-${key.replace(/\|/g, '-')}-${id}`, lbl, family, unitSystem, name, id));
+      unitSelections[id] = UnitConv.getPreferredUnit(family, unitSystem);
+    });
+    div.appendChild(inputsWrap);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'toggle-formula';
+    toggle.textContent = 'Show derivation / formula';
+    const fp = document.createElement('div');
+    fp.className = 'formula-panel';
+    fp.innerHTML = `<div class="eq-block mono">${escapeHtml(spec.formula || formula)}</div><ul class="assump-list">${(spec.assumptions || []).map(a => `<li>${escapeHtml(a)}</li>`).join('')}</ul><p class="muted tiny">${escapeHtml(spec.notes || '')}</p>`;
+    toggle.onclick = () => { fp.classList.toggle('open'); toggle.textContent = fp.classList.contains('open') ? 'Hide derivation / formula' : 'Show derivation / formula'; };
+    div.appendChild(toggle);
+    div.appendChild(fp);
+    const resBox = document.createElement('div');
+    resBox.className = 'result-box';
+    resBox.textContent = 'Result: —';
+    div.appendChild(resBox);
+
+    function recalc() {
+      const raw = {};
+      spec.inputs.forEach(([id]) => {
+      const inp = div.querySelector(`input[data-key="${id}"]`);
+      const sel = div.querySelector(`select[data-key="${id}"]`);
+        if (inp) { raw[id] = inp.value; unitSelections[id] = sel?.value; }
+      });
+      try {
+        const out = runCalcEngine(key, spec, raw, unitSelections, unitSystem);
+        resBox.textContent = `Result: ${fmtNum(out.result)} ${out.outUnit} (${out.outLabel})`;
+        const inputStr = spec.inputs.map(([id, lbl]) => `${lbl}=${raw[id]}`).join('; ');
+        logHistory({ segment: seg, name, formula: spec.formula || formula, inputs: inputStr, result: fmtNum(out.result), unit: out.outUnit });
+      } catch { resBox.textContent = 'Result: Error — check inputs'; }
+    }
+    div.querySelectorAll('input, select').forEach(el => el.addEventListener('input', recalc));
+    div.querySelector('.star-btn').onclick = e => {
+      const on = toggleFavorite(key);
+      e.target.textContent = on ? '★' : '☆';
+      e.target.classList.toggle('on', on);
+      renderNav(activeSegment);
+    };
+
+    if (seg === 'Well Testing & DST' && name === 'Permeability from build-up') {
+      div.appendChild(buildHornerSection());
+    }
+    if (seg === 'Production' && name === 'Productivity decline') {
+      div.appendChild(buildDeclineSection());
+    }
+    if ((seg === 'Production' && name === 'Oil PI') || (seg === 'Completion' && name === 'Nodal inflow/outflow match')) {
+      div.appendChild(buildNodalSection());
+    }
+    return div;
+  }
+
+  function buildHornerSection() {
+    const box = document.createElement('div');
+    box.className = 'chart-box';
+    box.innerHTML = `<h4>Horner plot generator</h4>
+      <div class="calc-inputs">
+        <div class="field"><label>tp (hr)</label><input type="number" id="horner-tp" step="any" value="10" aria-label="Flow time tp"></div>
+        <div class="field"><label>q (stb/d)</label><input type="number" id="horner-q" step="any" value="1000" aria-label="Rate"></div>
+        <div class="field"><label>μ (cP)</label><input type="number" id="horner-mu" step="any" value="1" aria-label="Viscosity"></div>
+        <div class="field"><label>B (rb/stb)</label><input type="number" id="horner-b" step="any" value="1.2" aria-label="FVF"></div>
+        <div class="field"><label>h (ft)</label><input type="number" id="horner-h" step="any" value="50" aria-label="Net pay"></div>
+        <div class="field"><label>Pi (psi)</label><input type="number" id="horner-pi" step="any" value="5000" aria-label="Initial pressure"></div>
+      </div>
+      <div class="field"><label>Pwf data (Δt hr, Pwf psi — one pair per line)</label><textarea id="horner-data" rows="5" aria-label="Horner pressure data" style="width:100%;padding:.75rem;border-radius:10px;border:1px solid var(--color-border)">0.01,4800\n0.05,4850\n0.1,4900\n0.5,4950\n1,4980\n5,5020\n10,5040</textarea></div>
+      <button type="button" class="btn primary no-print" id="hornerPlotBtn">Plot Horner</button>
+      <div id="hornerChart"></div><div id="hornerResults" class="footer-note"></div>`;
+    box.querySelector('#hornerPlotBtn').onclick = () => {
+      const tp = parseFloat(box.querySelector('#horner-tp').value);
+      const lines = box.querySelector('#horner-data').value.trim().split('\n');
+      const points = lines.map(l => { const [dt, pwf] = l.split(/[,\s]+/).map(Number); return { dt, pwf }; }).filter(p => p.dt > 0 && Number.isFinite(p.pwf));
+      const params = {
+        q: parseFloat(box.querySelector('#horner-q').value),
+        mu: parseFloat(box.querySelector('#horner-mu').value),
+        b: parseFloat(box.querySelector('#horner-b').value),
+        h: parseFloat(box.querySelector('#horner-h').value),
+        pi: parseFloat(box.querySelector('#horner-pi').value),
+        rw: 0.25, phi: 0.2, ct: 1e-5,
+      };
+      const r = Charts.horner(box.querySelector('#hornerChart'), tp, points, params);
+      if (r) box.querySelector('#hornerResults').innerHTML = `<strong>Slope m:</strong> ${fmtNum(r.slope)} psi/cycle &nbsp; <strong>k:</strong> ${fmtNum(r.k)} mD &nbsp; <strong>Skin:</strong> ${fmtNum(r.skin)}`;
+    };
+    return box;
+  }
+
+  function buildDeclineSection() {
+    const box = document.createElement('div');
+    box.className = 'chart-box';
+    box.innerHTML = `<h4>Decline curve plotter</h4>
+      <div class="calc-inputs">
+        <div class="field"><label>Model</label><select id="decl-type" aria-label="Decline type"><option value="exp">Exponential</option><option value="hyper">Hyperbolic</option><option value="harm">Harmonic</option></select></div>
+        <div class="field"><label>qi</label><input type="number" id="decl-qi" value="1000" aria-label="Initial rate"></div>
+        <div class="field"><label>Di (1/day)</label><input type="number" id="decl-di" value="0.001" step="any" aria-label="Decline constant"></div>
+        <div class="field"><label>b</label><input type="number" id="decl-b" value="0.5" step="any" aria-label="b factor"></div>
+        <div class="field"><label>t max (days)</label><input type="number" id="decl-tmax" value="3650" aria-label="Max time"></div>
+      </div>
+      <button type="button" class="btn primary" id="declPlotBtn">Plot decline</button><div id="declChart"></div>`;
+    box.querySelector('#declPlotBtn').onclick = () => {
+      Charts.decline(box.querySelector('#declChart'), box.querySelector('#decl-type').value,
+        parseFloat(box.querySelector('#decl-qi').value), parseFloat(box.querySelector('#decl-di').value),
+        parseFloat(box.querySelector('#decl-b').value), parseFloat(box.querySelector('#decl-tmax').value));
+    };
+    return box;
+  }
+
+  function buildNodalSection() {
+    const box = document.createElement('div');
+    box.className = 'chart-box';
+    box.innerHTML = `<h4>Nodal analysis / IPR + tubing curve</h4>
+      <div class="calc-inputs">
+        <div class="field"><label>IPR type</label><select id="nod-ipr" aria-label="IPR type"><option value="vogel">Vogel</option><option value="linear">Linear (PI)</option></select></div>
+        <div class="field"><label>Pr (psi)</label><input type="number" id="nod-pr" value="4000" aria-label="Reservoir pressure"></div>
+        <div class="field"><label>qmax or PI</label><input type="number" id="nod-qmax" value="3000" aria-label="qmax or PI"></div>
+      </div>
+      <div class="field"><label>VLP points (q, Pwf — one per line)</label><textarea id="nod-vlp" rows="4" aria-label="VLP data" style="width:100%;padding:.75rem;border-radius:10px;border:1px solid var(--color-border)">0,4000\n500,3500\n1000,2800\n1500,2000\n2000,1200\n2500,500</textarea></div>
+      <button type="button" class="btn primary" id="nodPlotBtn">Plot nodal</button><div id="nodChart"></div><div id="nodMatch" class="footer-note"></div>`;
+    box.querySelector('#nodPlotBtn').onclick = () => {
+      const vlp = box.querySelector('#nod-vlp').value.trim().split('\n').map(l => { const [q, pwf] = l.split(/[,\s]+/).map(Number); return { q, pwf }; }).filter(p => Number.isFinite(p.q));
+      const iprType = box.querySelector('#nod-ipr').value;
+      const pr = parseFloat(box.querySelector('#nod-pr').value);
+      const qmax = parseFloat(box.querySelector('#nod-qmax').value);
+      const match = Charts.nodal(box.querySelector('#nodChart'), iprType, pr, iprType === 'vogel' ? qmax : null, iprType === 'linear' ? qmax : 1, vlp);
+      box.querySelector('#nodMatch').innerHTML = match ? `<strong>Intersection:</strong> q ≈ ${fmtNum(match.q)} stb/d, Pwf ≈ ${fmtNum(match.pwf)} psi` : 'No intersection found — adjust curves.';
+    };
+    return box;
+  }
+
+  function renderLibrary(segment = 'All', term = '') {
+    activeSegment = segment;
+    searchTerm = term.toLowerCase();
+    renderNav(segment);
+    els.library.innerHTML = '';
+    let names = segment === 'All' ? segmentNames : segment === 'Favorites' ? segmentNames : [segment];
+    const fav = getFavorites();
+    names.forEach(name => {
+      let rows = calcData[name];
+      if (segment === 'Favorites') rows = rows.filter(r => fav.includes(calcKey(name, r[0])));
+      rows = rows.filter(r => !term || (name + ' ' + r[0] + ' ' + r[1] + ' ' + r[2].join(' ')).toLowerCase().includes(term));
+      if (!rows.length) return;
+      const section = document.createElement('section');
+      section.className = 'card';
+      section.innerHTML = `<div class="section-title"><div><h3 style="margin:0">${highlightText(name, term)}</h3><div class="muted">${rows.length} calculations</div></div></div>`;
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'table-wrap';
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Calculation</th><th>Formula / method</th><th>Primary inputs</th><th>Notes / Caution</th><th></th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      rows.forEach(r => {
+        const key = calcKey(name, r[0]);
+        const spec = calcRegistry[key];
+        const isFav = fav.includes(key);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><button type="button" class="star-btn ${isFav ? 'on' : ''}" data-fav="${escapeHtml(key)}" aria-label="Favorite">${isFav ? '★' : '☆'}</button> <strong>${highlightText(r[0], term)}</strong></td>
+          <td><code>${highlightText(r[1], term)}</code></td>
+          <td>${r[2].map(x => `<span class="pill">${highlightText(x, term)}</span>`).join(' ')}</td>
+          <td class="muted tiny">${escapeHtml(spec?.notes || '')}</td>
+          <td><button type="button" class="btn expand-btn" data-expand="${escapeHtml(key)}" aria-label="Expand">▸</button></td>`;
+        tbody.appendChild(tr);
+        const tr2 = document.createElement('tr');
+        tr2.className = 'expand-row';
+        tr2.style.display = 'none';
+        tr2.dataset.expandRow = key;
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.appendChild(renderInteractiveCalc(name, r[0], r[1], spec));
+        tr2.appendChild(td);
+        tbody.appendChild(tr2);
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+      section.appendChild(tableWrap);
+      els.library.appendChild(section);
+    });
+    els.library.querySelectorAll('.expand-btn').forEach(btn => {
+      btn.onclick = () => {
+        const row = els.library.querySelector(`tr[data-expand-row="${btn.dataset.expand}"]`);
+        const open = row.style.display !== 'none';
+        row.style.display = open ? 'none' : 'table-row';
+        btn.textContent = open ? '▸' : '▾';
+      };
+    });
+    els.library.querySelectorAll('.star-btn[data-fav]').forEach(btn => {
+      btn.onclick = () => {
+        const on = toggleFavorite(btn.dataset.fav);
+        btn.textContent = on ? '★' : '☆';
+        btn.classList.toggle('on', on);
+        if (activeSegment === 'Favorites') renderLibrary('Favorites', searchTerm);
+        else renderNav(activeSegment);
+      };
+    });
+    if (!els.library.children.length) {
+      els.library.innerHTML = '<div class="card"><h3>No matches</h3><p class="muted">Try pressure, buildup, choke, ECD, or annulus.</p></div>';
+    }
+  }
+
+  /* Converter */
+  const converterFamilies = {
+    pressure: UNIT_FAMILIES.pressure.units,
+    length: UNIT_FAMILIES.length.units,
+    volume: UNIT_FAMILIES.volume.units,
+    rate_liquid: UNIT_FAMILIES.rate_liquid.units,
+    density: UNIT_FAMILIES.density.units,
+    gradient: UNIT_FAMILIES.gradient.units,
+    temperature: null,
+    force: UNIT_FAMILIES.force.units,
+    power: UNIT_FAMILIES.power_hp.units,
+    gas_rate: UNIT_FAMILIES.rate_gas.units,
+  };
+  const familySel = document.getElementById('family');
+  const fromUnit = document.getElementById('fromUnit');
+  const toUnit = document.getElementById('toUnit');
+  const fromValue = document.getElementById('fromValue');
+  const convResult = document.getElementById('convResult');
+  Object.keys(converterFamilies).forEach(k => {
+    const o = document.createElement('option'); o.value = k; o.textContent = k.replace('_', ' '); familySel.appendChild(o);
   });
-  calcResult.textContent='—';
-}
-quickCalc.onchange=fillQuickFields; fillQuickFields();
-document.getElementById('runCalc').onclick=()=>{
-  const d=quickDefs[quickCalc.value]; const vals={}; let ok=true;
-  quickFields.querySelectorAll('input').forEach(inp=>{const n=parseFloat(inp.value); if(Number.isNaN(n)) ok=false; vals[inp.dataset.key]=n;});
-  if(!ok){calcResult.textContent='Enter all inputs'; return;}
-  const out=d.fn(vals); calcResult.textContent=`${out.toLocaleString(undefined,{maximumFractionDigits:6})} ${d.unit}`;
-};
-document.getElementById('resetCalc').onclick=()=>fillQuickFields();
+  function fillUnits() {
+    const fam = familySel.value;
+    fromUnit.innerHTML = ''; toUnit.innerHTML = '';
+    const units = fam === 'temperature' ? ['C', 'F', 'K'] : Object.keys(converterFamilies[fam]);
+    units.forEach((u, i) => {
+      const a = document.createElement('option'); a.value = u; a.textContent = u; fromUnit.appendChild(a);
+      const b = document.createElement('option'); b.value = u; b.textContent = u; toUnit.appendChild(b);
+      if (i === 1) toUnit.value = u;
+    });
+    convert();
+  }
+  function convert() {
+    const fam = familySel.value; const v = parseFloat(fromValue.value);
+    if (Number.isNaN(v)) { convResult.textContent = 'Enter a number'; return; }
+    let result;
+    if (fam === 'temperature') {
+      const f = fromUnit.value, t = toUnit.value;
+      let c = f === 'C' ? v : (f === 'F' ? (v - 32) * 5 / 9 : v - 273.15);
+      result = t === 'C' ? c : (t === 'F' ? (c * 9 / 5 + 32) : c + 273.15);
+    } else {
+      const base = v / converterFamilies[fam][fromUnit.value];
+      result = base * converterFamilies[fam][toUnit.value];
+    }
+    convResult.textContent = `${fmtNum(result)} ${toUnit.value}`;
+  }
+  familySel.onchange = fillUnits; fromUnit.onchange = convert; toUnit.onchange = convert; fromValue.oninput = convert; fillUnits();
 
-themeBtn.onclick=()=>{document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='dark' ? 'light':'dark');};
-renderNav(); renderLibrary();
+  /* Quick calc */
+  Object.entries(quickDefs).forEach(([k, d]) => {
+    const o = document.createElement('option'); o.value = k; o.textContent = d.label; els.quickCalc.appendChild(o);
+  });
+  function fillQuickFields() {
+    const d = quickDefs[els.quickCalc.value];
+    els.quickFields.innerHTML = '';
+    d.inputs.forEach(([id, lbl, family]) => els.quickFields.appendChild(createUnitField(`quick-${id}`, lbl, family, unitSystem, d.label, id)));
+    els.calcResult.textContent = '—';
+  }
+  els.quickCalc.onchange = fillQuickFields; fillQuickFields();
+  document.getElementById('runCalc').onclick = () => {
+    const d = quickDefs[els.quickCalc.value];
+    const raw = {}; const us = {}; let ok = true;
+    d.inputs.forEach(([id, , family]) => {
+      const inp = document.getElementById(`quick-${id}`);
+      const sel = inp?.closest('.field-row')?.querySelector('select');
+      const n = parseFloat(inp?.value);
+      if (Number.isNaN(n)) ok = false;
+      else { us[id] = sel?.value; raw[id] = UnitConv.toBase(n, us[id], family); }
+    });
+    if (!ok) { els.calcResult.textContent = 'Enter all inputs'; return; }
+    const resultBase = d.fn(raw);
+    const outU = UnitConv.getPreferredUnit(d.outFamily, unitSystem);
+    const result = UnitConv.fromBase(resultBase, outU, d.outFamily);
+    els.calcResult.textContent = `${fmtNum(result)} ${outU}`;
+    logHistory({ name: d.label, formula: d.label, inputs: d.inputs.map(([id, lbl]) => lbl).join(', '), result: fmtNum(result), unit: outU });
+  };
+  document.getElementById('resetCalc').onclick = fillQuickFields;
+
+  /* Well context */
+  const ctx = getWellContext();
+  ['wellName', 'field', 'operator', 'testDate', 'reservoir', 'engineer'].forEach(k => {
+    const el = document.getElementById(k);
+    if (el) { el.value = ctx[k] || ''; el.addEventListener('input', () => { ctx[k] = el.value; saveWellContext(ctx); }); }
+  });
+
+  els.search.addEventListener('input', () => renderLibrary(activeSegment, els.search.value.trim().toLowerCase()));
+
+  els.themeBtn.onclick = () => {
+    themeIdx = (themeIdx + 1) % themes.length;
+    document.documentElement.setAttribute('data-theme', themes[themeIdx]);
+    Store.set(STORAGE_KEYS.theme, themes[themeIdx]);
+    els.themeBtn.textContent = `Theme: ${themes[themeIdx]}`;
+  };
+  els.themeBtn.textContent = `Theme: ${themes[themeIdx]}`;
+
+  els.unitSystemSel.value = unitSystem;
+  els.unitSystemSel.onchange = () => { unitSystem = els.unitSystemSel.value; applyUnitSystem(); fillQuickFields(); };
+
+  els.menuBtn.onclick = () => { els.sidebar.classList.toggle('open'); els.overlay.classList.toggle('open'); };
+  els.histBtn.onclick = () => { els.historyPanel.classList.toggle('open'); els.overlay.classList.toggle('open'); };
+  els.overlay.onclick = () => { els.sidebar.classList.remove('open'); els.historyPanel.classList.remove('open'); els.overlay.classList.remove('open'); };
+
+  document.getElementById('exportCsvBtn').onclick = exportHistoryCSV;
+  document.getElementById('reportBtn').onclick = generateReport;
+
+  renderHistory();
+  renderLibrary();
+  registerPWA();
+}
+
+initUpstreamApp(calcData, calcRegistry);
 </script>
 </body>
 </html>
