@@ -534,30 +534,20 @@ html_parts.append('''</style>
         <button class="btn primary" id="reportBtn" aria-label="Generate printable report">Generate Report</button>
       </div>
     </div>
-    <details class="well-panel no-print" open>
-      <summary>Well Context</summary>
-      <div class="well-grid" style="margin-top:var(--space-3)">
-        <div class="field"><label for="wellName">Well Name</label><input id="wellName" aria-label="Well name"></div>
-        <div class="field"><label for="field">Field</label><input id="field" aria-label="Field name"></div>
-        <div class="field"><label for="operator">Operator</label><input id="operator" aria-label="Operator"></div>
-        <div class="field"><label for="testDate">Test Date</label><input id="testDate" type="date" aria-label="Test date"></div>
-        <div class="field"><label for="reservoir">Reservoir</label><input id="reservoir" aria-label="Reservoir"></div>
-        <div class="field"><label for="engineer">Engineer Name</label><input id="engineer" aria-label="Engineer name"></div>
-      </div>
-    </details>
     <div class="hero no-print">
-      <span class="pill">Upstream oil &amp; gas — Abu Dhabi offshore ready</span>
-      <h1>Interactive calculator for drilling, completions, production, well testing, DST, wireline, CT, cementing, stimulation, and unit conversion.</h1>
-      <p class="muted">Field screening tool — not a substitute for operator procedures, OEM manuals, or formal simulation. Works offline after first load.</p>
+      <div class="hero-head">
+        <span class="pill">Upstream oil &amp; gas</span>
+        <p class="hero-tagline muted">Field screening tool — offline-capable. Not a substitute for operator procedures or simulation.</p>
+      </div>
       <div class="stats">
-        <div class="stat"><div class="tiny">Segments</div><div id="segCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
-        <div class="stat"><div class="tiny">Calculations</div><div id="calcCount" style="font-size:var(--text-xl);font-weight:700"></div></div>
-        <div class="stat"><div class="tiny">Tools</div><div style="font-size:var(--text-xl);font-weight:700">Charts + nodal + Horner</div></div>
-        <div class="stat"><div class="tiny">Priority</div><div style="font-size:var(--text-xl);font-weight:700">Safety first</div></div>
+        <div class="stat"><span class="tiny">Segments</span><strong id="segCount" class="stat-val">—</strong></div>
+        <div class="stat"><span class="tiny">Calculations</span><strong id="calcCount" class="stat-val">—</strong></div>
+        <div class="stat"><span class="tiny">Tools</span><strong class="stat-val">Horner · Decline · Nodal</strong></div>
+        <div class="stat"><span class="tiny">Priority</span><strong class="stat-val">Safety first</strong></div>
       </div>
     </div>
     <section class="grid no-print">
-      <div class="card" style="grid-column:span 12"><h2>Quick tools</h2><p class="muted">Unit converter plus 15 high-use field formulas including ri, skin, C, Gilbert choke, ECD, Bg, API, WC, and GOR.</p></div>
+      <div class="card" style="grid-column:span 12"><h2>Quick tools</h2><p class="muted">Converter + 15 field formulas: ri, skin, C, Gilbert choke, ECD, Bg, API, WC, GOR.</p></div>
       <div class="card" style="grid-column:span 7"><h3>Unit converter</h3>
         <div class="converter">
           <div class="field"><label for="family">Family</label><select id="family" aria-label="Conversion family"></select></div>

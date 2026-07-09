@@ -846,13 +846,6 @@ function initUpstreamApp(calcData, calcRegistry) {
   };
   document.getElementById('resetCalc').onclick = fillQuickFields;
 
-  /* Well context */
-  const ctx = getWellContext();
-  ['wellName', 'field', 'operator', 'testDate', 'reservoir', 'engineer'].forEach(k => {
-    const el = document.getElementById(k);
-    if (el) { el.value = ctx[k] || ''; el.addEventListener('input', () => { ctx[k] = el.value; saveWellContext(ctx); }); }
-  });
-
   els.search.addEventListener('input', () => renderLibrary(activeSegment, els.search.value.trim().toLowerCase()));
 
   els.themeBtn.onclick = () => {
