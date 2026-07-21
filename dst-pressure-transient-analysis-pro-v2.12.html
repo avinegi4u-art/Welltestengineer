@@ -112,17 +112,17 @@
     }
 
     .app {
-      width: min(1600px, calc(100% - 1.25rem));
+      width: min(1600px, calc(100% - 1rem));
       margin: 0 auto;
-      padding: 0.75rem 0 1.25rem;
+      padding: 0.55rem 0 1rem;
     }
 
     .hero {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.65rem;
+      gap: 0.5rem;
       align-items: center;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.45rem;
     }
 
     .brand {
@@ -146,8 +146,8 @@
 
     h1 {
       margin-bottom: 0.25rem;
-      font-size: clamp(1.35rem, 1rem + 1.2vw, 2rem);
-      line-height: 1.1;
+      font-size: clamp(1.2rem, 0.95rem + 0.9vw, 1.7rem);
+      line-height: 1.12;
       letter-spacing: -0.035em;
     }
 
@@ -166,9 +166,9 @@
 
     .sub {
       color: var(--muted);
-      max-width: 90ch;
-      font-size: 0.9rem;
-      line-height: 1.4;
+      max-width: 95ch;
+      font-size: 0.82rem;
+      line-height: 1.35;
       margin-bottom: 0;
     }
 
@@ -233,16 +233,16 @@
     .kpis {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 0.45rem;
-      margin-bottom: 0.65rem;
+      gap: 0.35rem;
+      margin-bottom: 0.45rem;
     }
 
     .kpi {
       background: rgba(18, 34, 56, 0.88);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.65rem 0.75rem;
-      min-height: 4.4rem;
+      border-radius: 10px;
+      padding: 0.5rem 0.6rem;
+      min-height: 3.6rem;
     }
 
     .kpi .label {
@@ -253,8 +253,8 @@
     }
 
     .kpi .value {
-      margin-top: 0.2rem;
-      font-size: clamp(1.15rem, 0.95rem + 0.7vw, 1.55rem);
+      margin-top: 0.1rem;
+      font-size: clamp(1.05rem, 0.9rem + 0.55vw, 1.35rem);
       font-weight: 800;
       letter-spacing: -0.04em;
     }
@@ -267,9 +267,9 @@
 
     .tabs {
       display: flex;
-      gap: 0.35rem;
+      gap: 0.3rem;
       flex-wrap: wrap;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.45rem;
     }
 
     .tab {
@@ -452,15 +452,15 @@
     .workflow {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 0.4rem;
-      margin-bottom: 0.65rem;
+      gap: 0.3rem;
+      margin-bottom: 0.45rem;
     }
 
     .step {
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       background: rgba(18, 34, 56, 0.78);
-      padding: 0.5rem 0.55rem;
+      padding: 0.4rem 0.45rem;
       color: var(--muted);
       font-size: 0.8rem;
     }
@@ -697,7 +697,7 @@
         </div>
         <div>
           <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.12</span></h1>
-          <p class="sub">Local-first DST/PTA for senior well test engineers — interactive Plotly charts (SVG offline fallback), variable-rate superposition, Horner and Bourdet analysis, boundary detection, composite screening, physics Bayesian uncertainty, gating, and office sign-off.</p>
+          <p class="sub">Interactive Plotly PTA workspace — zoom/pan/select-fit charts, Horner & Bourdet, boundary & composite screening, Bayesian uncertainty, gating, and office sign-off. Offline SVG fallback.</p>
         </div>
       </div>
       <div class="hero-actions">
