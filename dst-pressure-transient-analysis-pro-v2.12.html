@@ -1457,7 +1457,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2.12.0";
+    const APP_VERSION = "2.12.1";
 
     const PLOTLY_READY = () => typeof window !== "undefined" && typeof window.Plotly !== "undefined";
     const CHART_IDS = ["trendChart", "hornerChart", "derivativeChart", "semilogChart", "deconvChart", "stepRateChart", "injectivityChart"];
@@ -5118,6 +5118,56 @@
       `;
     }
 
+    function derivativeLogLogOverlays(analysis) {
+      const shapes = [];
+      const annotations = [];
+      const lastDt = analysis.points[analysis.points.length - 1]?.dt;
+      const highlightWindows = [
+        {start: analysis.window.start, end: analysis.window.end, label: "Horner fit", color: "rgba(255,186,102,0.12)", stroke: "#ffba66"},
+        analysis.radialRegime ? {start: analysis.radialRegime.startDt, end: analysis.radialRegime.endDt, label: "Radial plateau", color: "rgba(61,215,182,0.10)", stroke: "#3dd7b6"} : null,
+        analysis.boundaryModel?.onsetDt ? {start: analysis.boundaryModel.onsetDt, end: lastDt || analysis.boundaryModel.onsetDt, label: "Late-time / boundary", color: "rgba(199,166,255,0.08)", stroke: "#c7a6ff"} : null
+      ].filter(Boolean);
+      highlightWindows.forEach((win, index) => {
+        if (!(win.start > 0 && win.end > win.start)) return;
+        shapes.push({
+          type: "rect", xref: "x", yref: "paper", x0: win.start, x1: win.end, y0: 0, y1: 1,
+          fillcolor: win.color, line: {color: win.stroke, width: 1, dash: "dot"}, layer: "below"
+        });
+        annotations.push({
+          x: Math.sqrt(win.start * win.end), xref: "x", y: 1.01 - index * 0.035, yref: "paper",
+          xanchor: "left", yanchor: "bottom", text: win.label, showarrow: false,
+          font: {size: 10, color: win.stroke}, bgcolor: "rgba(7,21,37,0.72)", borderpad: 2
+        });
+      });
+      const regimePriority = ["wellbore storage", "radial flow", "dual-porosity behavior", "linear flow", "boundary-dominated flow"];
+      const regimes = (analysis.regimes || []).slice().sort((a, b) => {
+        const ai = regimePriority.indexOf(a.name), bi = regimePriority.indexOf(b.name);
+        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.startDt - b.startDt;
+      });
+      regimes.forEach((regime, index) => {
+        const x = Math.sqrt(regime.startDt * Math.max(regime.endDt, regime.startDt));
+        shapes.push({
+          type: "line", xref: "x", yref: "paper", x0: x, x1: x, y0: 0, y1: 1,
+          line: {color: "#ffd166", width: 1, dash: "dot"}, layer: "below"
+        });
+        annotations.push({
+          x, xref: "x", y: 0.94 - index * 0.052, yref: "paper", xanchor: "left", yanchor: "top",
+          text: `${regime.name} (${regime.confidence})`, showarrow: false,
+          font: {size: 11, color: "#ffd166"},
+          bgcolor: "rgba(7,21,37,0.78)", bordercolor: "rgba(255,209,102,0.35)", borderwidth: 1, borderpad: 3
+        });
+      });
+      if (analysis.boundaryModel?.onsetDt && lastDt > analysis.boundaryModel.onsetDt) {
+        const x = Math.sqrt(analysis.boundaryModel.onsetDt * lastDt);
+        annotations.push({
+          x, xref: "x", y: 0.08, yref: "paper", xanchor: "center", yanchor: "bottom",
+          text: "boundary effects", showarrow: false,
+          font: {size: 10, color: "#c7a6ff"}, bgcolor: "rgba(7,21,37,0.72)", borderpad: 2
+        });
+      }
+      return {shapes, annotations};
+    }
+
     function renderDerivative() {
       const analysis = state.analysis;
       if (!analysis || analysis.derivatives.length < 2) {
@@ -5149,7 +5199,16 @@
         if (deltaPts.length) {
           const p0 = deltaPts[0];
           traces.push({x: [p0.dt, tMax], y: [p0.deltaP, p0.deltaP * (tMax / p0.dt)], name: "unit slope",
-            mode: "lines", line: {color: "#c7a6ff", width: 1.3, dash: "dash"}, hoverinfo: "skip"});
+            mode: "lines", line: {color: "#7ee787", width: 1.3, dash: "dash"}, hoverinfo: "skip"});
+        }
+        const anchor = derPts[Math.floor(derPts.length * 0.35)] || derPts[0];
+        if (anchor?.dt > 0 && anchor?.derivative > 0) {
+          traces.push({
+            x: [tMin, tMax],
+            y: [anchor.derivative * Math.sqrt(tMin / anchor.dt), anchor.derivative * Math.sqrt(tMax / anchor.dt)],
+            name: "half slope", mode: "lines",
+            line: {color: "#9be7ff", width: 1.2, dash: "dash"}, hoverinfo: "skip"
+          });
         }
         const tcPressure = analysis.typeCurve?.pressure || analysis.typeCurve?.delta || [];
         const tcDeriv = analysis.typeCurve?.derivative || [];
@@ -5165,21 +5224,12 @@
             name: "type Δp′", mode: "lines", line: {color: "rgba(199,166,255,0.55)", width: 1.4, dash: "dot"}, hoverinfo: "skip"
           });
         }
-        const shapes = [];
-        const windows = [
-          {start: analysis.window.start, end: analysis.window.end, color: "rgba(255,186,102,0.12)"},
-          analysis.radialRegime ? {start: analysis.radialRegime.startDt, end: analysis.radialRegime.endDt, color: "rgba(61,215,182,0.10)"} : null,
-          analysis.boundaryModel?.onsetDt ? {start: analysis.boundaryModel.onsetDt, end: analysis.points[analysis.points.length - 1]?.dt || analysis.boundaryModel.onsetDt, color: "rgba(199,166,255,0.08)"} : null
-        ].filter(Boolean);
-        windows.forEach(w => {
-          if (!(w.start > 0 && w.end > w.start)) return;
-          shapes.push({
-            type: "rect", xref: "x", yref: "paper", x0: w.start, x1: w.end, y0: 0, y1: 1,
-            fillcolor: w.color, line: {width: 0}, layer: "below"
-          });
-        });
+        const overlays = derivativeLogLogOverlays(analysis);
         renderPlot(els.derivativeChart, traces, {
-          height: PLOT_HEIGHT, dragmode: "select", shapes,
+          height: PLOT_HEIGHT, dragmode: "select",
+          shapes: overlays.shapes,
+          annotations: overlays.annotations,
+          margin: {l: 58, r: 48, t: 52, b: 42},
           xaxis: axisStyle({title: "shut-in time Δt, hr (log)", type: "log"}),
           yaxis: axisStyle({title: "Δp and Δp′, psi (log)", type: "log"})
         });
