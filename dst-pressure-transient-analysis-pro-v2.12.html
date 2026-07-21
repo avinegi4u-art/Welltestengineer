@@ -5074,15 +5074,20 @@
             marker: {color: "#ffba66", size: 8, line: {color: "#fff", width: 0.5}},
             hovertemplate: "Δt %{customdata:.3f} hr<br>p %{y:.1f} psi<extra>radial fit</extra>"},
           {x: fitLine.x, y: fitLine.y, name: "fit", mode: "lines",
-            line: {color: "#3dd7b6", width: 2.3, dash: "dash"}, hoverinfo: "skip"},
-          {x: [0], y: [analysis.pStar], name: "p*", mode: "markers",
-            marker: {color: "#7ee787", size: 11, symbol: "star"},
-            hovertemplate: "p* %{y:.1f} psi<extra></extra>"}
+            line: {color: "#3dd7b6", width: 2.3, dash: "dash"}, hoverinfo: "skip"}
         ];
+        const xPad = Math.max((xMax - xMin) * 0.08, 1e-4);
+        const xLo = Math.max(0, xMin - xPad);
+        const xHi = xMax + xPad;
         renderPlot(els.hornerChart, traces, {
           height: PLOT_HEIGHT, dragmode: "select",
-          xaxis: axisStyle({title: "log₁₀ Horner superposition ratio  ←  p* at 1", autorange: "reversed"}),
-          yaxis: axisStyle({title: "BHP, psi"})
+          annotations: [{
+            xref: "paper", yref: "paper", x: 0.99, y: 0.98, xanchor: "right", yanchor: "top",
+            text: `p* ${fmt(analysis.pStar, 1)} psi`, showarrow: false,
+            font: {color: "#7ee787", size: 12}, bgcolor: "rgba(7,21,37,0.75)", bordercolor: "#7ee787", borderwidth: 1, borderpad: 4
+          }],
+          xaxis: axisStyle({title: "log₁₀ Horner superposition ratio  ←  p* at 1", range: [xHi, xLo]}),
+          yaxis: axisStyle({title: "BHP, psi", autorange: true})
         });
         if (els.hornerChart.removeAllListeners) els.hornerChart.removeAllListeners("plotly_selected");
         els.hornerChart.on("plotly_selected", ev => applyRegionSelection(ev));
