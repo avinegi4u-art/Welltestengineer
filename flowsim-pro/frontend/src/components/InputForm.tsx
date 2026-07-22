@@ -52,6 +52,12 @@ export default function InputForm({ inputs, onChange, activeTab, onTabChange }: 
     onChange({ ...inputs, well: { ...inputs.well, segments: [...inputs.well.segments, newSeg] } });
   };
 
+  const removeSegment = (index: number) => {
+    if (inputs.well.segments.length <= 1) return;
+    const segments = inputs.well.segments.filter((_, i) => i !== index);
+    onChange({ ...inputs, well: { ...inputs.well, segments } });
+  };
+
   const updateFlowlineSegment = (index: number, field: string, value: number) => {
     const segments = [...inputs.flowline.segments];
     segments[index] = { ...segments[index], [field]: value };
@@ -69,6 +75,11 @@ export default function InputForm({ inputs, onChange, activeTab, onTabChange }: 
       u_btu_hr_ft2_f: 2.0,
     };
     onChange({ ...inputs, flowline: { ...inputs.flowline, segments: [...inputs.flowline.segments, newSeg] } });
+  };
+
+  const removeFlowlineSegment = (index: number) => {
+    const segments = inputs.flowline.segments.filter((_, i) => i !== index);
+    onChange({ ...inputs, flowline: { segments } });
   };
 
   return (
@@ -112,7 +123,12 @@ export default function InputForm({ inputs, onChange, activeTab, onTabChange }: 
               </div>
               {inputs.well.segments.map((seg, i) => (
                 <div key={i} className="border border-border-light dark:border-border-dark rounded p-2 mb-2">
-                  <p className="text-xs font-medium mb-1">Segment {i + 1}</p>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs font-medium">Segment {i + 1}</p>
+                    {inputs.well.segments.length > 1 && (
+                      <button onClick={() => removeSegment(i)} className="text-[10px] text-red-500">Remove</button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <MiniField label="MD Top" value={seg.md_top_ft} onChange={(v) => updateSegment(i, "md_top_ft", v)} />
                     <MiniField label="MD Bot" value={seg.md_bottom_ft} onChange={(v) => updateSegment(i, "md_bottom_ft", v)} />
@@ -120,6 +136,7 @@ export default function InputForm({ inputs, onChange, activeTab, onTabChange }: 
                     <MiniField label="TVD Bot" value={seg.tvd_bottom_ft ?? seg.md_bottom_ft} onChange={(v) => updateSegment(i, "tvd_bottom_ft", v)} />
                     <MiniField label="ID (in)" value={seg.inner_diameter_in} onChange={(v) => updateSegment(i, "inner_diameter_in", v)} step={0.001} />
                     <MiniField label="Inc (°)" value={seg.inclination_deg} onChange={(v) => updateSegment(i, "inclination_deg", v)} />
+                    <MiniField label="Rough (ft)" value={seg.roughness_ft} onChange={(v) => updateSegment(i, "roughness_ft", v)} step={0.00001} />
                   </div>
                 </div>
               ))}
@@ -135,12 +152,18 @@ export default function InputForm({ inputs, onChange, activeTab, onTabChange }: 
             </div>
             {inputs.flowline.segments.map((seg, i) => (
               <div key={i} className="border border-border-light dark:border-border-dark rounded p-2 mb-2">
-                <p className="text-xs font-medium mb-1">Segment {i + 1}</p>
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-xs font-medium">Segment {i + 1}</p>
+                  <button onClick={() => removeFlowlineSegment(i)} className="text-[10px] text-red-500">Remove</button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <MiniField label="Length (ft)" value={seg.length_ft} onChange={(v) => updateFlowlineSegment(i, "length_ft", v)} />
                   <MiniField label="ID (in)" value={seg.inner_diameter_in} onChange={(v) => updateFlowlineSegment(i, "inner_diameter_in", v)} step={0.001} />
                   <MiniField label="Elev Δ (ft)" value={seg.elevation_change_ft} onChange={(v) => updateFlowlineSegment(i, "elevation_change_ft", v)} />
+                  <MiniField label="Inc (°)" value={seg.inclination_deg} onChange={(v) => updateFlowlineSegment(i, "inclination_deg", v)} />
                   <MiniField label="Ambient (°F)" value={seg.ambient_temp_f} onChange={(v) => updateFlowlineSegment(i, "ambient_temp_f", v)} />
+                  <MiniField label="U" value={seg.u_btu_hr_ft2_f} onChange={(v) => updateFlowlineSegment(i, "u_btu_hr_ft2_f", v)} step={0.1} />
+                  <MiniField label="Rough (ft)" value={seg.roughness_ft} onChange={(v) => updateFlowlineSegment(i, "roughness_ft", v)} step={0.00001} />
                 </div>
               </div>
             ))}

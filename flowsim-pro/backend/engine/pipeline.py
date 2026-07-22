@@ -1,5 +1,7 @@
 """
 Flowline and pipeline pressure/temperature traverse model.
+
+Uses Beggs-Brill (default) multiphase correlation consistent with tubing VLP.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from engine.beggs_brill import segment_gradients as bb_segment_gradients
 from engine.fluid import FluidModel
 from engine.heat_transfer import HeatTransferConfig, outlet_temperature
 
@@ -51,16 +54,29 @@ class PipelineModel:
         fluid: FluidModel,
         geometry: PipelineGeometry,
         heat_config: HeatTransferConfig | None = None,
+        flow_correlation: str = "beggs_brill",
     ) -> None:
         self.fluid = fluid
         self.geometry = geometry
         self.heat_config = heat_config or HeatTransferConfig()
+        self.flow_correlation = flow_correlation
 
     def friction_factor(self, reynolds: float, roughness_ft: float, diameter_ft: float) -> float:
         if reynolds < 2100:
             return 64.0 / max(reynolds, 1.0)
         rel_rough = roughness_ft / max(diameter_ft, 1e-6)
         return float(0.25 / (math.log10(rel_rough / 3.7 + 5.74 / reynolds**0.9) ** 2))
+
+    def _inclination_from_elevation(self, seg: PipelineSegment) -> float:
+        """Infer pipe inclination from elevation change when inclination is near-horizontal."""
+        if abs(seg.inclination_deg) > 1e-6 and abs(seg.elevation_change_ft) < 1e-6:
+            return seg.inclination_deg
+        length = max(seg.length_ft, 1.0)
+        elev = seg.elevation_change_ft
+        if abs(elev) < 1e-9:
+            return seg.inclination_deg
+        ratio = max(-1.0, min(1.0, elev / length))
+        return math.degrees(math.asin(ratio))
 
     def segment_dp(
         self,
@@ -69,31 +85,66 @@ class PipelineModel:
         temperature_f: float,
         liquid_rate_stb_d: float,
     ) -> tuple[float, float, float]:
-        length_ft = seg.length_ft
+        """
+        Pressure drop over segment (psi), liquid holdup, mixture velocity (ft/s).
+        Flow is downstream (inlet → outlet); ΔP is positive when pressure falls.
+        """
+        length_ft = max(seg.length_ft, 1.0)
         diameter_ft = seg.inner_diameter_in / 12.0
         area_ft2 = math.pi * (diameter_ft / 2.0) ** 2
+        inclination = self._inclination_from_elevation(seg)
 
         state = self.fluid.mixture_properties(
-            pressure_psi, temperature_f, liquid_rate_stb_d, seg.inclination_deg
+            pressure_psi, temperature_f, liquid_rate_stb_d, inclination
         )
+        bo = state.oil_fvf
+        bw = state.water_fvf
+        ql = liquid_rate_stb_d * (bo * (1 - state.water_cut) + bw * state.water_cut) / 86400.0
+        qg = state.gas_rate_mscf_d * 1000.0 * state.gas_fvf / 86400.0
+        vsl = ql / area_ft2
+        vsg = qg / area_ft2
+        vm = vsl + vsg
+
+        if self.flow_correlation == "beggs_brill":
+            rho_l = (
+                state.oil_density_lb_ft3 * (1 - state.water_cut)
+                + state.water_density_lb_ft3 * state.water_cut
+            )
+            mu_l = (
+                state.oil_viscosity_cp * (1 - state.water_cut)
+                + state.water_viscosity_cp * state.water_cut
+            ) * 0.000672
+            bb = bb_segment_gradients(
+                diameter_ft=diameter_ft,
+                roughness_ft=seg.roughness_ft,
+                length_ft=length_ft,
+                inclination_deg=inclination,
+                superficial_liquid_ft_s=vsl,
+                superficial_gas_ft_s=vsg,
+                liquid_density_lb_ft3=rho_l,
+                gas_density_lb_ft3=state.gas_density_lb_ft3,
+                liquid_viscosity_lb_ft_s=mu_l,
+                marching_downward=False,
+            )
+            # Upstream→downstream: pressure falls with friction + adverse elevation
+            dp = abs(bb.dpdz_friction_psi_ft) * length_ft
+            if seg.elevation_change_ft > 0:
+                # Uphill: add hydrostatic
+                rho_mix = max(state.mixture_density_lb_ft3, 1.0)
+                dp += rho_mix * seg.elevation_change_ft / 144.0
+            elif seg.elevation_change_ft < 0:
+                rho_mix = max(state.mixture_density_lb_ft3, 1.0)
+                dp = max(dp + rho_mix * seg.elevation_change_ft / 144.0, 0.0)
+            return dp, bb.liquid_holdup, vm
+
+        # Legacy homogeneous fallback
         rho = state.mixture_density_lb_ft3
         mu = state.mixture_viscosity_cp * 0.000672
-
-        ql = liquid_rate_stb_d * 5.615 / 86400.0
-        vm = ql / area_ft2
-        re = max(rho * vm * diameter_ft / max(mu, 1e-8), 1.0)
-        f = self.friction_factor(re, seg.roughness_ft, diameter_ft)
-
         re = max(rho * vm * diameter_ft / max(mu, 1e-8), 100.0)
         f = min(self.friction_factor(re, seg.roughness_ft, diameter_ft), 0.08)
-
-        length_ft = max(length_ft, 1.0)
         dpdz_fric = min(f * rho * vm**2 / (2.0 * diameter_ft * 144.0), 0.05)
-        incl_rad = math.radians(seg.inclination_deg)
-        dpdz_grav = rho * math.sin(incl_rad) / 144.0
         dpdz_elev = rho * seg.elevation_change_ft / (length_ft * 144.0)
         dp = (dpdz_fric + abs(dpdz_elev)) * length_ft
-        dpdz = dp / length_ft
         return dp, state.liquid_holdup, vm
 
     def traverse(

@@ -143,3 +143,53 @@ export interface SensitivityResult {
   curves: SensitivityCurve[];
   diagnostics: string[];
 }
+
+export interface TubingCandidate {
+  label: string;
+  od_in: number;
+  weight_lb_ft: number;
+  inner_diameter_in: number;
+  operating_rate_stb_d: number;
+  operating_bhp_psi: number;
+  status: string;
+  message: string;
+  max_mixture_velocity_ft_s: number;
+  erosional_velocity_ft_s: number;
+  erosion_ratio: number;
+  erosion_ok: boolean;
+  choke_dp_psi: number;
+  rank_score: number;
+  recommended: boolean;
+}
+
+export interface TubingSelectionResult {
+  recommended_label: string | null;
+  recommended_id_in: number | null;
+  c_factor: number;
+  diagnostics: string[];
+  candidates: TubingCandidate[];
+}
+
+export interface FlowlineCandidate {
+  label: string;
+  nominal_in: number;
+  schedule: string;
+  inner_diameter_in: number;
+  pressure_drop_psi: number;
+  outlet_pressure_psi: number;
+  max_velocity_ft_s: number;
+  erosional_velocity_ft_s: number;
+  erosion_ratio: number;
+  erosion_ok: boolean;
+  meets_dp_target: boolean;
+  recommended: boolean;
+}
+
+export interface FlowlineSelectionResult {
+  recommended_label: string | null;
+  recommended_id_in: number | null;
+  target_dp_psi: number;
+  c_factor: number;
+  diagnostics: string[];
+  candidates: FlowlineCandidate[];
+}

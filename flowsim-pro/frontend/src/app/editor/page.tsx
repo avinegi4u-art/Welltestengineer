@@ -10,6 +10,8 @@ import ProfileCharts from "@/components/ProfileCharts";
 import ResultsPanel from "@/components/ResultsPanel";
 import AssumptionsPanel from "@/components/AssumptionsPanel";
 import SensitivityPanel from "@/components/SensitivityPanel";
+import TubingSelectorPanel from "@/components/TubingSelectorPanel";
+import FlowlineSelectorPanel from "@/components/FlowlineSelectorPanel";
 import { Save, Play, Download } from "lucide-react";
 
 function EditorContent() {
@@ -111,6 +113,29 @@ function EditorContent() {
     URL.revokeObjectURL(url);
   };
 
+  const applyTubingId = (idIn: number) => {
+    const segments = inputs.well.segments.map((s) => ({ ...s, inner_diameter_in: idIn }));
+    setInputs({ ...inputs, well: { ...inputs.well, segments } });
+  };
+
+  const applyFlowlineId = (idIn: number) => {
+    const segments =
+      inputs.flowline.segments.length > 0
+        ? inputs.flowline.segments.map((s) => ({ ...s, inner_diameter_in: idIn }))
+        : [
+            {
+              length_ft: 5000,
+              inner_diameter_in: idIn,
+              roughness_ft: 0.00018,
+              inclination_deg: 0,
+              elevation_change_ft: 0,
+              ambient_temp_f: 70,
+              u_btu_hr_ft2_f: 2.0,
+            },
+          ];
+    setInputs({ ...inputs, flowline: { segments } });
+  };
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col">
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border-light dark:border-border-dark bg-panel-light dark:bg-panel-dark">
@@ -149,14 +174,12 @@ function EditorContent() {
         <div className="col-span-3 overflow-hidden">
           <InputForm inputs={inputs} onChange={setInputs} activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
-        <div className="col-span-5 overflow-y-auto">
+        <div className="col-span-5 overflow-y-auto space-y-3">
           <ProfileCharts output={output} />
-          <div className="mt-3">
-            <SensitivityPanel caseId={selectedId} />
-          </div>
-          <div className="mt-3">
-            <AssumptionsPanel output={output} />
-          </div>
+          <SensitivityPanel caseId={selectedId} />
+          <TubingSelectorPanel caseId={selectedId} onApplyId={applyTubingId} />
+          <FlowlineSelectorPanel caseId={selectedId} onApplyId={applyFlowlineId} />
+          <AssumptionsPanel output={output} />
         </div>
         <div className="col-span-2 overflow-hidden">
           <ResultsPanel output={output} loading={solving} />

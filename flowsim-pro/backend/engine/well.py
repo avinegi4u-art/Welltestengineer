@@ -166,19 +166,55 @@ class WellModel:
 
         return delta_p, state.liquid_holdup, dpdz_total
 
-    def choke_pressure_drop(self, liquid_rate_stb_d: float, whp_psi: float) -> float:
-        """Simplified choke delta-P using orifice equation."""
-        choke_in = self.geometry.choke_size_64_in / 64.0
+    def choke_pressure_drop(
+        self,
+        liquid_rate_stb_d: float,
+        downstream_psi: float,
+        temperature_f: float | None = None,
+    ) -> float:
+        """
+        Multiphase choke ΔP (orifice form).
+
+        Treats ``downstream_psi`` as pressure after the choke (line/separator side).
+        Returns upstream−downstream drop so tubing WHP = downstream + ΔP.
+        """
+        bean_64 = self.geometry.choke_size_64_in
+        if bean_64 <= 0:
+            return 0.0
+        choke_in = bean_64 / 64.0
         if choke_in <= 0:
             return 0.0
-        area_in2 = math.pi * (choke_in / 2.0) ** 2
-        cd = 0.85
-        rho = 50.0  # approximate mixture lb/ft3
-        q_ft3_s = liquid_rate_stb_d * 5.615 / 86400.0
-        if area_in2 <= 0:
+
+        t = temperature_f if temperature_f is not None else (self.heat_config.ambient_temp_f + 20.0)
+        p_eval = max(downstream_psi, 14.7)
+        state = self.fluid.mixture_properties(p_eval, t, liquid_rate_stb_d, 0.0)
+        bo = state.oil_fvf
+        bw = state.water_fvf
+        ql = liquid_rate_stb_d * (bo * (1 - state.water_cut) + bw * state.water_cut) / 86400.0
+        qg = state.gas_rate_mscf_d * 1000.0 * state.gas_fvf / 86400.0
+        q_mix = ql + qg
+
+        area_ft2 = math.pi * ((choke_in / 12.0) / 2.0) ** 2
+        if area_ft2 <= 0:
             return 0.0
-        dp_psi = (q_ft3_s / (cd * area_in2 / 144.0)) ** 2 * rho / (2.0 * 32.174) / 144.0
-        return min(dp_psi, whp_psi * 0.8)
+
+        cd = 0.85
+        rho = max(state.mixture_density_lb_ft3, 1.0)
+        velocity = q_mix / area_ft2
+        # Bernoulli orifice: ΔP = ρ v² / (2 g_c Cd²) converted to psi
+        dp_psi = rho * velocity**2 / (2.0 * self.GRAVITY_FT_S2 * cd**2) / 144.0
+        # Cap extreme values for tiny beans / high rates
+        return min(max(dp_psi, 0.0), max(downstream_psi * 3.0, 500.0))
+
+    def effective_tubing_whp(
+        self,
+        downstream_whp_psi: float,
+        liquid_rate_stb_d: float,
+        temperature_f: float | None = None,
+    ) -> tuple[float, float]:
+        """Return (tubing-side WHP, choke ΔP) for VLP marches."""
+        dp = self.choke_pressure_drop(liquid_rate_stb_d, downstream_whp_psi, temperature_f)
+        return downstream_whp_psi + dp, dp
 
     def traverse_bottom_up(
         self,
@@ -240,12 +276,22 @@ class WellModel:
         self,
         whp_psi: float | None = None,
         liquid_rate: float | None = None,
+        apply_choke: bool = True,
     ) -> list[ProfilePoint]:
-        """March from wellhead to bottomhole (VLP)."""
+        """
+        March from wellhead to bottomhole (VLP).
+
+        ``whp_psi`` is the pressure downstream of the surface choke (line/separator).
+        When ``apply_choke`` is True, tubing-side starting pressure includes choke ΔP.
+        """
         rate = liquid_rate or self.geometry.liquid_rate_stb_d
-        whp = whp_psi or self.geometry.wellhead_pressure_psi
-        p = max(whp, 14.7)
+        downstream = whp_psi if whp_psi is not None else self.geometry.wellhead_pressure_psi
         t = self.heat_config.ambient_temp_f + 20.0
+        if apply_choke:
+            p, _choke_dp = self.effective_tubing_whp(downstream, rate, t)
+        else:
+            p = downstream
+        p = max(p, 14.7)
         profile: list[ProfilePoint] = []
 
         sorted_segs = sorted(self.geometry.segments, key=lambda s: s.md_top_ft)

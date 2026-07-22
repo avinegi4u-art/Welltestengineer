@@ -2,6 +2,8 @@
 
 Steady-state multiphase flow simulation for wells, flowlines, pipelines, and production networks.
 
+**Version 1.1** — Phase A (Beggs-Brill VLP) + Phase B (tubing selector) + Phase C (flowline selector).
+
 ## Architecture
 
 ```
@@ -19,10 +21,13 @@ flowsim-pro/
 | Module | Description |
 |--------|-------------|
 | `fluid.py` | Black-oil PVT (Standing Bo, Beggs-Robinson viscosity) |
-| `well.py` | Tubing pressure traverse with hydrostatic + friction |
-| `pipeline.py` | Flowline/pipeline pressure and temperature profiles |
-| `nodal.py` | IPR/VLP nodal analysis with operating point |
-| `network.py` | Tree network iterative pressure balance solver |
+| `beggs_brill.py` | Beggs-Brill (1973) holdup + two-phase friction |
+| `well.py` | Tubing VLP with choke orifice ΔP |
+| `pipeline.py` | Flowline/pipeline profiles (Beggs-Brill) |
+| `nodal.py` | IPR/VLP nodal analysis + sensitivity |
+| `catalog.py` | Tubing & flowline size catalogs |
+| `selection.py` | Phase B/C tubing & flowline auto-sizing |
+| `network.py` | Tree network iterative pressure balance |
 | `heat_transfer.py` | Steady-state lumped heat exchange model |
 | `solver.py` | Orchestrates end-to-end case solution |
 
@@ -35,7 +40,7 @@ cd flowsim-pro/backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+PYTHONPATH=. uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
@@ -54,7 +59,7 @@ Open http://localhost:3000
 
 ```bash
 cd flowsim-pro/backend
-pytest tests/ -v
+PYTHONPATH=. python -m pytest tests/ -v
 ```
 
 ## API Endpoints
@@ -62,13 +67,24 @@ pytest tests/ -v
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/health` | GET | Health check |
+| `/api/catalog` | GET | Tubing & flowline size catalogs |
 | `/api/cases` | GET/POST | List/create cases |
 | `/api/cases/{id}` | GET/PUT/DELETE | Case CRUD |
 | `/api/cases/{id}/duplicate` | POST | Duplicate case |
 | `/api/solve` | POST | Run simulation |
 | `/api/compare` | POST | Compare multiple cases |
 | `/api/sensitivity` | POST | Sensitivity analysis |
+| `/api/select/tubing` | POST | Phase B tubing catalog sweep |
+| `/api/select/flowline` | POST | Phase C flowline diameter sweep |
 | `/api/export` | POST | Export PDF/JSON/CSV report |
+
+## Phases
+
+| Phase | Capability |
+|-------|------------|
+| A | Beggs-Brill VLP, nodal diagnostics, sensitivity overlays |
+| B | Tubing catalog auto-sweep, rate/BHP/velocity ranking, API RP 14E erosion screen, Apply ID |
+| C | Flowline diameter sweep, ΔP/velocity charts, min-ID recommendation for target ΔP |
 
 ## Example Case
 
@@ -77,9 +93,11 @@ See `backend/sample_data/deviated_well_example.json` — a deviated producing we
 ## Model Assumptions
 
 - **Fluid**: Black-oil with Standing Bo, Beggs-Robinson viscosity, simplified Z-factor
-- **Multiphase flow**: Drift-flux holdup with Darcy-Weisbach friction (Colebrook-White)
+- **Multiphase flow**: Beggs-Brill (tubing + flowline)
+- **Choke**: Multiphase orifice; WHP boundary is downstream of choke
 - **Heat transfer**: Exponential approach to ambient (lumped UA)
 - **IPR**: Linear PI or Vogel correlation
+- **Erosion**: API RP 14E `Ve = C / sqrt(ρ)` screening in selectors
 - **Units**: Field units (psi, ft, stb/d, °F)
 
 ## License

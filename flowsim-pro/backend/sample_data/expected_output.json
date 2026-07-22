@@ -1,20 +1,23 @@
 {
-  "description": "Expected output ranges for deviated_well_example.json (approximate)",
+  "description": "Expected output ranges for deviated_well_example.json (approximate, Phase B/C with choke + Beggs-Brill flowline)",
   "input_summary": {
     "liquid_rate_stb_d": 2200,
     "wellhead_pressure_psi": 480,
     "reservoir_pressure_psi": 3600
   },
   "expected_ranges": {
-    "bottomhole_pressure_psi": { "min": 2500, "max": 4500 },
-    "wellhead_pressure_psi": { "min": 400, "max": 600 },
-    "flowline_pressure_drop_psi": { "min": 5, "max": 200 },
-    "nodal_operating_rate_stb_d": { "min": 500, "max": 4000 },
-    "well_profile_points": { "min": 10 }
+    "bottomhole_pressure_psi": { "min": 2000, "max": 5000 },
+    "wellhead_pressure_psi": { "min": 400, "max": 800 },
+    "flowline_pressure_drop_psi": { "min": 5, "max": 400 },
+    "nodal_operating_rate_stb_d": { "min": 200, "max": 5000 },
+    "well_profile_points": { "min": 10 },
+    "drawdown_psi": { "min": 0, "max": 3000 }
   },
   "validation_notes": [
     "BHP must exceed WHP for producing well",
     "Flowline outlet pressure < wellhead pressure",
-    "Nodal operating point should converge with error < 50 psi"
+    "Drawdown = reservoir pressure − BHP",
+    "Nodal operating point should converge with error < 50 psi",
+    "Choke ΔP increases VLP required BHP vs open choke"
   ]
 }

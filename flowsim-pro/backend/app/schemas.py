@@ -128,3 +128,14 @@ class SensitivityRequest(BaseModel):
 class ExportRequest(BaseModel):
     case_id: int
     format: str = "pdf"  # pdf | json | csv
+
+
+class TubingSelectRequest(BaseModel):
+    case_id: int
+    c_factor: float = 100.0  # API RP 14E erosional C-factor
+
+
+class FlowlineSelectRequest(BaseModel):
+    case_id: int
+    target_dp_psi: float = 50.0
+    c_factor: float = 100.0

@@ -1,4 +1,11 @@
-import type { CaseInputs, SimulationCase, SimulationOutput, SensitivityResult } from "./types";
+import type {
+  CaseInputs,
+  SimulationCase,
+  SimulationOutput,
+  SensitivityResult,
+  TubingSelectionResult,
+  FlowlineSelectionResult,
+} from "./types";
 
 const API_BASE = "/api";
 
@@ -49,6 +56,21 @@ export const api = {
       body: JSON.stringify({ case_id: caseId, parameter, values }),
     }),
 
+  selectTubing: (caseId: number, cFactor = 100) =>
+    request<TubingSelectionResult>("/select/tubing", {
+      method: "POST",
+      body: JSON.stringify({ case_id: caseId, c_factor: cFactor }),
+    }),
+
+  selectFlowline: (caseId: number, targetDpPsi = 50, cFactor = 100) =>
+    request<FlowlineSelectionResult>("/select/flowline", {
+      method: "POST",
+      body: JSON.stringify({ case_id: caseId, target_dp_psi: targetDpPsi, c_factor: cFactor }),
+    }),
+
+  getCatalog: () =>
+    request<{ tubing: Record<string, unknown>[]; flowline: Record<string, unknown>[] }>("/catalog"),
+
   exportReport: async (caseId: number, format: "pdf" | "json" | "csv") => {
     const res = await fetch(`${API_BASE}/export`, {
       method: "POST",
@@ -86,7 +108,19 @@ export const defaultInputs: CaseInputs = {
     choke_size_64_in: 32,
     wellhead_pressure_psi: 500,
   },
-  flowline: { segments: [] },
+  flowline: {
+    segments: [
+      {
+        length_ft: 5000,
+        inner_diameter_in: 6.065,
+        roughness_ft: 0.00018,
+        inclination_deg: 0,
+        elevation_change_ft: 20,
+        ambient_temp_f: 70,
+        u_btu_hr_ft2_f: 2.0,
+      },
+    ],
+  },
   nodal: { reservoir_pressure_psi: 3500, productivity_index: 2.0, ipr_model: "pi" },
   network: {},
   heat_transfer: { ambient_temp_f: 70, overall_u_btu_hr_ft2_f: 3.0, burial_depth_ft: 0, insulation_thickness_in: 0 },

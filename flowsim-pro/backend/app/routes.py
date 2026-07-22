@@ -11,20 +11,24 @@ from sqlalchemy.orm import Session
 
 from app.database import SimulationCase, get_db
 from app.report import generate_pdf_report
+from engine.fluid import FluidModel, FluidProperties
+from engine.nodal import NodalAnalyzer
+from engine.solver import SimulationSolver
+from engine.well import TubingSegment, WellGeometry
+from engine.pipeline import PipelineSegment
+from engine.catalog import catalog_to_dict
+from engine.selection import FlowlineSelector, TubingSelector
 from app.schemas import (
     CaseCreate,
     CaseResponse,
     CaseUpdate,
     CompareRequest,
     ExportRequest,
+    FlowlineSelectRequest,
     SensitivityRequest,
     SolveRequest,
+    TubingSelectRequest,
 )
-from engine.fluid import FluidModel, FluidProperties
-from engine.nodal import NodalAnalyzer
-from engine.solver import SimulationSolver
-from engine.well import TubingSegment, WellGeometry
-
 router = APIRouter()
 
 
@@ -54,8 +58,107 @@ def _output_to_dict(output) -> dict:
 
 @router.get("/health")
 def health():
-    return {"status": "ok", "app": "FlowSim Pro", "version": "1.0.0"}
+    return {"status": "ok", "app": "FlowSim Pro", "version": "1.1.0", "phases": ["A", "B", "C"]}
 
+
+@router.get("/catalog")
+def get_catalog():
+    """Tubing and flowline size catalogs for selection studies."""
+    return catalog_to_dict()
+
+
+def _build_analyzer_from_case(case: SimulationCase) -> tuple[NodalAnalyzer, dict]:
+    inputs = case.inputs
+    fluid = FluidModel(FluidProperties(**inputs.get("fluid", {})))
+    well_data = inputs.get("well", {})
+    segments = [
+        TubingSegment(
+            md_top_ft=s["md_top_ft"],
+            md_bottom_ft=s["md_bottom_ft"],
+            tvd_top_ft=s.get("tvd_top_ft", s["md_top_ft"]),
+            tvd_bottom_ft=s.get("tvd_bottom_ft", s["md_bottom_ft"]),
+            inner_diameter_in=s.get("inner_diameter_in", 3.958),
+            roughness_ft=s.get("roughness_ft", 0.00015),
+            inclination_deg=s.get("inclination_deg", 90.0),
+        )
+        for s in well_data.get("segments", [])
+    ]
+    well_geo = WellGeometry(
+        segments=segments,
+        packer_depth_ft=well_data.get("packer_depth_ft", 8000),
+        perforation_depth_ft=well_data.get("perforation_depth_ft", 8500),
+        choke_size_64_in=well_data.get("choke_size_64_in", 32),
+        wellhead_pressure_psi=inputs.get("boundary_conditions", {}).get("wellhead_pressure_psi", 500),
+    )
+    nodal_cfg = inputs.get("nodal", {})
+    analyzer = NodalAnalyzer(
+        fluid,
+        well_geo,
+        reservoir_pressure_psi=nodal_cfg.get("reservoir_pressure_psi", 3500),
+        productivity_index_stb_d_psi=nodal_cfg.get("productivity_index", 2.0),
+        ipr_model=nodal_cfg.get("ipr_model", "pi"),
+        flow_correlation="beggs_brill",
+    )
+    return analyzer, inputs
+
+
+@router.post("/select/tubing")
+def select_tubing(request: TubingSelectRequest, db: Session = Depends(get_db)):
+    """Phase B — tubing catalog auto-sweep with nodal ranking and erosion screen."""
+    case = db.query(SimulationCase).filter(SimulationCase.id == request.case_id).first()
+    if not case:
+        raise HTTPException(404, "Case not found")
+    analyzer, inputs = _build_analyzer_from_case(case)
+    whp = inputs.get("boundary_conditions", {}).get("wellhead_pressure_psi", 500)
+    selector = TubingSelector(
+        analyzer.fluid,
+        analyzer.well_geometry,
+        reservoir_pressure_psi=analyzer.reservoir_pressure,
+        productivity_index=analyzer.pi,
+        ipr_model=analyzer.ipr_model,
+        whp_psi=whp,
+        c_factor=request.c_factor,
+    )
+    result = selector.evaluate()
+    return TubingSelector.to_dict(result)
+
+
+@router.post("/select/flowline")
+def select_flowline(request: FlowlineSelectRequest, db: Session = Depends(get_db)):
+    """Phase C — flowline diameter sweep with ΔP / velocity ranking."""
+    case = db.query(SimulationCase).filter(SimulationCase.id == request.case_id).first()
+    if not case:
+        raise HTTPException(404, "Case not found")
+    inputs = case.inputs
+    fluid = FluidModel(FluidProperties(**inputs.get("fluid", {})))
+    bc = inputs.get("boundary_conditions", {})
+    rate = bc.get("liquid_rate_stb_d", 2000)
+    whp = bc.get("wellhead_pressure_psi", 500)
+    fl = inputs.get("flowline", {})
+    segments = [
+        PipelineSegment(
+            length_ft=s["length_ft"],
+            inner_diameter_in=s.get("inner_diameter_in", 6.0),
+            roughness_ft=s.get("roughness_ft", 0.00015),
+            inclination_deg=s.get("inclination_deg", 0.0),
+            elevation_change_ft=s.get("elevation_change_ft", 0.0),
+            ambient_temp_f=s.get("ambient_temp_f", 70.0),
+            u_btu_hr_ft2_f=s.get("u_btu_hr_ft2_f", 2.0),
+        )
+        for s in fl.get("segments", [])
+    ]
+    inlet_t = fluid.props.reservoir_temp_f - 40.0
+    selector = FlowlineSelector(
+        fluid,
+        segments,
+        inlet_pressure_psi=whp,
+        inlet_temperature_f=inlet_t,
+        liquid_rate_stb_d=rate,
+        target_dp_psi=request.target_dp_psi,
+        c_factor=request.c_factor,
+    )
+    result = selector.evaluate()
+    return FlowlineSelector.to_dict(result)
 
 @router.get("/manual")
 def download_manual():
@@ -258,29 +361,9 @@ def sensitivity_analysis(request: SensitivityRequest, db: Session = Depends(get_
     if not case:
         raise HTTPException(404, "Case not found")
 
-    inputs = case.inputs
-    fluid = FluidModel(FluidProperties(**inputs.get("fluid", {})))
-    well_data = inputs.get("well", {})
-    segments = [TubingSegment(**{**s, "tvd_top_ft": s.get("tvd_top_ft", s["md_top_ft"]), "tvd_bottom_ft": s.get("tvd_bottom_ft", s["md_bottom_ft"])}) for s in well_data.get("segments", [])]
-    well_geo = WellGeometry(
-        segments=segments,
-        packer_depth_ft=well_data.get("packer_depth_ft", 8000),
-        perforation_depth_ft=well_data.get("perforation_depth_ft", 8500),
-        choke_size_64_in=well_data.get("choke_size_64_in", 32),
-        wellhead_pressure_psi=inputs.get("boundary_conditions", {}).get("wellhead_pressure_psi", 500),
-    )
-    nodal_cfg = inputs.get("nodal", {})
-    analyzer = NodalAnalyzer(
-        fluid,
-        well_geo,
-        reservoir_pressure_psi=nodal_cfg.get("reservoir_pressure_psi", 3500),
-        productivity_index_stb_d_psi=nodal_cfg.get("productivity_index", 2.0),
-        ipr_model=nodal_cfg.get("ipr_model", "pi"),
-        flow_correlation="beggs_brill",
-    )
+    analyzer, _inputs = _build_analyzer_from_case(case)
     result = analyzer.sensitivity(request.parameter, request.values, include_vlp_curves=True)
     return analyzer.sensitivity_to_dict(result)
-
 
 @router.post("/export")
 def export_report(request: ExportRequest, db: Session = Depends(get_db)):

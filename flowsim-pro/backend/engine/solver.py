@@ -17,9 +17,11 @@ from engine.well import TubingSegment, WellGeometry, WellModel
 
 ASSUMPTIONS = {
     "fluid_model": "Black-oil with Standing Bo and Beggs-Robinson viscosity",
-    "multiphase_flow": "Beggs-Brill (1973) holdup and two-phase friction",
+    "multiphase_flow": "Beggs-Brill (1973) holdup and two-phase friction (tubing + flowline)",
+    "choke": "Multiphase orifice ΔP; WHP boundary is downstream of choke",
     "heat_transfer": "Steady-state lumped UA exponential approach to ambient",
     "ipr_models": ["Linear PI", "Vogel"],
+    "selection": "Tubing catalog nodal ranking + flowline diameter sweep (API RP 14E Ve)",
     "network_solver": "Iterative pressure balance (Gauss-Seidel relaxation)",
     "units": "Field units (psi, ft, stb/d, °F)",
 }
@@ -169,7 +171,7 @@ class SimulationSolver:
             # Flowline traverse
             if self.input.flowline.get("segments"):
                 pipe_geo = self._build_pipeline_geometry(whp_actual, whp_temp, rate)
-                pipe_model = PipelineModel(fluid, pipe_geo, heat)
+                pipe_model = PipelineModel(fluid, pipe_geo, heat, flow_correlation="beggs_brill")
                 fprofile = pipe_model.traverse()
                 flowline_profile = [
                     {
@@ -186,12 +188,17 @@ class SimulationSolver:
                     fprofile[0].pressure_psi - fprofile[-1].pressure_psi if fprofile else 0
                 )
 
+            # Reservoir drawdown = Pr − BHP (not bubble-point offset)
+            pr = self.input.nodal.get("reservoir_pressure_psi", 3500.0)
+            bhp_val = bhp or 0.0
+            choke_dp = well_model.choke_pressure_drop(rate, whp)
             summary.update(
                 {
                     "liquid_rate_stb_d": rate,
                     "wellhead_pressure_psi": round(whp_actual, 2),
-                    "bottomhole_pressure_psi": round(bhp or 0, 2),
-                    "drawdown_psi": round((bhp or 0) - fluid.props.bubble_point_psi, 2),
+                    "bottomhole_pressure_psi": round(bhp_val, 2),
+                    "drawdown_psi": round(pr - bhp_val, 2),
+                    "choke_dp_psi": round(choke_dp, 2),
                     "total_well_md_ft": max((p.md_ft for p in profile), default=0),
                 }
             )

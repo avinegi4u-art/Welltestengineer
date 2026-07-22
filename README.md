@@ -21,5 +21,6 @@ Well testing and completion engineering tools (single-file HTML apps).
 | `acid-calculator-v5.html` | Acid job calculator |
 | `CasingDesign.html` | WellCat-style casing screening v2.1 — burst, collapse, tension (superseded by Pro v3) |
 | `casing-design-pro-v3.html` | **Casing Design Pro v5** — wear allowance, APB, deviation survey/DLS, multi-fluid columns, running drag/shock, plus all v4 depth-wise triaxial engine. Redesigned UI: workflow stepper, KPI dashboard, filters, toasts, keyboard shortcuts (`Ctrl+Enter` to run) |
+| `flowsim-pro/` | **FlowSim Pro v1.1** — steady-state multiphase flow (Beggs-Brill VLP, nodal analysis, tubing/flowline selectors). FastAPI + Next.js. See `flowsim-pro/README.md` |
 
-Open any `.html` file in a browser — no build step required.
+Open any `.html` file in a browser — no build step required. For FlowSim Pro, start the backend and frontend (see its README).
