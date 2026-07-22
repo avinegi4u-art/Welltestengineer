@@ -172,7 +172,7 @@ class TubingSelector:
             )
             ve = erosional_velocity_ft_s(rho, self.c_factor)
             ratio = vm / max(ve, 1e-6)
-            erosion_ok = ratio <= 1.0
+            erosion_ok = bool(ratio <= 1.0)
 
             # Prefer higher rate, then erosion-safe, then lower BHP drawdown proxy
             rank = rate
@@ -187,16 +187,16 @@ class TubingSelector:
                     od_in=size.od_in,
                     weight_lb_ft=size.weight_lb_ft,
                     inner_diameter_in=size.inner_diameter_in,
-                    operating_rate_stb_d=round(rate, 1),
-                    operating_bhp_psi=round(nodal.operating_bhp_psi, 1),
+                    operating_rate_stb_d=round(float(rate), 1),
+                    operating_bhp_psi=round(float(nodal.operating_bhp_psi), 1),
                     status=nodal.status,
                     message=nodal.message,
-                    max_mixture_velocity_ft_s=round(vm, 3),
-                    erosional_velocity_ft_s=round(ve, 3),
-                    erosion_ratio=round(ratio, 3),
+                    max_mixture_velocity_ft_s=round(float(vm), 3),
+                    erosional_velocity_ft_s=round(float(ve), 3),
+                    erosion_ratio=round(float(ratio), 3),
                     erosion_ok=erosion_ok,
-                    choke_dp_psi=round(choke_dp, 1),
-                    rank_score=rank,
+                    choke_dp_psi=round(float(choke_dp), 1),
+                    rank_score=float(rank),
                 )
             )
             diagnostics.append(
@@ -312,23 +312,36 @@ class FlowlineSelector:
                 liquid_rate_stb_d=self.rate,
             )
             model = PipelineModel(self.fluid, geo, flow_correlation="beggs_brill")
+            # Theoretical ΔP (uncapped) for ranking + capped traverse for outlet/velocity
+            p_rank = self.inlet_p
+            t_rank = self.inlet_t
+            theoretical_dp = 0.0
+            vmax = 0.0
+            for seg in segs:
+                dp_i, _hl, vm = model.segment_dp(seg, max(p_rank, 50.0), t_rank, self.rate)
+                theoretical_dp += dp_i
+                vmax = max(vmax, vm)
+                p_rank = max(p_rank - dp_i, 14.7)
+
             profile = model.traverse()
             if len(profile) < 2:
-                dp = 0.0
                 outlet = self.inlet_p
-                vmax = 0.0
-                rho = 50.0
+                dp_reported = theoretical_dp
             else:
-                dp = profile[0].pressure_psi - profile[-1].pressure_psi
                 outlet = profile[-1].pressure_psi
-                vmax = max(p.velocity_ft_s for p in profile)
-                state = self.fluid.mixture_properties(self.inlet_p, self.inlet_t, self.rate, 0.0)
-                rho = state.mixture_density_lb_ft3
+                dp_reported = profile[0].pressure_psi - profile[-1].pressure_psi
+                vmax = max(vmax, max(p.velocity_ft_s for p in profile))
+
+            # Prefer theoretical ΔP for ranking when traverse floors at atmospheric
+            dp = theoretical_dp if theoretical_dp > dp_reported + 1.0 else dp_reported
+
+            state = self.fluid.mixture_properties(self.inlet_p, self.inlet_t, self.rate, 0.0)
+            rho = state.mixture_density_lb_ft3
 
             ve = erosional_velocity_ft_s(rho, self.c_factor)
             ratio = vmax / max(ve, 1e-6)
-            erosion_ok = ratio <= 1.0
-            meets = dp <= self.target_dp and erosion_ok
+            erosion_ok = bool(ratio <= 1.0)
+            meets = bool(dp <= self.target_dp and erosion_ok)
 
             candidates.append(
                 FlowlineCandidateResult(
@@ -336,11 +349,11 @@ class FlowlineSelector:
                     nominal_in=size.nominal_in,
                     schedule=size.schedule,
                     inner_diameter_in=size.inner_diameter_in,
-                    pressure_drop_psi=round(dp, 2),
-                    outlet_pressure_psi=round(outlet, 2),
-                    max_velocity_ft_s=round(vmax, 3),
-                    erosional_velocity_ft_s=round(ve, 3),
-                    erosion_ratio=round(ratio, 3),
+                    pressure_drop_psi=round(float(dp), 2),
+                    outlet_pressure_psi=round(float(outlet), 2),
+                    max_velocity_ft_s=round(float(vmax), 3),
+                    erosional_velocity_ft_s=round(float(ve), 3),
+                    erosion_ratio=round(float(ratio), 3),
                     erosion_ok=erosion_ok,
                     meets_dp_target=meets,
                 )
@@ -355,10 +368,12 @@ class FlowlineSelector:
         if meets_list:
             recommended = min(meets_list, key=lambda c: c.inner_diameter_in)
         else:
-            # Fall back to lowest ΔP among erosion-safe, else lowest ΔP overall
+            # Fall back to lowest ΔP among erosion-safe; tie-break larger ID
             safe = [c for c in candidates if c.erosion_ok]
             pool = safe or candidates
-            recommended = min(pool, key=lambda c: c.pressure_drop_psi) if pool else None
+            recommended = (
+                min(pool, key=lambda c: (c.pressure_drop_psi, -c.inner_diameter_in)) if pool else None
+            )
 
         if recommended:
             recommended.recommended = True
