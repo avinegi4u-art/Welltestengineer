@@ -31,7 +31,19 @@ flowsim-pro/
 | `heat_transfer.py` | Steady-state lumped heat exchange model |
 | `solver.py` | Orchestrates end-to-end case solution |
 
-## Quick Start
+## Quick Start (one-click)
+
+| Platform | What to do |
+|----------|------------|
+| **Windows** | Double-click `Open FlowSim Pro.bat` |
+| **macOS** | Double-click `Open FlowSim Pro.command` (first time: right-click → Open) |
+| **Linux / Cursor** | Run `./open-flowsim-pro.sh` |
+
+The launcher installs dependencies if needed, starts backend + frontend, and opens http://127.0.0.1:3000 in your browser. Keep the launcher window open while using the app. Press `Ctrl+C` (or run `Stop FlowSim Pro.bat` on Windows) to shut down.
+
+**Requirements:** Python 3.10+ and Node.js LTS (with npm) installed and on PATH.
+
+### Manual start
 
 ### Backend
 
