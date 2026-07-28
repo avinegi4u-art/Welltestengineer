@@ -323,14 +323,50 @@
     }
     .analytical-mosaic {
       display: grid;
-      grid-template-columns: 1.35fr 0.9fr;
-      grid-template-rows: minmax(280px, 1fr) minmax(260px, 1fr);
+      grid-template-columns: 1.45fr 0.85fr;
+      grid-template-rows: minmax(440px, 1.25fr) minmax(280px, 1fr);
       gap: 0.45rem;
-      min-height: calc(100vh - 7.5rem);
+      min-height: calc(100vh - 6.5rem);
     }
-    .mosaic-card { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0.55rem; }
-    .mosaic-card .chart { flex: 1; min-height: 220px; height: auto; }
+    .mosaic-card { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0.55rem; overflow: hidden; }
+    .mosaic-card .chart { flex: 1 1 auto; min-height: 220px; height: auto; }
     .mosaic-loglog { grid-column: 1; grid-row: 1; }
+    .mosaic-loglog .chart-controls {
+      flex: 0 0 auto;
+      max-height: 5.5rem;
+      overflow: auto;
+      margin-bottom: 0.35rem;
+      padding-right: 0.2rem;
+    }
+    .mosaic-loglog #derivativeChart.chart {
+      flex: 1 0 auto;
+      flex-shrink: 0;
+      min-height: 360px;
+      height: 360px;
+    }
+    .mosaic-loglog .loglog-footer {
+      flex: 0 1 auto;
+      max-height: 4.2rem;
+      overflow: auto;
+      margin-top: 0.35rem;
+      padding-right: 0.2rem;
+      border-top: 1px solid rgba(41, 68, 95, 0.45);
+    }
+    .mosaic-loglog .loglog-footer .help,
+    .mosaic-loglog .loglog-footer .legend {
+      margin-top: 0.25rem;
+      font-size: 0.7rem;
+      line-height: 1.3;
+    }
+    .mosaic-loglog .loglog-match-bar .match-hint {
+      display: none;
+    }
+    .mosaic-loglog .tool-fields-row {
+      display: none;
+    }
+    .mosaic-loglog.tools-open .tool-fields-row {
+      display: grid;
+    }
     .mosaic-results { grid-column: 2; grid-row: 1; }
     .mosaic-semilog { grid-column: 1; grid-row: 2; }
     .mosaic-history { grid-column: 2; grid-row: 2; }
@@ -880,7 +916,7 @@
               </div>
               <input id="bourdetSmoothingSlider" type="range" min="0.05" max="0.6" step="0.01" value="0.15" />
             </div>
-            <div class="fields" style="margin-top:0.35rem">
+            <div class="fields tool-fields-row" style="margin-top:0.35rem">
               <label>Radial plateau tool, psi
                 <input id="toolPlateau" type="number" step="any" placeholder="drag line or type" />
               </label>
@@ -905,17 +941,19 @@
                 <button id="autoMatchModelBtn" class="small" title="Nonlinear regression of the selected analytical model to Δp and derivative, with 95% confidence intervals">Auto-match model</button>
               </div>
             </div>
-            <div id="autoMatchSummary" class="help" style="margin-top:0.35rem">Auto-match fits the selected analytical model to Δp and derivative by regression, with 95% confidence intervals from the fit curvature. "Try all" ranks the model library by BIC.</div>
           </div>
           <div id="derivativeChart" class="chart" aria-label="Pressure derivative chart"></div>
-          <div id="typeCurveNote" class="help" style="margin-top:0.55rem">Type curve uses Horner k, skin, and estimated CD from early-time storage.</div>
-          <div class="legend">
-            <span style="--c:#63a7ff">Delta pressure</span>
-            <span style="--c:#ffba66">Bourdet derivative</span>
-            <span style="--c:#c7a6ff">Analytical WBS + radial</span>
-            <span style="--c:#7ee787">Unit / half-slope guides</span>
+          <div class="loglog-footer">
+            <div id="autoMatchSummary" class="help">Auto-match summary appears after Generate / Match.</div>
+            <div id="typeCurveNote" class="help">Type curve uses Horner k, skin, and estimated CD from early-time storage.</div>
+            <div class="legend">
+              <span style="--c:#63a7ff">Delta pressure</span>
+              <span style="--c:#ffba66">Bourdet derivative</span>
+              <span style="--c:#c7a6ff">Analytical WBS + radial</span>
+              <span style="--c:#7ee787">Unit / half-slope guides</span>
+            </div>
+            <p class="help">|Δp′| on log axis; × markers = negative derivative (kept, not dropped).</p>
           </div>
-          <p class="help" style="margin-top:0.3rem">Plotted as |Δp′| on the log axis; × markers (dashed segments on the offline chart) mark points where the derivative has gone negative — a real signal near transition/boundary regimes, not dropped data.</p>
         </div>
 
         <div class="card mosaic-card mosaic-results">
@@ -6031,6 +6069,7 @@
       const hasAnalysis = !!state.analysis?.derivatives?.length;
       const modelReady = !!(state.analysis?.autoMatch || state.analysis?.typeCurve?.matched || m.modelReady);
       m.modelReady = modelReady;
+      document.querySelector(".mosaic-loglog")?.classList.toggle("tools-open", !!m.showTools);
       if (els.btnShowTools) els.btnShowTools.classList.toggle("active-match", !!m.showTools);
       if (els.btnShowModel) {
         els.btnShowModel.disabled = !modelReady;
