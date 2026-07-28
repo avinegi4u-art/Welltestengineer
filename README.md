@@ -6,6 +6,7 @@ Well testing and completion engineering tools (single-file HTML apps).
 
 | File | Purpose |
 |------|---------|
+| `welltest-data-qc-pro-v1.html` | **Welltest Data QC Pro v1** — QA/QC for downhole gauge (BHP) and surface well test data: CSV import, spike filter, period detection, surface vs downhole checks, PTA-ready export |
 | `dst-bha-tally-app.html` | DST / completion BHA tally builder — volumes, depths, connections, Excel/PDF import, export |
 | `dst-pressure-transient-analysis-pro-v2.11.html` | **DST PTA Pro v2.11** (open this one) — local-first senior engineer DST/PTA: variable-rate superposition, Horner & derivative analysis, boundary detection, composite screening, physics Bayesian uncertainty, interpretation gating, office sign-off, engineering audit trail |
 | `dst-pressure-transient-analysis-pro-v2.10.html` | DST PTA Pro v2.10 — reservoir-aware Bayesian posteriors, refined multilayer inversion, sparse boundary confidence, office/reserves sign-off workflow, auditable curve dominance |
