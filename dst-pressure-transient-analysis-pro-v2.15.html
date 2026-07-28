@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.15.2 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.15.3 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <!-- Interactive Plotly charts when online; SVG fallback keeps the app fully offline. -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
@@ -533,7 +533,7 @@
           </svg>
         </div>
         <div>
-          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.2</span></h1>
+          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.3</span></h1>
           <p class="sub">Kappa Workstation–style Saphir layout — Load Q/P · Extract · Deconvolution · Analytical · Improve</p>
         </div>
       </div>
@@ -1457,7 +1457,7 @@
 
 
 <script>
-    const APP_VERSION = "2.15.2";
+    const APP_VERSION = "2.15.3";
 
     const PLOTLY_READY = () => typeof window !== "undefined" && typeof window.Plotly !== "undefined";
     const CHART_IDS = ["trendChart", "trendRateChart", "hornerChart", "derivativeChart", "semilogChart", "deconvChart", "stepRateChart", "injectivityChart"];
@@ -6322,13 +6322,14 @@
           });
         }
         renderPlot(els.derivativeChart, traces, {
-          height: PLOT_HEIGHT, dragmode: "select", shapes,
+          height: Math.max(360, els.derivativeChart?.clientHeight || 360), dragmode: "select", shapes,
           xaxis: axisStyle({title: "Time", type: "log"}),
           yaxis: axisStyle({title: "Pressure difference [psi]", type: "log"})
         }, {
           editable: true,
           edits: {shapePosition: true, shapeRotate: false}
         });
+        queuePlotResize(els.derivativeChart);
         if (els.derivativeChart.removeAllListeners) {
           els.derivativeChart.removeAllListeners("plotly_selected");
           els.derivativeChart.removeAllListeners("plotly_relayout");
