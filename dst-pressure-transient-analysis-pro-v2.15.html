@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.15.1 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.15.2 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <!-- Interactive Plotly charts when online; SVG fallback keeps the app fully offline. -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
@@ -397,6 +397,42 @@
       min-height: 0;
       height: 100%;
     }
+
+    .loglog-match-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+      margin: 0.25rem 0 0.45rem;
+      padding: 0.35rem 0.45rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(10, 22, 36, 0.9);
+    }
+    .loglog-match-bar .match-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6f849c;
+      margin-right: 0.15rem;
+    }
+    .loglog-match-bar button.active-match {
+      border-color: rgba(61, 215, 182, 0.55);
+      color: var(--accent);
+      background: rgba(61, 215, 182, 0.12);
+    }
+    .loglog-match-bar button:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .match-hint {
+      flex: 1 1 12rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.3;
+    }
+
     .kappa-warn {
       margin-top: 0.55rem;
       color: var(--bad);
@@ -461,7 +497,7 @@
           </svg>
         </div>
         <div>
-          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.1</span></h1>
+          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.2</span></h1>
           <p class="sub">Kappa Workstation–style Saphir layout — Load Q/P · Extract · Deconvolution · Analytical · Improve</p>
         </div>
       </div>
@@ -825,7 +861,15 @@
 <div class="card mosaic-card mosaic-loglog">
           <div class="chart-toolbar">
             <h2 style="margin-bottom:0">Loglog plot</h2>
-            <span class="chart-hint">Select fit on radial plateau · scroll to zoom</span>
+            <span class="chart-hint">Kappa-style tools → generate model → show model / match</span>
+          </div>
+          <div class="loglog-match-bar" aria-label="Loglog model matching">
+            <span class="match-label">Plot</span>
+            <button type="button" class="small active-match" id="btnShowTools" title="Interactive WBS unit-slope and radial plateau tools">Show tools</button>
+            <button type="button" class="small" id="btnShowModel" disabled title="Generate an analytical model first (same as Kappa until model exists)">Show model</button>
+            <button type="button" class="small" id="btnResetMatch" disabled title="Clear match overrides and hide model">Reset match</button>
+            <button type="button" class="small primary" id="btnImproveMatch" title="Nonlinear regression match (Improve)">Match</button>
+            <span id="loglogMatchHint" class="match-hint">Show tools are on. Generate an analytical model to enable Show model / Reset match — same gate as Kappa Saphir.</span>
           </div>
           <div class="plot-tools" data-plot-tools="derivativeChart" data-default-mode="select" data-select-label="Select fit"></div>
           <div class="chart-controls">
@@ -836,11 +880,19 @@
               </div>
               <input id="bourdetSmoothingSlider" type="range" min="0.05" max="0.6" step="0.01" value="0.15" />
             </div>
-            <div class="row" style="justify-content:space-between">
-              <label style="display:inline-flex; align-items:center; gap:0.45rem; color:var(--muted); font-size:0.86rem">
-                <input id="showTypeCurve" type="checkbox" checked />
-                Overlay analytical type curve
+            <div class="fields" style="margin-top:0.35rem">
+              <label>Radial plateau tool, psi
+                <input id="toolPlateau" type="number" step="any" placeholder="drag line or type" />
               </label>
+              <label>WBS unit-slope anchor Δt, hr
+                <input id="toolWbsDt" type="number" step="any" placeholder="early-time Δt" />
+              </label>
+              <label>WBS unit-slope anchor Δp, psi
+                <input id="toolWbsDp" type="number" step="any" placeholder="Δp at anchor" />
+              </label>
+            </div>
+            <div class="row" style="justify-content:space-between; margin-top:0.45rem">
+              <input id="showTypeCurve" type="checkbox" checked class="hide" aria-hidden="true" />
               <div class="row">
                 <select id="matchModelType" class="tight-select" title="Model family for the auto-match regression">
                   <option value="homogeneous" selected>Homogeneous radial</option>
@@ -1367,7 +1419,7 @@
 
 
 <script>
-    const APP_VERSION = "2.15.1";
+    const APP_VERSION = "2.15.2";
 
     const PLOTLY_READY = () => typeof window !== "undefined" && typeof window.Plotly !== "undefined";
     const CHART_IDS = ["trendChart", "trendRateChart", "hornerChart", "derivativeChart", "semilogChart", "deconvChart", "stepRateChart", "injectivityChart"];
@@ -1590,6 +1642,14 @@
         geologicReview: false,
         dominanceReviewed: false,
         engineerSignOff: false
+      },
+      loglogMatch: {
+        showTools: true,
+        showModel: false,
+        modelReady: false,
+        toolPlateau: null,
+        toolWbsDt: null,
+        toolWbsDp: null
       }
     };
 
@@ -1606,7 +1666,7 @@
       "stepImport", "stepQc", "stepPeriods", "stepAnalysis", "stepReport",
       "netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor",
       "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd",
-      "buildupSelect", "bourdetSmoothing", "bourdetSmoothingSlider", "bourdetSmoothingValue", "showTypeCurve", "typeCurveNote", "spikeFilter", "derivTimeFn", "autoMatchModelBtn", "matchModelType", "autoMatchSummary", "reservoirModel", "boundaryModelSelect", "wellboreModel", "wellModel", "imposePi",
+      "buildupSelect", "bourdetSmoothing", "bourdetSmoothingSlider", "bourdetSmoothingValue", "showTypeCurve", "typeCurveNote", "spikeFilter", "derivTimeFn", "autoMatchModelBtn", "matchModelType", "autoMatchSummary", "btnShowTools", "btnShowModel", "btnResetMatch", "btnImproveMatch", "loglogMatchHint", "toolPlateau", "toolWbsDt", "toolWbsDp", "reservoirModel", "boundaryModelSelect", "wellboreModel", "wellModel", "imposePi",
       "eventTime", "eventType", "eventNote", "eventList",
       "caseWell", "caseZone", "caseEngineer", "reportText",
       "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups",
@@ -1731,6 +1791,31 @@
       });
       els.showTypeCurve?.addEventListener("change", () => renderDerivative());
       els.autoMatchModelBtn?.addEventListener("click", runAutoMatch);
+      els.btnShowTools?.addEventListener("click", () => {
+        state.loglogMatch.showTools = !state.loglogMatch.showTools;
+        syncLoglogMatchControls();
+        renderDerivative();
+      });
+      els.btnShowModel?.addEventListener("click", () => {
+        if (els.btnShowModel.disabled) return;
+        state.loglogMatch.showModel = !state.loglogMatch.showModel;
+        if (els.showTypeCurve) els.showTypeCurve.checked = state.loglogMatch.showModel;
+        syncLoglogMatchControls();
+        renderDerivative();
+      });
+      els.btnResetMatch?.addEventListener("click", () => resetLoglogMatch());
+      els.btnImproveMatch?.addEventListener("click", () => {
+        applyLoglogToolMatch({runRegression: true});
+      });
+      ["toolPlateau", "toolWbsDt", "toolWbsDp"].forEach(id => {
+        els[id]?.addEventListener("change", () => {
+          const raw = Number(els[id].value);
+          if (id === "toolPlateau") state.loglogMatch.toolPlateau = Number.isFinite(raw) && raw > 0 ? raw : null;
+          if (id === "toolWbsDt") state.loglogMatch.toolWbsDt = Number.isFinite(raw) && raw > 0 ? raw : null;
+          if (id === "toolWbsDp") state.loglogMatch.toolWbsDp = Number.isFinite(raw) && raw > 0 ? raw : null;
+          applyLoglogToolMatch({runRegression: false});
+        });
+      });
       [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "buildupSelect", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups", "interpretationMode", "minEarlyPoints", "minFitPoints", "minRadialPoints", "minShutinHr", "minLogSpan"].forEach(id => {
         els[id]?.addEventListener("change", () => refresh());
       });
@@ -4683,6 +4768,7 @@
           computeModelOverlays(analysis, inputs);
           if (analysis.k) computeModelScreening(analysis, inputs);
           state.quality = buildQualityChecks();
+          enableLoglogModel(true);
           renderAll(`Auto-matched ${match.modelLabel}${mode === "all" ? " (best of library by BIC)" : ""}: ${formatMatchParams(match)} — log RMS ${fmt(match.initialRmsLog, 3)} → ${fmt(match.rmsLog, 3)}.`);
         } catch (error) {
           console.error("Auto-match failed", error);
@@ -5686,6 +5772,7 @@
       renderBuildupComparison();
       renderEvents();
       updateKappaResultsPanel();
+      syncLoglogMatchControls();
       if (message) els.rowCount.textContent = `${state.rows.length} rows loaded - ${message}`;
     }
 
@@ -5938,8 +6025,165 @@
       `;
     }
 
+
+    function syncLoglogMatchControls() {
+      const m = state.loglogMatch || (state.loglogMatch = {showTools: true, showModel: false, modelReady: false});
+      const hasAnalysis = !!state.analysis?.derivatives?.length;
+      const modelReady = !!(state.analysis?.autoMatch || state.analysis?.typeCurve?.matched || m.modelReady);
+      m.modelReady = modelReady;
+      if (els.btnShowTools) els.btnShowTools.classList.toggle("active-match", !!m.showTools);
+      if (els.btnShowModel) {
+        els.btnShowModel.disabled = !modelReady;
+        els.btnShowModel.classList.toggle("active-match", !!m.showModel && modelReady);
+        if (!modelReady) m.showModel = false;
+      }
+      if (els.btnResetMatch) els.btnResetMatch.disabled = !(modelReady || m.toolPlateau != null || m.toolWbsDt != null);
+      if (els.showTypeCurve) els.showTypeCurve.checked = !!m.showModel && modelReady;
+      if (els.toolPlateau && document.activeElement !== els.toolPlateau) {
+        els.toolPlateau.value = m.toolPlateau != null && Number.isFinite(m.toolPlateau) ? m.toolPlateau : (state.analysis?.plateau || "");
+      }
+      if (els.toolWbsDt && document.activeElement !== els.toolWbsDt) {
+        els.toolWbsDt.value = m.toolWbsDt != null ? m.toolWbsDt : "";
+      }
+      if (els.toolWbsDp && document.activeElement !== els.toolWbsDp) {
+        els.toolWbsDp.value = m.toolWbsDp != null ? m.toolWbsDp : "";
+      }
+      if (els.loglogMatchHint) {
+        if (!hasAnalysis) {
+          els.loglogMatchHint.textContent = "Load a buildup first. Kappa also keeps Show model / Reset match disabled until an analytical model exists.";
+        } else if (!modelReady) {
+          els.loglogMatchHint.textContent = "Show tools are available. Click Generate / Model (or Match) to create an analytical model — then Show model unlocks, same as Kappa.";
+        } else if (m.showModel) {
+          els.loglogMatchHint.textContent = "Model visible. Drag the radial plateau or edit WBS anchors, then Match to regress; Reset match clears the match.";
+        } else {
+          els.loglogMatchHint.textContent = "Model is ready but hidden. Toggle Show model to overlay the analytical curve on the loglog plot.";
+        }
+      }
+    }
+
+    function enableLoglogModel(show = true) {
+      if (!state.loglogMatch) state.loglogMatch = {showTools: true, showModel: false, modelReady: false};
+      state.loglogMatch.modelReady = true;
+      state.loglogMatch.showModel = !!show;
+      if (els.showTypeCurve) els.showTypeCurve.checked = !!show;
+      syncLoglogMatchControls();
+    }
+
+    function resetLoglogMatch() {
+      if (!state.loglogMatch) return;
+      if (state.analysis) {
+        state.analysis.autoMatch = null;
+        state.analysis.autoMatchRanking = null;
+      }
+      state.loglogMatch.toolPlateau = null;
+      state.loglogMatch.toolWbsDt = null;
+      state.loglogMatch.toolWbsDp = null;
+      state.loglogMatch.showModel = false;
+      state.loglogMatch.modelReady = false;
+      if (els.showTypeCurve) els.showTypeCurve.checked = false;
+      if (state.analysis) {
+        const inputs = state.analysis.inputs || currentInputs();
+        computeModelOverlays(state.analysis, inputs);
+      }
+      syncLoglogMatchControls();
+      renderDerivative();
+      updateKappaResultsPanel();
+      refresh("Reset match — analytical model cleared (Kappa-style).");
+    }
+
+    function applyLoglogToolMatch(options = {}) {
+      const analysis = state.analysis;
+      if (!analysis) return;
+      const inputs = analysis.inputs || currentInputs();
+      const m = state.loglogMatch || {};
+      const plateau = Number(m.toolPlateau);
+      if (Number.isFinite(plateau) && plateau > 0) {
+        analysis.plateau = plateau;
+        analysis.kDerivative = 70.6 * analysis.q * inputs.fvfRbStb * inputs.viscosityCp / (Math.max(inputs.netPayFt, 0.0001) * plateau);
+        // Seed Horner-compatible screening k from derivative tool when user is matching on loglog
+        if (Number.isFinite(analysis.kDerivative) && analysis.kDerivative > 0) {
+          analysis.k = analysis.kDerivative;
+          analysis.kh = analysis.k * Math.max(inputs.netPayFt, 0.0001);
+        }
+      }
+      const dt = Number(m.toolWbsDt);
+      const dp = Number(m.toolWbsDp);
+      if (Number.isFinite(dt) && dt > 0 && Number.isFinite(dp) && dp > 0) {
+        // Unit-slope WBS: Δp = (q B / (24 C)) * Δt  →  C = q B Δt / (24 Δp)
+        const C = analysis.q * inputs.fvfRbStb * dt / (24 * dp);
+        if (Number.isFinite(C) && C > 0) analysis.wellboreStorageCoeff = C;
+      }
+      computeModelOverlays(analysis, inputs);
+      if (options.runRegression) {
+        enableLoglogModel(true);
+        runAutoMatch();
+        return;
+      }
+      enableLoglogModel(true);
+      renderDerivative();
+      updateKappaResultsPanel();
+    }
+
+    function seedLoglogToolsFromAnalysis() {
+      const analysis = state.analysis;
+      const m = state.loglogMatch || (state.loglogMatch = {showTools: true, showModel: false, modelReady: false});
+      if (!analysis) return;
+      if (m.toolPlateau == null && Number.isFinite(analysis.plateau)) m.toolPlateau = analysis.plateau;
+      if ((m.toolWbsDt == null || m.toolWbsDp == null) && analysis.points?.length) {
+        const early = analysis.points.filter(p => p.dt > 0 && p.deltaP > 0).slice(0, Math.max(3, Math.min(8, analysis.points.length)));
+        if (early.length) {
+          const anchor = early[Math.min(2, early.length - 1)];
+          if (m.toolWbsDt == null) m.toolWbsDt = Number(anchor.dt.toPrecision(4));
+          if (m.toolWbsDp == null) m.toolWbsDp = Number(anchor.deltaP.toPrecision(4));
+        }
+      }
+    }
+
+    function onLoglogShapeEdit(ev) {
+      if (!ev || !state.loglogMatch?.showTools) return;
+      // Plotly editable shape edits arrive as shapes[i].y0 / y1 or x0...
+      const keys = Object.keys(ev).filter(k => k.startsWith("shapes["));
+      if (!keys.length) return;
+      let changed = false;
+      keys.forEach(key => {
+        const yMatch = key.match(/^shapes\[(\d+)\]\.y([01])$/);
+        if (!yMatch) return;
+        const idx = Number(yMatch[1]);
+        const shape = els.derivativeChart?.layout?.shapes?.[idx];
+        const y = Number(ev[key]);
+        if (!Number.isFinite(y) || y <= 0) return;
+        // Horizontal radial tool: y0 ~= y1
+        const y0 = Number(shape?.y0);
+        const y1 = Number(shape?.y1);
+        if (shape && Math.abs(Math.log10(Math.max(y0, 1e-12)) - Math.log10(Math.max(y1, 1e-12))) < 0.05) {
+          state.loglogMatch.toolPlateau = y;
+          changed = true;
+        }
+      });
+      // Unit-slope endpoint edits
+      keys.forEach(key => {
+        const m = key.match(/^shapes\[(\d+)\]\.(x|y)([01])$/);
+        if (!m) return;
+        const idx = Number(m[1]);
+        const shape = els.derivativeChart?.layout?.shapes?.[idx];
+        if (!shape || shape.name !== "wbs-tool") return;
+        const x0 = Number(ev[`shapes[${idx}].x0`] ?? shape.x0);
+        const y0 = Number(ev[`shapes[${idx}].y0`] ?? shape.y0);
+        if (Number.isFinite(x0) && x0 > 0 && Number.isFinite(y0) && y0 > 0) {
+          state.loglogMatch.toolWbsDt = Number(x0.toPrecision(4));
+          state.loglogMatch.toolWbsDp = Number(y0.toPrecision(4));
+          changed = true;
+        }
+      });
+      if (changed) {
+        applyLoglogToolMatch({runRegression: false});
+      }
+    }
+
+
     function renderDerivative() {
       const analysis = state.analysis;
+      syncLoglogMatchControls();
       if (!analysis || analysis.derivatives.length < 2) {
         purgePlot(els.derivativeChart);
         els.derivativeChart.innerHTML = emptySvg("Need more buildup points for log-log pressure derivative.");
@@ -5947,11 +6191,12 @@
         renderAutoMatchSummary(null);
         return;
       }
-      const showTypeCurve = els.showTypeCurve?.checked !== false;
+      seedLoglogToolsFromAnalysis();
+      const matchUi = state.loglogMatch || {showTools: true, showModel: false};
+      const showTools = matchUi.showTools !== false;
+      const showModel = !!matchUi.showModel && (!!analysis.autoMatch || !!analysis.typeCurve);
+      if (els.showTypeCurve) els.showTypeCurve.checked = showModel;
       const deltaPts = analysis.points.filter(point => point.dt > 0 && point.deltaP > 0);
-      // Bourdet derivative can legitimately dip to/through zero in transition or boundary regimes.
-      // Plot |derivative| on the log axis (standard log-log convention) instead of dropping those
-      // points; negative-sign points get a distinct marker symbol so the sign flip stays visible.
       const derPts = analysis.derivatives.filter(point => point.dt > 0 && Number.isFinite(point.derivative) && point.derivative !== 0);
       if (PLOTLY_READY() && deltaPts.length && derPts.length) {
         const sel = new Set(analysis.selected);
@@ -5968,16 +6213,26 @@
         ];
         const tVals = deltaPts.map(p => p.dt).concat(derPts.map(p => p.dt));
         const tMin = Math.min(...tVals), tMax = Math.max(...tVals);
-        if (Number.isFinite(analysis.plateau) && analysis.plateau > 0) {
-          traces.push({x: [tMin, tMax], y: [analysis.plateau, analysis.plateau], name: "radial plateau",
-            mode: "lines", line: {color: "#7ee787", width: 1.5, dash: "dot"}, hoverinfo: "skip"});
+        const plateau = Number(matchUi.toolPlateau) > 0 ? Number(matchUi.toolPlateau) : analysis.plateau;
+        if (showTools && Number.isFinite(plateau) && plateau > 0) {
+          traces.push({x: [tMin, tMax], y: [plateau, plateau], name: "radial tool",
+            mode: "lines", line: {color: "#7ee787", width: 2, dash: "dot"}, hoverinfo: "skip"});
         }
-        if (deltaPts.length) {
+        const wbsDt = Number(matchUi.toolWbsDt);
+        const wbsDp = Number(matchUi.toolWbsDp);
+        if (showTools && wbsDt > 0 && wbsDp > 0) {
+          traces.push({
+            x: [wbsDt, Math.min(tMax, wbsDt * 200)],
+            y: [wbsDp, wbsDp * Math.min(tMax, wbsDt * 200) / wbsDt],
+            name: "WBS unit slope", mode: "lines",
+            line: {color: "#ffd166", width: 2, dash: "dash"}, hoverinfo: "skip"
+          });
+        } else if (showTools && deltaPts.length) {
           const p0 = deltaPts[0];
           traces.push({x: [p0.dt, tMax], y: [p0.deltaP, p0.deltaP * (tMax / p0.dt)], name: "unit slope",
             mode: "lines", line: {color: "#c7a6ff", width: 1.3, dash: "dash"}, hoverinfo: "skip"});
         }
-        if (derPts.length > 3) {
+        if (showTools && derPts.length > 3) {
           const anchor = derPts[Math.floor(derPts.length * 0.4)];
           const aY = Math.abs(anchor.derivative);
           if (aY > 0) {
@@ -5987,16 +6242,16 @@
         }
         const tcPressure = analysis.typeCurve?.pressure || analysis.typeCurve?.delta || [];
         const tcDeriv = analysis.typeCurve?.derivative || [];
-        if (showTypeCurve && tcPressure.length) {
+        if (showModel && tcPressure.length) {
           traces.push({
             x: tcPressure.map(p => p.x), y: tcPressure.map(p => p.y),
-            name: "type Δp", mode: "lines", line: {color: "rgba(199,166,255,0.85)", width: 1.6}, hoverinfo: "skip"
+            name: "model Δp", mode: "lines", line: {color: "rgba(255,123,138,0.95)", width: 2.1}, hoverinfo: "skip"
           });
         }
-        if (showTypeCurve && tcDeriv.length) {
+        if (showModel && tcDeriv.length) {
           traces.push({
             x: tcDeriv.map(p => p.x), y: tcDeriv.map(p => p.y),
-            name: "type Δp′", mode: "lines", line: {color: "rgba(199,166,255,0.55)", width: 1.4, dash: "dot"}, hoverinfo: "skip"
+            name: "model Δp′", mode: "lines", line: {color: "rgba(255,123,138,0.65)", width: 1.8, dash: "dot"}, hoverinfo: "skip"
           });
         }
         const shapes = [];
@@ -6012,13 +6267,36 @@
             fillcolor: w.color, line: {width: 0}, layer: "below"
           });
         });
+        if (showTools && Number.isFinite(plateau) && plateau > 0) {
+          shapes.push({
+            type: "line", name: "radial-tool", editable: true,
+            xref: "x", yref: "y", x0: tMin, x1: tMax, y0: plateau, y1: plateau,
+            line: {color: "#7ee787", width: 2, dash: "dot"}
+          });
+        }
+        if (showTools && wbsDt > 0 && wbsDp > 0) {
+          const x1 = Math.min(tMax, wbsDt * 200);
+          shapes.push({
+            type: "line", name: "wbs-tool", editable: true,
+            xref: "x", yref: "y", x0: wbsDt, y0: wbsDp, x1: x1, y1: wbsDp * x1 / wbsDt,
+            line: {color: "#ffd166", width: 2, dash: "dash"}
+          });
+        }
         renderPlot(els.derivativeChart, traces, {
           height: PLOT_HEIGHT, dragmode: "select", shapes,
-          xaxis: axisStyle({title: "shut-in time Δt, hr (log)", type: "log"}),
-          yaxis: axisStyle({title: "Δp and Δp′, psi (log)", type: "log"})
+          xaxis: axisStyle({title: "Time", type: "log"}),
+          yaxis: axisStyle({title: "Pressure difference [psi]", type: "log"})
+        }, {
+          editable: true,
+          edits: {shapePosition: true, shapeRotate: false}
         });
-        if (els.derivativeChart.removeAllListeners) els.derivativeChart.removeAllListeners("plotly_selected");
+        if (els.derivativeChart.removeAllListeners) {
+          els.derivativeChart.removeAllListeners("plotly_selected");
+          els.derivativeChart.removeAllListeners("plotly_relayout");
+          els.derivativeChart.removeAllListeners("plotly_doubleclick");
+        }
         els.derivativeChart.on("plotly_selected", ev => applyRegionSelection(ev));
+        els.derivativeChart.on("plotly_relayout", ev => onLoglogShapeEdit(ev));
         els.derivativeChart.on("plotly_doubleclick", () => {
           if (els.hornerStart) els.hornerStart.value = 0.001;
           if (els.hornerEnd) els.hornerEnd.value = 999;
@@ -6029,7 +6307,7 @@
           delta: deltaPts.map(point => ({x: point.dt, y: point.deltaP})),
           derivative: derPts.map(point => ({x: point.dt, y: Math.abs(point.derivative), negative: point.derivative < 0})),
           regimes: analysis.regimes,
-          typeCurve: showTypeCurve ? analysis.typeCurve : null,
+          typeCurve: showModel ? analysis.typeCurve : null,
           highlightWindows: [
             {start: analysis.window.start, end: analysis.window.end, label: "Horner fit", color: "rgba(255,186,102,0.12)", stroke: "#ffba66"},
             analysis.radialRegime ? {start: analysis.radialRegime.startDt, end: analysis.radialRegime.endDt, label: "Radial plateau", color: "rgba(61,215,182,0.10)", stroke: "#3dd7b6"} : null,
@@ -6038,13 +6316,14 @@
         });
       }
       if (els.typeCurveNote) {
-        els.typeCurveNote.textContent = showTypeCurve && analysis.typeCurve
+        els.typeCurveNote.textContent = showModel && analysis.typeCurve
           ? analysis.typeCurve.label
-          : showTypeCurve
-            ? "Type curve needs a positive Horner permeability estimate."
-            : "Analytical type-curve overlay is hidden.";
+          : (!matchUi.modelReady
+            ? "Show model is disabled until you Generate / Match an analytical model (Kappa behavior)."
+            : (showModel ? "Model ready." : "Analytical model is hidden — toggle Show model."));
       }
       renderAutoMatchSummary(analysis);
+      syncLoglogMatchControls();
     }
 
     function renderDeconvolution() {
