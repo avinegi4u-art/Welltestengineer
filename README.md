@@ -23,3 +23,19 @@ Well testing and completion engineering tools (single-file HTML apps).
 | `casing-design-pro-v3.html` | **Casing Design Pro v5** — wear allowance, APB, deviation survey/DLS, multi-fluid columns, running drag/shock, plus all v4 depth-wise triaxial engine. Redesigned UI: workflow stepper, KPI dashboard, filters, toasts, keyboard shortcuts (`Ctrl+Enter` to run) |
 
 Open any `.html` file in a browser — no build step required.
+
+## Defluffer (prompt compression)
+
+Python package under [`defluffer/`](defluffer/) that strips fluff from LLM prompts:
+
+```python
+from defluffer import Defluffer
+
+defluffer = Defluffer()
+compressed_prompt = defluffer.compress("Your verbose prompt here...")
+```
+
+```bash
+pip install -e ./defluffer
+defluffer "Could you please summarize this? Thank you!" --stats
+```
