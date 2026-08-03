@@ -676,7 +676,7 @@
         <div class="card span-7">
           <h2>Live and imported data</h2>
           <div class="callout">
-            Expected columns are flexible: time/timestamp, bhp/bottomhole pressure, rate or oil/water/gas rates, whp/surface pressure, and temperature. The browser stores the case locally; no data leaves your machine unless you poll your own endpoint.
+            Expected columns are flexible: time/timestamp, bhp/bottomhole pressure, rate or oil/water/gas rates, whp/surface pressure, and temperature. Import <span class="mono">.csv</span> or electronic-gauge <span class="mono">.txt</span> exports (comma, tab, semicolon, or space delimited). The browser stores the case locally; no data leaves your machine unless you poll your own endpoint.
           </div>
           <div class="fields" style="margin-bottom:0.75rem">
             <label>Pressure unit
@@ -1650,6 +1650,7 @@
 
     function isUnitIndicatorLine(line) {
       const low = String(line || "").toLowerCase();
+      if (/dd[-\/]mm|mm[-\/]dd|yy[-\/]mm|hh:mm/.test(low) && !/\d{4,}/.test(low)) return true;
       return /psia|psig|degc|degf|bpd|stb\/d|mscf|hh\/mm|dd\/mm|mm\/dd/.test(low) && !/\d{4,}/.test(low);
     }
 
@@ -1784,10 +1785,10 @@
         });
       });
       return {
-        pressure: inferUnit(textByChannel.bhp || textByChannel.whp, els.pressureUnit?.value || "psi", ["kpa", "bar", "mpa", "psi"]),
+        pressure: inferUnit(textByChannel.bhp || textByChannel.whp, els.pressureUnit?.value || "psi", ["psia", "psig", "kpa", "bar", "mpa", "psi"]),
         rate: inferUnit(textByChannel.rate || textByChannel.oil || textByChannel.water, els.rateUnit?.value || "bpd", ["m3/d", "m3d", "stb/d", "stbd", "bpd"]),
         gas: inferUnit(textByChannel.gas, els.gasUnit?.value || "mscfd", ["mscf/d", "mscfd", "scf/d", "scfd", "e3m3/d", "e3m3d"]),
-        temp: inferUnit(textByChannel.temp, els.tempUnit?.value || "f", ["degc", "c", "degf", "f", "k"])
+        temp: inferUnit(textByChannel.temp, els.tempUnit?.value || "f", ["degf", "degc", "degc", "c", "degf", "f", "k"])
       };
     }
 
@@ -1802,18 +1803,29 @@
 
     function canonicalUnit(unit) {
       const key = String(unit || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      return ({kpa: "kpa", bar: "bar", mpa: "mpa", psi: "psi", m3d: "m3d", stbd: "stbd", bpd: "bpd", mscfd: "mscfd", scfd: "scfd", e3m3d: "e3m3d", degc: "c", c: "c", degf: "f", f: "f", k: "k"}[key] || unit || "psi");
+      return ({kpa: "kpa", bar: "bar", mpa: "mpa", psi: "psi", psia: "psi", psig: "psi", m3d: "m3d", stbd: "stbd", bpd: "bpd", mscfd: "mscfd", scfd: "scfd", e3m3d: "e3m3d", degc: "c", c: "c", degf: "f", f: "f", k: "k"}[key] || unit || "psi");
+    }
+
+    function getRecordValue(record, channel) {
+      for (const alias of HEADER_ALIASES[channel] || []) {
+        const key = normalizeHeader(alias);
+        if (record[key] !== undefined && record[key] !== "") return record[key];
+      }
+      return "";
+    }
+
+    function combineDateAndTime(record) {
+      const dateText = String(record.date || record.datum || "").trim();
+      const timeText = String(record.time || record.temps || record.heure || "").trim();
+      if (dateText && timeText && /^\d{1,2}[\/\-]\d{1,2}/.test(dateText) && /^\d{1,2}:\d{2}/.test(timeText)) {
+        return `${dateText} ${timeText}`;
+      }
+      return getRecordValue(record, "time");
     }
 
     function rowFromRecord(record, options = {}) {
-      const get = channel => {
-        for (const alias of HEADER_ALIASES[channel] || []) {
-          const key = normalizeHeader(alias);
-          if (record[key] !== undefined && record[key] !== "") return record[key];
-        }
-        return "";
-      };
-      const timeRaw = get("time");
+      const get = channel => getRecordValue(record, channel);
+      const timeRaw = combineDateAndTime(record);
       const time = parseTime(timeRaw);
       if (!time) return {row: null, issue: "missing or invalid timestamp"};
       const rawBhp = nullableNum(get("bhp"));
@@ -1868,7 +1880,18 @@
         anchor.setHours(Number(hh), Number(mm), Number(ss), 0);
         return anchor;
       }
-      if (/^\d{1,2}\/\d{1,2}(\/\d{2,4})?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/.test(text)) {
+      if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/.test(text)) {
+        const parts = text.split(/\s+/);
+        const datePart = parts[0].split(/[\/\-]/);
+        const timePart = parts[1] || "00:00:00";
+        const [hh, mm, ss = "0"] = timePart.split(":");
+        let day = Number(datePart[0]);
+        let month = Number(datePart[1]);
+        let year = datePart[2] ? Number(datePart[2]) : new Date().getFullYear();
+        if (year < 100) year += 2000;
+        if (month > 12 && day <= 12) [day, month] = [month, day];
+        normalized = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+      } else if (/^\d{1,2}\/\d{1,2}(\/\d{2,4})?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/.test(text)) {
         const parts = text.split(/\s+/);
         const datePart = parts[0].split("/");
         const timePart = parts[1] || "00:00:00";
@@ -4958,7 +4981,7 @@
 
     function renderDataTable() {
       if (!state.rows.length) {
-        els.dataBody.innerHTML = '<tr><td colspan="9" class="muted">Load sample data, paste CSV, add manual readings, or connect polling.</td></tr>';
+        els.dataBody.innerHTML = '<tr><td colspan="9" class="muted">Load sample data, import CSV/TXT, paste rows, add manual readings, or connect polling.</td></tr>';
         return;
       }
       const periodByIndex = new Map();
