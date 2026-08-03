@@ -711,7 +711,8 @@
           </div>
           <div class="split">
             <div>
-              <h3>CSV / TXT file or pasted rows</h3>
+              <h3>Gauge data (pressure / temperature)</h3>
+              <p class="muted" style="margin-top:0">High-frequency downhole or memory gauge readings. Rate columns are optional — upload surface flow separately below.</p>
               <div class="fields">
                 <label>Import gauge file (.csv or .txt)
                   <input id="csvFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
@@ -723,13 +724,27 @@
                   </select>
                 </label>
               </div>
-              <label style="margin-top:0.75rem">Paste CSV / TXT rows
-                <textarea id="csvPaste" placeholder="timestamp,bhp_psi,rate_bpd,whp_psi,temp_f&#10;2026-06-21 08:00,8420,0,520,186&#10;&#10;Tab- or space-delimited electronic gauge .txt exports are also supported."></textarea>
+              <label style="margin-top:0.75rem">Paste gauge rows
+                <textarea id="csvPaste" placeholder="Date,Time,Pressure,Temperature&#10;DD-MM-YY,HH:MM:SS,psia,degF&#10;03-02-22,17:10:00,8420,186&#10;&#10;Tab- or space-delimited electronic gauge .txt exports are also supported."></textarea>
               </label>
               <div class="row" style="margin-top:0.7rem">
-                <button id="parsePaste" class="primary">Import pasted rows</button>
+                <button id="parsePaste" class="primary">Import pasted gauge rows</button>
                 <button id="appendSampleRows">Append 15 min demo rows</button>
               </div>
+              <h3 style="margin-top:1.25rem">Surface flow data (separate upload)</h3>
+              <p class="muted" style="margin-top:0">Rig surface rates (typically every 5–15 min). Each gauge reading gets the last known surface rate at or before that time (forward-fill). Before the first surface reading, rate is 0.</p>
+              <div class="fields">
+                <label>Import surface flow file (.csv or .txt)
+                  <input id="surfaceRateFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
+                </label>
+              </div>
+              <label style="margin-top:0.75rem">Paste surface rate rows
+                <textarea id="surfacePaste" placeholder="Date,Time,Oil,Water,Gas&#10;03-02-22,17:00:00,520,0,0&#10;03-02-22,17:15:00,0,0,0&#10;&#10;Total rate column (rate, q, surface_rate) is also accepted."></textarea>
+              </label>
+              <div class="row" style="margin-top:0.7rem">
+                <button id="parseSurfacePaste">Import pasted surface rates</button>
+              </div>
+              <p id="surfaceRateStatus" class="muted" style="margin-top:0.65rem">No surface rates loaded.</p>
             </div>
             <div>
               <h3>Endpoint polling</h3>
@@ -1366,7 +1381,7 @@
 
   <script src="welltest-pta-engine.js"></script>
   <script>
-    const APP_VERSION = "2.12.1";
+    const APP_VERSION = "2.12.2";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
@@ -1404,12 +1419,15 @@
         engineerSignOff: false
       },
       detectorMeta: null,
-      vsh04Deconv: null
+      vsh04Deconv: null,
+      surfaceRates: [],
+      surfaceMergeStats: null,
+      surfaceImportStats: {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []}
     };
 
     const els = {};
     const fieldIds = [
-      "csvFile", "caseFile", "timeMode", "csvPaste", "endpointUrl", "pollSeconds", "pollMessage",
+      "csvFile", "surfaceRateFile", "caseFile", "timeMode", "csvPaste", "surfacePaste", "surfaceRateStatus", "endpointUrl", "pollSeconds", "pollMessage",
       "pressureUnit", "rateUnit", "gasUnit", "tempUnit",
       "manualTime", "manualBhp", "manualOil", "manualWater", "manualGas", "manualWhp", "manualTemp",
       "rowCount", "dataBody", "periodBody", "qualityBody", "trendChart", "hornerChart",
@@ -1468,15 +1486,24 @@
         state.events = [];
         state.importIssues = [];
         state.importStats = {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+        state.surfaceRates = [];
+        state.surfaceMergeStats = null;
+        state.surfaceImportStats = {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
         refresh("Cleared data.");
       });
       els.csvFile.addEventListener("change", handleFileImport);
+      els.surfaceRateFile?.addEventListener("change", handleSurfaceFileImport);
       els.caseFile.addEventListener("change", handleCaseImport);
       document.getElementById("parsePaste").addEventListener("click", () => {
         const result = parseImportText(els.csvPaste.value, "paste");
         appendRows(result.rows, "paste");
         mergeImportStats(result);
-        refresh(`Imported ${result.rows.length} pasted row${result.rows.length === 1 ? "" : "s"}.`);
+        applyMergedSurfaceRates();
+        refresh(`Imported ${result.rows.length} pasted gauge row${result.rows.length === 1 ? "" : "s"}.`);
+      });
+      document.getElementById("parseSurfacePaste")?.addEventListener("click", () => {
+        const result = importSurfaceRatesFromText(els.surfacePaste.value, "paste");
+        refresh(result.message);
       });
       document.getElementById("pollOnce").addEventListener("click", () => pollEndpoint());
       document.getElementById("togglePolling").addEventListener("click", togglePolling);
@@ -1640,6 +1667,245 @@
         }
       }
       return best;
+    }
+
+    function lineHasSurfaceHeader(line) {
+      const low = String(line || "").toLowerCase();
+      const rateHits = ["rate", "oil", "water", "gas", "flow", "q_oil", "q_water", "q_gas", "surface"].filter(key => low.includes(key));
+      const timeHits = ["time", "date", "timestamp", "datetime"].filter(key => low.includes(key));
+      return rateHits.length >= 1 && timeHits.length >= 1;
+    }
+
+    function positionalSurfaceHeaders(count) {
+      if (count <= 2) return ["time", "rate"].slice(0, count);
+      if (count === 3) return ["time", "rate", "gas"];
+      return ["time", "oil", "water", "gas", "rate"].slice(0, count);
+    }
+
+    function parseSurfaceRecordsFromLines(lines, delimiter, headerIndex, source) {
+      const result = {rows: [], issues: [], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (!lines.length) {
+        result.issues.push("No readable surface-rate lines found.");
+        return result;
+      }
+      const headerLine = lines[headerIndex];
+      const rawHeaders = splitImportLine(headerLine, delimiter);
+      const hasNamedHeader = lineHasSurfaceHeader(headerLine);
+      const headers = (hasNamedHeader ? rawHeaders : positionalSurfaceHeaders(rawHeaders.length)).map(normalizeHeader);
+      let dataStart = headerIndex + (hasNamedHeader ? 1 : 0);
+      if (dataStart < lines.length && isUnitIndicatorLine(lines[dataStart])) dataStart += 1;
+      const unitMap = inferUnits(hasNamedHeader ? rawHeaders : headers);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      if (!hasNamedHeader) result.unitNotes.push("No header row detected — using positional mapping: time, oil, water, gas, rate.");
+      const dataLines = lines.slice(dataStart).filter(line => !isSkippableGaugeLine(line));
+      result.rawRows = dataLines.length;
+      let previousTime = -Infinity;
+      dataLines.forEach((line, index) => {
+        const values = splitImportLine(line, delimiter);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = surfaceRowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Surface row ${dataStart + index + 1}: ${parsed.issue || "missing timestamp or rate"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function parseSurfaceImportText(text, source = "surface") {
+      const normalized = normalizeGaugeDecimals(text);
+      let lines = normalized.split(/\r?\n/).map(line => line.replace(/\r$/, ""));
+      while (lines.length && isSkippableGaugeLine(lines[0])) lines.shift();
+      if (lines.length < 1) {
+        return {rows: [], issues: ["Surface file is empty or contains only metadata."], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      }
+      const delimiter = detectImportDelimiter(lines);
+      let headerIndex = -1;
+      for (let i = 0; i < Math.min(lines.length, 60); i += 1) {
+        if (isSkippableGaugeLine(lines[i])) continue;
+        if (lineHasSurfaceHeader(lines[i])) {
+          headerIndex = i;
+          break;
+        }
+      }
+      if (headerIndex < 0) headerIndex = lines.findIndex(line => !isSkippableGaugeLine(line));
+      const parsed = parseSurfaceRecordsFromLines(lines, delimiter, Math.max(0, headerIndex), source);
+      if (parsed.rows.length) return parsed;
+      const csvFallback = parseSurfaceCsv(normalized, source);
+      return csvFallback.rows.length ? csvFallback : parsed;
+    }
+
+    function parseSurfaceCsv(text, source = "surface") {
+      const lines = String(text || "").split(/\r?\n/).filter(line => line.trim().length);
+      const result = {rows: [], issues: [], rawRows: Math.max(0, lines.length - 1), parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (lines.length < 2) {
+        result.issues.push("Surface CSV requires a header and at least one data row.");
+        return result;
+      }
+      const rawHeaders = splitCsvLine(lines[0]);
+      const headers = (lineHasSurfaceHeader(lines[0]) ? rawHeaders : positionalSurfaceHeaders(rawHeaders.length)).map(normalizeHeader);
+      const unitMap = inferUnits(rawHeaders);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      let previousTime = -Infinity;
+      lines.slice(1).forEach((line, index) => {
+        const values = splitCsvLine(line);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = surfaceRowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Surface row ${index + 2}: ${parsed.issue || "missing timestamp or rate"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function surfaceRowFromRecord(record, options = {}) {
+      const get = channel => getRecordValue(record, channel);
+      const timeRaw = combineDateAndTime(record);
+      const time = parseTime(timeRaw);
+      if (!time) return {row: null, issue: "missing or invalid timestamp"};
+      const unitMap = options.unitMap || defaultUnitMap();
+      const rawRate = nullableNum(get("rate"));
+      const rawOil = nullableNum(get("oil"));
+      const rawWater = nullableNum(get("water"));
+      const rawGas = nullableNum(get("gas"));
+      const hasRate = [rawRate, rawOil, rawWater, rawGas].some(Number.isFinite);
+      if (!hasRate) return {row: null, issue: "missing rate (need oil, water, gas, or total rate)"};
+      const oil = Number.isFinite(rawOil) ? convertRate(rawOil, unitMap.rate.value) : 0;
+      const water = Number.isFinite(rawWater) ? convertRate(rawWater, unitMap.rate.value) : 0;
+      const gas = Number.isFinite(rawGas) ? convertGas(rawGas, unitMap.gas.value) : 0;
+      const explicitTotal = Number.isFinite(rawRate);
+      const rate = explicitTotal ? convertRate(rawRate, unitMap.rate.value) : calcRate({oil, water, gas});
+      return {
+        row: {
+          id: `${time.getTime()}-surface-${options.rawIndex ?? ""}-${Math.random().toString(36).slice(2, 8)}`,
+          rawIndex: options.rawIndex ?? state.surfaceRates.length,
+          timeMs: time.getTime(),
+          timeText: String(timeRaw || ""),
+          oil,
+          water,
+          gas,
+          rate,
+          explicitRate: true,
+          source: options.source || "surface",
+          units: {rate: unitMap.rate.value, gas: unitMap.gas.value}
+        }
+      };
+    }
+
+    function normalizeSurfaceRates() {
+      state.surfaceRates.sort((a, b) => a.timeMs - b.timeMs || (a.rawIndex || 0) - (b.rawIndex || 0));
+      state.surfaceRates.forEach((row, index) => {
+        row.rawIndex = Number.isFinite(row.rawIndex) ? row.rawIndex : index;
+        row.rate = row.explicitRate && Number.isFinite(row.rate) ? row.rate : calcRate(row);
+      });
+    }
+
+    function mergeSurfaceRatesOntoRows(gaugeRows, surfaceRates) {
+      if (!surfaceRates?.length || !gaugeRows?.length) {
+        return {merged: 0, beforeFirst: gaugeRows?.length || 0, surfaceCount: surfaceRates?.length || 0};
+      }
+      const sortedSurface = [...surfaceRates].sort((a, b) => a.timeMs - b.timeMs);
+      let surfaceIdx = 0;
+      let lastSurface = null;
+      let merged = 0;
+      let beforeFirst = 0;
+      gaugeRows.forEach(row => {
+        while (surfaceIdx < sortedSurface.length && sortedSurface[surfaceIdx].timeMs <= row.timeMs) {
+          lastSurface = sortedSurface[surfaceIdx];
+          surfaceIdx += 1;
+        }
+        if (!lastSurface) {
+          beforeFirst += 1;
+          row.oil = 0;
+          row.water = 0;
+          row.gas = 0;
+          row.rate = 0;
+          row.explicitRate = true;
+          row.rateSource = "surface-default";
+          return;
+        }
+        row.oil = lastSurface.oil || 0;
+        row.water = lastSurface.water || 0;
+        row.gas = lastSurface.gas || 0;
+        row.rate = lastSurface.rate;
+        row.explicitRate = true;
+        row.rateSource = "surface-merge";
+        merged += 1;
+      });
+      return {merged, beforeFirst, surfaceCount: sortedSurface.length};
+    }
+
+    function applyMergedSurfaceRates() {
+      if (!state.surfaceRates.length || !state.rows.length) {
+        state.surfaceMergeStats = null;
+        return null;
+      }
+      state.surfaceMergeStats = mergeSurfaceRatesOntoRows(state.rows, state.surfaceRates);
+      return state.surfaceMergeStats;
+    }
+
+    function importSurfaceRatesFromText(text, source = "surface") {
+      const result = parseSurfaceImportText(text, source);
+      if (!result.rows.length) {
+        const detail = result.issues[0] || "no valid surface rate rows found";
+        return {message: `Surface import failed: ${detail}.`, result};
+      }
+      state.surfaceRates = result.rows;
+      normalizeSurfaceRates();
+      state.surfaceImportStats = {
+        rawRows: result.rawRows,
+        parsedRows: result.parsedRows,
+        invalidRows: result.invalidRows,
+        unsortedRows: result.unsortedRows,
+        unitNotes: result.unitNotes || []
+      };
+      state.importIssues = [...state.importIssues, ...(result.issues || [])].slice(-25);
+      const mergeStats = applyMergedSurfaceRates();
+      let message = `Imported ${result.rows.length} surface rate row${result.rows.length === 1 ? "" : "s"}.`;
+      if (mergeStats && state.rows.length) {
+        message += ` Forward-filled onto ${mergeStats.merged} gauge reading${mergeStats.merged === 1 ? "" : "s"}`;
+        if (mergeStats.beforeFirst) message += ` (${mergeStats.beforeFirst} before first surface reading set to 0)`;
+        message += ".";
+      } else if (!state.rows.length) {
+        message += " Load gauge data to apply rates.";
+      }
+      return {message, result, mergeStats};
+    }
+
+    function renderSurfaceRateStatus() {
+      if (!els.surfaceRateStatus) return;
+      if (!state.surfaceRates.length) {
+        els.surfaceRateStatus.textContent = "No surface rates loaded.";
+        return;
+      }
+      const stats = state.surfaceMergeStats;
+      let text = `${state.surfaceRates.length} surface rate row${state.surfaceRates.length === 1 ? "" : "s"} loaded`;
+      if (stats && state.rows.length) {
+        text += ` — forward-filled onto ${stats.merged} of ${state.rows.length} gauge readings`;
+        if (stats.beforeFirst) text += ` (${stats.beforeFirst} before first surface point = 0 bpd)`;
+      } else if (state.rows.length) {
+        text += " — gauge data present; rates not yet merged";
+      } else {
+        text += " — waiting for gauge data";
+      }
+      els.surfaceRateStatus.textContent = text;
     }
 
     function lineHasGaugeHeader(line) {
@@ -1984,7 +2250,21 @@
       const result = parseImportText(text, file.name);
       appendRows(result.rows, file.name);
       mergeImportStats(result);
-      refresh(`Imported ${result.rows.length} row${result.rows.length === 1 ? "" : "s"} from ${file.name}.`);
+      applyMergedSurfaceRates();
+      let message = `Imported ${result.rows.length} gauge row${result.rows.length === 1 ? "" : "s"} from ${file.name}.`;
+      if (state.surfaceMergeStats?.merged) {
+        message += ` Surface rates forward-filled onto ${state.surfaceMergeStats.merged} reading${state.surfaceMergeStats.merged === 1 ? "" : "s"}.`;
+      }
+      refresh(message);
+      event.target.value = "";
+    }
+
+    async function handleSurfaceFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const outcome = importSurfaceRatesFromText(text, file.name);
+      refresh(`${outcome.message.replace(/\.$/, "")} from ${file.name}.`);
       event.target.value = "";
     }
 
@@ -2380,7 +2660,9 @@
       const flowPeriods = periods.slice(0, buildupIndex).filter(period => ["flow", "cleanup", "restart"].includes(period.type) && period.rows.length >= 2);
       const previousFlow = [...flowPeriods].reverse()[0];
       if (!previousFlow) return null;
-      const qRef = Math.max(0.0001, previousFlow.avgRate || average(flowPeriods.flatMap(period => period.rows.map(row => row.rate))));
+      const flowRates = flowPeriods.flatMap(period => period.rows.map(row => row.rate));
+      const computedAvg = previousFlow.avgRate || average(flowRates);
+      const qRef = Math.max(0.0001, computedAvg || inputNumber("defaultFlowRate", 850));
       const equivalentFlowTime = equivalentProducingTime(flowPeriods, qRef);
       const pwf = previousFlow.end.bhp;
       const startPressure = buildup.rows[0].bhp;
@@ -4944,6 +5226,7 @@
       renderStepRate();
       renderBuildupComparison();
       renderEvents();
+      renderSurfaceRateStatus();
       if (message) els.rowCount.textContent = `${state.rows.length} rows loaded - ${message}`;
     }
 
@@ -6304,6 +6587,9 @@
         manualPeriods: state.manualPeriods,
         importStats: state.importStats,
         importIssues: state.importIssues,
+        surfaceRates: state.surfaceRates,
+        surfaceMergeStats: state.surfaceMergeStats,
+        surfaceImportStats: state.surfaceImportStats,
         analysis: includeAnalysis ? compactAnalysis() : undefined
       };
     }
@@ -6361,7 +6647,12 @@
       state.manualPeriods = payload.manualPeriods || {};
       state.importStats = payload.importStats || state.importStats;
       state.importIssues = payload.importIssues || [];
+      state.surfaceRates = Array.isArray(payload.surfaceRates) ? payload.surfaceRates : [];
+      state.surfaceMergeStats = payload.surfaceMergeStats || null;
+      state.surfaceImportStats = payload.surfaceImportStats || state.surfaceImportStats;
       normalizeRows();
+      normalizeSurfaceRates();
+      if (state.surfaceRates.length && state.rows.length) applyMergedSurfaceRates();
     }
 
     function currentInputs() {
