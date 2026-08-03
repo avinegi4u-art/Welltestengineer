@@ -711,10 +711,10 @@
           </div>
           <div class="split">
             <div>
-              <h3>CSV file or pasted rows</h3>
+              <h3>CSV / TXT file or pasted rows</h3>
               <div class="fields">
-                <label>Import CSV file
-                  <input id="csvFile" type="file" accept=".csv,text/csv" />
+                <label>Import gauge file (.csv or .txt)
+                  <input id="csvFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
                 </label>
                 <label>Time zone treatment
                   <select id="timeMode">
@@ -723,8 +723,8 @@
                   </select>
                 </label>
               </div>
-              <label style="margin-top:0.75rem">Paste CSV rows
-                <textarea id="csvPaste" placeholder="timestamp,bhp_psi,rate_bpd,whp_psi,temp_f&#10;2026-06-21 08:00,8420,0,520,186"></textarea>
+              <label style="margin-top:0.75rem">Paste CSV / TXT rows
+                <textarea id="csvPaste" placeholder="timestamp,bhp_psi,rate_bpd,whp_psi,temp_f&#10;2026-06-21 08:00,8420,0,520,186&#10;&#10;Tab- or space-delimited electronic gauge .txt exports are also supported."></textarea>
               </label>
               <div class="row" style="margin-top:0.7rem">
                 <button id="parsePaste" class="primary">Import pasted rows</button>
@@ -804,7 +804,7 @@
                 <tr><th>Time</th><th>BHP psi</th><th>Rate bpd</th><th>Oil</th><th>Water</th><th>Gas Mscf/d</th><th>WHP psi</th><th>Temp F</th><th>Period</th></tr>
               </thead>
               <tbody id="dataBody">
-                <tr><td colspan="9" class="muted">Load sample data, paste CSV, add manual readings, or connect polling.</td></tr>
+                <tr><td colspan="9" class="muted">Load sample data, import CSV/TXT, paste rows, add manual readings, or connect polling.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1366,14 +1366,14 @@
 
   <script src="welltest-pta-engine.js"></script>
   <script>
-    const APP_VERSION = "2.11.1";
+    const APP_VERSION = "2.12.1";
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
-      time: ["time", "timestamp", "date_time", "datetime", "sample_time", "date", "reading_time"],
-      bhp: ["bhp", "bhp_psi", "bottomhole_pressure", "bottom_hole_pressure", "downhole_pressure", "pressure_bhp", "gauge_pressure", "pressure"],
+      time: ["time", "timestamp", "date_time", "datetime", "sample_time", "date", "reading_time", "temps", "elapsed", "elapsed_hr", "elapsed_hours"],
+      bhp: ["bhp", "bhp_psi", "bottomhole_pressure", "bottom_hole_pressure", "downhole_pressure", "pressure_bhp", "gauge_pressure", "pressure", "pression", "pres", "p_avg", "pavg"],
       whp: ["whp", "wellhead_pressure", "surface_pressure", "surface_pressure_psi", "thp", "tubing_head_pressure", "whp_psi"],
-      temp: ["temp", "temperature", "surface_temperature", "temperature_f", "temp_f", "gauge_temperature", "bh_temp"],
+      temp: ["temp", "temperature", "surface_temperature", "temperature_f", "temp_f", "gauge_temperature", "bh_temp", "bht", "degc", "degf"],
       rate: ["rate", "rate_bpd", "surface_rate", "surface_rate_bpd", "total_rate", "liquid_rate", "q", "q_total"],
       oil: ["oil", "oil_rate", "oil_bpd", "qo", "q_oil", "oil_rate_bpd"],
       water: ["water", "water_rate", "water_bpd", "qw", "q_water", "water_rate_bpd"],
@@ -1473,7 +1473,7 @@
       els.csvFile.addEventListener("change", handleFileImport);
       els.caseFile.addEventListener("change", handleCaseImport);
       document.getElementById("parsePaste").addEventListener("click", () => {
-        const result = parseCsv(els.csvPaste.value, "paste");
+        const result = parseImportText(els.csvPaste.value, "paste");
         appendRows(result.rows, "paste");
         mergeImportStats(result);
         refresh(`Imported ${result.rows.length} pasted row${result.rows.length === 1 ? "" : "s"}.`);
@@ -1580,6 +1580,145 @@
     }
 
     /* Parsing and unit normalization */
+    const GAUGE_META_PATTERNS = [
+      /^well\s*name/i, /^gauge/i, /^client/i, /^field/i, /^rig\s*name/i,
+      /^pressure\s*units/i, /^temperature\s*units/i, /^type\s*de\s*test/i,
+      /^date\s*of\s*last/i, /^gauge\s*specialist/i
+    ];
+
+    function normalizeGaugeDecimals(text) {
+      return String(text || "").replace(/^\uFEFF/, "").replace(/(\d),(\d)/g, "$1.$2");
+    }
+
+    function isSkippableGaugeLine(line) {
+      const stripped = String(line || "").trim();
+      if (!stripped) return true;
+      if (/^[=\-_*#~]{3,}$/.test(stripped)) return true;
+      const low = stripped.toLowerCase();
+      if (GAUGE_META_PATTERNS.some(pattern => pattern.test(low))) return true;
+      if (/^[^0-9]+[:=][^0-9]+$/.test(stripped) && !/\d{1,2}[\/:\-]\d{1,2}/.test(stripped)) return true;
+      return false;
+    }
+
+    function splitImportLine(line, delimiter = ",") {
+      if (delimiter === "ws") return String(line || "").trim().split(/\s+/).filter(Boolean);
+      if (delimiter === ",") return splitCsvLine(line);
+      return String(line || "").split(delimiter).map(cell => cell.trim());
+    }
+
+    function detectImportDelimiter(lines) {
+      const sample = lines.slice(0, 25).filter(line => !isSkippableGaugeLine(line));
+      const candidates = [
+        {id: "\t", re: /\t/},
+        {id: ";", re: /;/},
+        {id: ",", re: /,/},
+        {id: "|", re: /\|/},
+        {id: "ws", re: /\s{2,}/}
+      ];
+      let best = ",";
+      let bestScore = -1;
+      for (const candidate of candidates) {
+        let score = 0;
+        let consistent = 0;
+        let counts = [];
+        sample.forEach(line => {
+          if (!candidate.re.test(line)) return;
+          const parts = splitImportLine(line, candidate.id);
+          if (parts.length >= 2) {
+            score += parts.length;
+            counts.push(parts.length);
+          }
+        });
+        if (counts.length >= 2) {
+          const mode = counts.sort((a, b) => counts.filter(v => v === b).length - counts.filter(v => v === a).length)[0];
+          consistent = counts.filter(n => Math.abs(n - mode) <= 1).length;
+          score += consistent * 5;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          best = candidate.id;
+        }
+      }
+      return best;
+    }
+
+    function lineHasGaugeHeader(line) {
+      const low = String(line || "").toLowerCase();
+      const hits = ["time", "date", "timestamp", "bhp", "press", "pression", "rate", "temp", "gauge"].filter(key => low.includes(key));
+      return hits.length >= 1;
+    }
+
+    function isUnitIndicatorLine(line) {
+      const low = String(line || "").toLowerCase();
+      return /psia|psig|degc|degf|bpd|stb\/d|mscf|hh\/mm|dd\/mm|mm\/dd/.test(low) && !/\d{4,}/.test(low);
+    }
+
+    function findGaugeHeaderIndex(lines) {
+      for (let i = 0; i < Math.min(lines.length, 60); i += 1) {
+        if (isSkippableGaugeLine(lines[i])) continue;
+        if (lineHasGaugeHeader(lines[i])) return i;
+      }
+      return lines.findIndex(line => !isSkippableGaugeLine(line));
+    }
+
+    function positionalGaugeHeaders(count) {
+      const names = ["time", "pressure", "temperature", "rate", "whp"];
+      return Array.from({length: count}, (_, i) => names[i] || `col_${i}`);
+    }
+
+    function parseRecordsFromLines(lines, delimiter, headerIndex, source) {
+      const result = {rows: [], issues: [], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (!lines.length) {
+        result.issues.push("No readable data lines found.");
+        return result;
+      }
+      const headerLine = lines[headerIndex];
+      const rawHeaders = splitImportLine(headerLine, delimiter);
+      const hasNamedHeader = lineHasGaugeHeader(headerLine);
+      const headers = (hasNamedHeader ? rawHeaders : positionalGaugeHeaders(rawHeaders.length)).map(normalizeHeader);
+      let dataStart = headerIndex + (hasNamedHeader ? 1 : 0);
+      if (dataStart < lines.length && isUnitIndicatorLine(lines[dataStart])) dataStart += 1;
+      const unitMap = inferUnits(hasNamedHeader ? rawHeaders : headers);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      if (!hasNamedHeader) result.unitNotes.push("No header row detected — using positional mapping: time, pressure, temperature, rate, WHP.");
+      const dataLines = lines.slice(dataStart).filter(line => !isSkippableGaugeLine(line));
+      result.rawRows = dataLines.length;
+      let previousTime = -Infinity;
+      dataLines.forEach((line, index) => {
+        const values = splitImportLine(line, delimiter);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = rowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Row ${dataStart + index + 1}: ${parsed.issue || "missing timestamp or BHP"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function parseImportText(text, source = "import") {
+      const normalized = normalizeGaugeDecimals(text);
+      let lines = normalized.split(/\r?\n/).map(line => line.replace(/\r$/, ""));
+      while (lines.length && isSkippableGaugeLine(lines[0])) lines.shift();
+      if (lines.length < 1) {
+        return {rows: [], issues: ["File is empty or contains only metadata."], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      }
+      const delimiter = detectImportDelimiter(lines);
+      const headerIndex = Math.max(0, findGaugeHeaderIndex(lines));
+      const parsed = parseRecordsFromLines(lines, delimiter, headerIndex, source);
+      if (parsed.rows.length) return parsed;
+      const csvFallback = parseCsv(normalized, source);
+      return csvFallback.rows.length ? csvFallback : parsed;
+    }
+
     function parseCsv(text, source = "import") {
       const lines = String(text || "").split(/\r?\n/).filter(line => line.trim().length);
       const result = {rows: [], issues: [], rawRows: Math.max(0, lines.length - 1), parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
@@ -1717,8 +1856,32 @@
     function parseTime(value) {
       if (!value) return null;
       const text = String(value).trim();
+      const elapsed = toNum(text);
+      if (Number.isFinite(elapsed) && !/[\/:\-T]/.test(text)) {
+        const anchor = state.rows.length ? state.rows[state.rows.length - 1].timeMs : Date.now();
+        return new Date(anchor + elapsed * 3600000);
+      }
       let normalized = text;
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text)) normalized = text.replace(" ", "T");
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(text) && state.rows.length) {
+        const anchor = new Date(state.rows[state.rows.length - 1].timeMs);
+        const [hh, mm, ss = "0"] = text.split(":");
+        anchor.setHours(Number(hh), Number(mm), Number(ss), 0);
+        return anchor;
+      }
+      if (/^\d{1,2}\/\d{1,2}(\/\d{2,4})?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/.test(text)) {
+        const parts = text.split(/\s+/);
+        const datePart = parts[0].split("/");
+        const timePart = parts[1] || "00:00:00";
+        const [hh, mm, ss = "0"] = timePart.split(":");
+        let day = Number(datePart[0]);
+        let month = Number(datePart[1]);
+        let year = datePart[2] ? Number(datePart[2]) : new Date().getFullYear();
+        if (year < 100) year += 2000;
+        if (month > 12 && day <= 12) [day, month] = [month, day];
+        normalized = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+      } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text)) {
+        normalized = text.replace(" ", "T");
+      }
       const hasZone = /z$|[+-]\d{2}:?\d{2}$/i.test(normalized);
       const date = new Date(!hasZone && els.timeMode && els.timeMode.value === "utc" ? `${normalized}Z` : normalized);
       return Number.isFinite(date.getTime()) ? date : null;
@@ -1795,7 +1958,7 @@
       const file = event.target.files[0];
       if (!file) return;
       const text = await file.text();
-      const result = parseCsv(text, file.name);
+      const result = parseImportText(text, file.name);
       appendRows(result.rows, file.name);
       mergeImportStats(result);
       refresh(`Imported ${result.rows.length} row${result.rows.length === 1 ? "" : "s"} from ${file.name}.`);
@@ -1978,7 +2141,7 @@
 
     function detectPeriodsV81(rows) {
       if (!rows.length) return [];
-      const runCv = els.detectorCv?.checked !== false;
+      const runCv = els.detectorCv?.checked !== false && rows.length < 8000;
       let result;
       try {
         result = window.WelltestPtaEngine.detectEvents(rows, {}, runCv);
