@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.15.3 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.15.4 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <!-- Interactive Plotly charts when online; SVG fallback keeps the app fully offline. -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script src="welltest-pta-engine.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -533,8 +534,8 @@
           </svg>
         </div>
         <div>
-          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.3</span></h1>
-          <p class="sub">Kappa Workstation–style Saphir layout — Load Q/P · Extract · Deconvolution · Analytical · Improve</p>
+          <h1>DST PTA Pro <span class="mono" style="font-size:0.72em;color:var(--muted)">v2.15.4</span></h1>
+          <p class="sub">Kappa Workstation–style Saphir layout — Load Q/P · Extract · Deconvolution · Analytical · Improve. Includes welltest-pta V8.1 event detection, vSH04 multi-event deconvolution, and separate surface-rate upload from Pro v2.12.</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -652,6 +653,20 @@
                 <button id="parsePaste" class="primary">Import pasted rows</button>
                 <button id="appendSampleRows">Append 15 min demo rows</button>
               </div>
+              <h3 style="margin-top:1.25rem">Surface flow data (separate upload)</h3>
+              <p class="muted" style="margin-top:0">Rig surface rates (typically every 5–15 min). Each gauge reading gets the last known surface rate at or before that time (forward-fill). Before the first surface reading, rate is 0.</p>
+              <div class="fields">
+                <label>Import surface flow file (.csv or .txt)
+                  <input id="surfaceRateFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
+                </label>
+              </div>
+              <label style="margin-top:0.75rem">Paste surface rate rows
+                <textarea id="surfacePaste" placeholder="Date,Time,Oil,Water,Gas&#10;03-02-22,17:00:00,520,0,0&#10;03-02-22,17:15:00,0,0,0&#10;&#10;Total rate column (rate, q, surface_rate) is also accepted."></textarea>
+              </label>
+              <div class="row" style="margin-top:0.7rem">
+                <button id="parseSurfacePaste">Import pasted surface rates</button>
+              </div>
+              <p id="surfaceRateStatus" class="muted" style="margin-top:0.65rem">No surface rates loaded.</p>
             </div>
             <div>
               <h3>Endpoint polling</h3>
@@ -808,6 +823,32 @@
                 <option value="standard" selected>Standard (local median)</option>
               </select>
             </label>
+            <label>Period detector
+              <select id="periodDetector">
+                <option value="v81" selected>V8.1 pressure (welltest-pta)</option>
+                <option value="legacy">Legacy rate threshold</option>
+              </select>
+            </label>
+            <label>Detector CV score
+              <input id="detectorCv" type="checkbox" checked />
+              <span class="help" style="display:inline">Run bootstrap cross-validation</span>
+            </label>
+            <label>Deconvolution method
+              <select id="deconvMethod">
+                <option value="both" selected>Superposition + vSH04</option>
+                <option value="superposition">Superposition kernel only</option>
+                <option value="vsh04">vSH04 encoded only</option>
+              </select>
+            </label>
+            <label>vSH04 regularisation ν
+              <input id="vsh04Nu" type="number" min="0.0001" max="1" step="0.001" value="0.01" />
+            </label>
+            <label>vSH04 response nodes
+              <input id="vsh04Nodes" type="number" min="20" max="120" step="5" value="50" />
+            </label>
+            <label>Default flow rate, STB/D
+              <input id="defaultFlowRate" type="number" min="1" step="1" value="850" />
+            </label>
           </div>
           <div class="row" style="margin-top:0.55rem">
             <button id="recalculate" class="primary">Recalculate</button>
@@ -821,6 +862,7 @@
 
         <div class="card span-12">
           <h2>Detected DST periods</h2>
+          <div id="detectorCvSummary" class="callout" style="margin-bottom:0.65rem;min-height:2.5rem">V8.1 pressure-based event detector labels drawdowns and buildups from gauge data (welltest-pta 0.1.0).</div>
           <p class="help">Auto labels can be corrected below. Manual edits are saved with the case and used by Horner, superposition, QC, and reporting.</p>
           <div class="scroll">
             <table>
@@ -1457,7 +1499,7 @@
 
 
 <script>
-    const APP_VERSION = "2.15.3";
+    const APP_VERSION = "2.15.4";
 
     const PLOTLY_READY = () => typeof window !== "undefined" && typeof window.Plotly !== "undefined";
     const CHART_IDS = ["trendChart", "trendRateChart", "hornerChart", "derivativeChart", "semilogChart", "deconvChart", "stepRateChart", "injectivityChart"];
@@ -1648,7 +1690,8 @@
     const PERIOD_TYPES = ["cleanup", "flow", "shut-in", "restart", "afterflow"];
     const BADGE_CLASS = {"flow": "flow", "shut-in": "shutin", "cleanup": "cleanup", "restart": "restart", "afterflow": "afterflow", "alert": "alert", "warn": "shutin", "ok": "flow"};
     const HEADER_ALIASES = {
-      time: ["time", "timestamp", "date_time", "datetime", "sample_time", "date", "reading_time"],
+      time: ["time", "timestamp", "date_time", "datetime", "sample_time", "reading_time"],
+      date: ["date", "datum", "sample_date", "day"],
       bhp: ["bhp", "bhp_psi", "bhppsi", "bhp_psia", "bottomhole_pressure", "bottom_hole_pressure", "downhole_pressure", "pressure_bhp", "gauge_pressure", "pressure", "pwf"],
       whp: ["whp", "wellhead_pressure", "surface_pressure", "surface_pressure_psi", "thp", "tubing_head_pressure", "whp_psi", "whppsi"],
       temp: ["temp", "temperature", "surface_temperature", "temperature_f", "temp_f", "tempf", "gauge_temperature", "bh_temp"],
@@ -1688,12 +1731,17 @@
         toolPlateau: null,
         toolWbsDt: null,
         toolWbsDp: null
-      }
+      },
+      detectorMeta: null,
+      vsh04Deconv: null,
+      surfaceRates: [],
+      surfaceMergeStats: null,
+      surfaceImportStats: {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []}
     };
 
     const els = {};
     const fieldIds = [
-      "csvFile", "caseFile", "timeMode", "csvPaste", "endpointUrl", "pollSeconds", "pollMessage",
+      "csvFile", "surfaceRateFile", "caseFile", "timeMode", "csvPaste", "surfacePaste", "surfaceRateStatus", "endpointUrl", "pollSeconds", "pollMessage",
       "pressureUnit", "rateUnit", "gasUnit", "tempUnit",
       "manualTime", "manualBhp", "manualOil", "manualWater", "manualGas", "manualWhp", "manualTemp",
       "rowCount", "dataBody", "periodBody", "qualityBody", "trendChart", "trendRateChart", "hornerChart",
@@ -1704,7 +1752,7 @@
       "stepImport", "stepQc", "stepPeriods", "stepAnalysis", "stepReport",
       "netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor",
       "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd",
-      "buildupSelect", "bourdetSmoothing", "bourdetSmoothingSlider", "bourdetSmoothingValue", "showTypeCurve", "typeCurveNote", "spikeFilter", "derivTimeFn", "autoMatchModelBtn", "matchModelType", "autoMatchSummary", "btnShowTools", "btnShowModel", "btnResetMatch", "btnImproveMatch", "loglogMatchHint", "toolPlateau", "toolWbsDt", "toolWbsDp", "reservoirModel", "boundaryModelSelect", "wellboreModel", "wellModel", "imposePi",
+      "buildupSelect", "bourdetSmoothing", "bourdetSmoothingSlider", "bourdetSmoothingValue", "showTypeCurve", "typeCurveNote", "spikeFilter", "derivTimeFn", "periodDetector", "detectorCv", "detectorCvSummary", "deconvMethod", "vsh04Nu", "vsh04Nodes", "defaultFlowRate", "autoMatchModelBtn", "matchModelType", "autoMatchSummary", "btnShowTools", "btnShowModel", "btnResetMatch", "btnImproveMatch", "loglogMatchHint", "toolPlateau", "toolWbsDt", "toolWbsDp", "reservoirModel", "boundaryModelSelect", "wellboreModel", "wellModel", "imposePi",
       "eventTime", "eventType", "eventNote", "eventList",
       "caseWell", "caseZone", "caseEngineer", "reportText",
       "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups",
@@ -1785,9 +1833,20 @@
         state.events = [];
         state.importIssues = [];
         state.importStats = {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+        state.surfaceRates = [];
+        state.surfaceMergeStats = null;
+        state.surfaceImportStats = {rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+        state.detectorMeta = null;
+        state.vsh04Deconv = null;
         refresh("Cleared data.");
       });
       els.csvFile.addEventListener("change", handleFileImport);
+      els.surfaceRateFile?.addEventListener("change", handleSurfaceFileImport);
+      document.getElementById("parseSurfacePaste")?.addEventListener("click", () => {
+        const outcome = importSurfaceRatesFromText(els.surfacePaste.value, "paste-surface");
+        if (outcome.result.rows.length) els.surfacePaste.value = "";
+        refresh(outcome.message);
+      });
       els.caseFile.addEventListener("change", handleCaseImport);
       document.getElementById("parsePaste").addEventListener("click", () => {
         const result = parseCsv(els.csvPaste.value, "paste");
@@ -1854,7 +1913,7 @@
           applyLoglogToolMatch({runRegression: false});
         });
       });
-      [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "buildupSelect", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups", "interpretationMode", "minEarlyPoints", "minFitPoints", "minRadialPoints", "minShutinHr", "minLogSpan"].forEach(id => {
+      [...analysisInputIds(), "pressureUnit", "rateUnit", "gasUnit", "tempUnit", "buildupSelect", "stepRatePressureBasis", "stepRateTailPct", "stepRateMinMinutes", "stepRateMinPoints", "stepRatePressureChannel", "stepRateUseEvents", "stepRateManualGroups", "interpretationMode", "minEarlyPoints", "minFitPoints", "minRadialPoints", "minShutinHr", "minLogSpan", "periodDetector", "detectorCv", "deconvMethod"].forEach(id => {
         els[id]?.addEventListener("change", () => refresh());
       });
       els.reportLanguageMode?.addEventListener("change", () => {
@@ -1914,7 +1973,7 @@
     }
 
     function analysisInputIds() {
-      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd", "bourdetSmoothing", "spikeFilter", "showTypeCurve", "derivTimeFn"];
+      return ["netPay", "viscosity", "fvf", "porosity", "ct", "rw", "shutThreshold", "gasFactor", "zFactor", "perfTop", "perfBase", "tubingId", "packerDepth", "wellboreVolume", "hornerStart", "hornerEnd", "bourdetSmoothing", "spikeFilter", "showTypeCurve", "derivTimeFn", "periodDetector", "detectorCv", "deconvMethod", "vsh04Nu", "vsh04Nodes", "defaultFlowRate"];
     }
 
     function showTab(tabName, railId) {
@@ -2039,6 +2098,339 @@
       if (dlg?.open) dlg.close();
       showTab("analytical");
       runAutoMatch();
+    }
+
+    const GAUGE_META_PATTERNS = [
+      /^well\s*name/i, /^gauge/i, /^client/i, /^field/i, /^rig\s*name/i,
+      /^pressure\s*units/i, /^temperature\s*units/i, /^type\s*de\s*test/i,
+      /^date\s*of\s*last/i, /^gauge\s*specialist/i
+    ];
+
+    function normalizeGaugeDecimals(text) {
+      return String(text || "").replace(/^\uFEFF/, "").replace(/(\d),(\d)/g, "$1.$2");
+    }
+
+    function isSkippableGaugeLine(line) {
+      const stripped = String(line || "").trim();
+      if (!stripped) return true;
+      if (/^[=\-_*#~]{3,}$/.test(stripped)) return true;
+      const low = stripped.toLowerCase();
+      if (GAUGE_META_PATTERNS.some(pattern => pattern.test(low))) return true;
+      if (/^[^0-9]+[:=][^0-9]+$/.test(stripped) && !/\d{1,2}[\/:\-]\d{1,2}/.test(stripped)) return true;
+      return false;
+    }
+
+    function splitImportLine(line, delimiter = ",") {
+      if (delimiter === "ws") return String(line || "").trim().split(/\s+/).filter(Boolean);
+      if (delimiter === ",") return splitCsvLine(line);
+      return String(line || "").split(delimiter).map(cell => cell.trim());
+    }
+
+    function detectImportDelimiter(lines) {
+      const sample = lines.slice(0, 25).filter(line => !isSkippableGaugeLine(line));
+      const candidates = [
+        {id: "\t", re: /\t/},
+        {id: ";", re: /;/},
+        {id: ",", re: /,/},
+        {id: "|", re: /\|/},
+        {id: "ws", re: /\s{2,}/}
+      ];
+      let best = ",";
+      let bestScore = -1;
+      for (const candidate of candidates) {
+        let score = 0;
+        let consistent = 0;
+        let counts = [];
+        sample.forEach(line => {
+          if (!candidate.re.test(line)) return;
+          const parts = splitImportLine(line, candidate.id);
+          if (parts.length >= 2) {
+            score += parts.length;
+            counts.push(parts.length);
+          }
+        });
+        if (counts.length >= 2) {
+          const mode = counts.sort((a, b) => counts.filter(v => v === b).length - counts.filter(v => v === a).length)[0];
+          consistent = counts.filter(n => Math.abs(n - mode) <= 1).length;
+          score += consistent * 5;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          best = candidate.id;
+        }
+      }
+      return best;
+    }
+
+    function lineHasSurfaceHeader(line) {
+      const low = String(line || "").toLowerCase();
+      const rateHits = ["rate", "oil", "water", "gas", "flow", "q_oil", "q_water", "q_gas", "surface"].filter(key => low.includes(key));
+      const timeHits = ["time", "date", "timestamp", "datetime"].filter(key => low.includes(key));
+      return rateHits.length >= 1 && timeHits.length >= 1;
+    }
+
+    function positionalSurfaceHeaders(count) {
+      if (count <= 2) return ["time", "rate"].slice(0, count);
+      if (count === 3) return ["time", "rate", "gas"];
+      return ["time", "oil", "water", "gas", "rate"].slice(0, count);
+    }
+
+    function parseSurfaceRecordsFromLines(lines, delimiter, headerIndex, source) {
+      const result = {rows: [], issues: [], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (!lines.length) {
+        result.issues.push("No readable surface-rate lines found.");
+        return result;
+      }
+      const headerLine = lines[headerIndex];
+      const rawHeaders = splitImportLine(headerLine, delimiter);
+      const hasNamedHeader = lineHasSurfaceHeader(headerLine);
+      const headers = (hasNamedHeader ? rawHeaders : positionalSurfaceHeaders(rawHeaders.length)).map(normalizeHeader);
+      let dataStart = headerIndex + (hasNamedHeader ? 1 : 0);
+      if (dataStart < lines.length && isUnitIndicatorLine(lines[dataStart])) dataStart += 1;
+      const unitMap = inferUnits(hasNamedHeader ? rawHeaders : headers);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      if (!hasNamedHeader) result.unitNotes.push("No header row detected — using positional mapping: time, oil, water, gas, rate.");
+      const dataLines = lines.slice(dataStart).filter(line => !isSkippableGaugeLine(line));
+      result.rawRows = dataLines.length;
+      let previousTime = -Infinity;
+      dataLines.forEach((line, index) => {
+        const values = splitImportLine(line, delimiter);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = surfaceRowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Surface row ${dataStart + index + 1}: ${parsed.issue || "missing timestamp or rate"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function parseSurfaceImportText(text, source = "surface") {
+      const normalized = normalizeGaugeDecimals(text);
+      let lines = normalized.split(/\r?\n/).map(line => line.replace(/\r$/, ""));
+      while (lines.length && isSkippableGaugeLine(lines[0])) lines.shift();
+      if (lines.length < 1) {
+        return {rows: [], issues: ["Surface file is empty or contains only metadata."], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      }
+      const delimiter = detectImportDelimiter(lines);
+      let headerIndex = -1;
+      for (let i = 0; i < Math.min(lines.length, 60); i += 1) {
+        if (isSkippableGaugeLine(lines[i])) continue;
+        if (lineHasSurfaceHeader(lines[i])) {
+          headerIndex = i;
+          break;
+        }
+      }
+      if (headerIndex < 0) headerIndex = lines.findIndex(line => !isSkippableGaugeLine(line));
+      const parsed = parseSurfaceRecordsFromLines(lines, delimiter, Math.max(0, headerIndex), source);
+      if (parsed.rows.length) return parsed;
+      const csvFallback = parseSurfaceCsv(normalized, source);
+      return csvFallback.rows.length ? csvFallback : parsed;
+    }
+
+    function parseSurfaceCsv(text, source = "surface") {
+      const lines = String(text || "").split(/\r?\n/).filter(line => line.trim().length);
+      const result = {rows: [], issues: [], rawRows: Math.max(0, lines.length - 1), parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
+      if (lines.length < 2) {
+        result.issues.push("Surface CSV requires a header and at least one data row.");
+        return result;
+      }
+      const rawHeaders = splitCsvLine(lines[0]);
+      const headers = (lineHasSurfaceHeader(lines[0]) ? rawHeaders : positionalSurfaceHeaders(rawHeaders.length)).map(normalizeHeader);
+      const unitMap = inferUnits(rawHeaders);
+      result.unitNotes = Object.entries(unitMap)
+        .filter(([, unit]) => unit.inferred)
+        .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      let previousTime = -Infinity;
+      lines.slice(1).forEach((line, index) => {
+        const values = splitCsvLine(line);
+        const record = {};
+        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        const parsed = surfaceRowFromRecord(record, {source, rawIndex: index, unitMap});
+        if (!parsed.row) {
+          result.invalidRows += 1;
+          result.issues.push(`Surface row ${index + 2}: ${parsed.issue || "missing timestamp or rate"}.`);
+          return;
+        }
+        if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
+        previousTime = parsed.row.timeMs;
+        result.rows.push(parsed.row);
+      });
+      result.parsedRows = result.rows.length;
+      return result;
+    }
+
+    function surfaceRowFromRecord(record, options = {}) {
+      const get = channel => getRecordValue(record, channel);
+      const timeRaw = combineDateAndTime(record);
+      const time = parseTime(timeRaw);
+      if (!time) return {row: null, issue: "missing or invalid timestamp"};
+      const unitMap = options.unitMap || defaultUnitMap();
+      const rawRate = nullableNum(get("rate"));
+      const rawOil = nullableNum(get("oil"));
+      const rawWater = nullableNum(get("water"));
+      const rawGas = nullableNum(get("gas"));
+      const hasRate = [rawRate, rawOil, rawWater, rawGas].some(Number.isFinite);
+      if (!hasRate) return {row: null, issue: "missing rate (need oil, water, gas, or total rate)"};
+      const oil = Number.isFinite(rawOil) ? convertRate(rawOil, unitMap.rate.value) : 0;
+      const water = Number.isFinite(rawWater) ? convertRate(rawWater, unitMap.rate.value) : 0;
+      const gas = Number.isFinite(rawGas) ? convertGas(rawGas, unitMap.gas.value) : 0;
+      const explicitTotal = Number.isFinite(rawRate);
+      const rate = explicitTotal ? convertRate(rawRate, unitMap.rate.value) : calcRate({oil, water, gas});
+      return {
+        row: {
+          id: `${time.getTime()}-surface-${options.rawIndex ?? ""}-${Math.random().toString(36).slice(2, 8)}`,
+          rawIndex: options.rawIndex ?? state.surfaceRates.length,
+          timeMs: time.getTime(),
+          timeText: String(timeRaw || ""),
+          oil,
+          water,
+          gas,
+          rate,
+          explicitRate: true,
+          source: options.source || "surface",
+          units: {rate: unitMap.rate.value, gas: unitMap.gas.value}
+        }
+      };
+    }
+
+    function normalizeSurfaceRates() {
+      state.surfaceRates.sort((a, b) => a.timeMs - b.timeMs || (a.rawIndex || 0) - (b.rawIndex || 0));
+      state.surfaceRates.forEach((row, index) => {
+        row.rawIndex = Number.isFinite(row.rawIndex) ? row.rawIndex : index;
+        row.rate = row.explicitRate && Number.isFinite(row.rate) ? row.rate : calcRate(row);
+      });
+    }
+
+    function mergeSurfaceRatesOntoRows(gaugeRows, surfaceRates) {
+      if (!surfaceRates?.length || !gaugeRows?.length) {
+        return {merged: 0, beforeFirst: gaugeRows?.length || 0, surfaceCount: surfaceRates?.length || 0};
+      }
+      const sortedSurface = [...surfaceRates].sort((a, b) => a.timeMs - b.timeMs);
+      let surfaceIdx = 0;
+      let lastSurface = null;
+      let merged = 0;
+      let beforeFirst = 0;
+      gaugeRows.forEach(row => {
+        while (surfaceIdx < sortedSurface.length && sortedSurface[surfaceIdx].timeMs <= row.timeMs) {
+          lastSurface = sortedSurface[surfaceIdx];
+          surfaceIdx += 1;
+        }
+        if (!lastSurface) {
+          beforeFirst += 1;
+          row.oil = 0;
+          row.water = 0;
+          row.gas = 0;
+          row.rate = 0;
+          row.explicitRate = true;
+          row.rateSource = "surface-default";
+          return;
+        }
+        row.oil = lastSurface.oil || 0;
+        row.water = lastSurface.water || 0;
+        row.gas = lastSurface.gas || 0;
+        row.rate = lastSurface.rate;
+        row.explicitRate = true;
+        row.rateSource = "surface-merge";
+        merged += 1;
+      });
+      return {merged, beforeFirst, surfaceCount: sortedSurface.length};
+    }
+
+    function applyMergedSurfaceRates() {
+      if (!state.surfaceRates.length || !state.rows.length) {
+        state.surfaceMergeStats = null;
+        return null;
+      }
+      state.surfaceMergeStats = mergeSurfaceRatesOntoRows(state.rows, state.surfaceRates);
+      return state.surfaceMergeStats;
+    }
+
+    function importSurfaceRatesFromText(text, source = "surface") {
+      const result = parseSurfaceImportText(text, source);
+      if (!result.rows.length) {
+        const detail = result.issues[0] || "no valid surface rate rows found";
+        return {message: `Surface import failed: ${detail}.`, result};
+      }
+      state.surfaceRates = result.rows;
+      normalizeSurfaceRates();
+      state.surfaceImportStats = {
+        rawRows: result.rawRows,
+        parsedRows: result.parsedRows,
+        invalidRows: result.invalidRows,
+        unsortedRows: result.unsortedRows,
+        unitNotes: result.unitNotes || []
+      };
+      state.importIssues = [...state.importIssues, ...(result.issues || [])].slice(-25);
+      const mergeStats = applyMergedSurfaceRates();
+      let message = `Imported ${result.rows.length} surface rate row${result.rows.length === 1 ? "" : "s"}.`;
+      if (mergeStats && state.rows.length) {
+        message += ` Forward-filled onto ${mergeStats.merged} gauge reading${mergeStats.merged === 1 ? "" : "s"}`;
+        if (mergeStats.beforeFirst) message += ` (${mergeStats.beforeFirst} before first surface reading set to 0)`;
+        message += ".";
+      } else if (!state.rows.length) {
+        message += " Load gauge data to apply rates.";
+      }
+      return {message, result, mergeStats};
+    }
+
+    function renderSurfaceRateStatus() {
+      if (!els.surfaceRateStatus) return;
+      if (!state.surfaceRates.length) {
+        els.surfaceRateStatus.textContent = "No surface rates loaded.";
+        return;
+      }
+      const stats = state.surfaceMergeStats;
+      let text = `${state.surfaceRates.length} surface rate row${state.surfaceRates.length === 1 ? "" : "s"} loaded`;
+      if (stats && state.rows.length) {
+        text += ` — forward-filled onto ${stats.merged} of ${state.rows.length} gauge readings`;
+        if (stats.beforeFirst) text += ` (${stats.beforeFirst} before first surface point = 0 bpd)`;
+      } else if (state.rows.length) {
+        text += " — gauge data present; rates not yet merged";
+      } else {
+        text += " — waiting for gauge data";
+      }
+      els.surfaceRateStatus.textContent = text;
+    }
+
+    function isUnitIndicatorLine(line) {
+      const low = String(line || "").toLowerCase();
+      if (/dd[-\/]mm|mm[-\/]dd|yy[-\/]mm|hh:mm/.test(low) && !/\d{4,}/.test(low)) return true;
+      return /psia|psig|degc|degf|bpd|stb\/d|mscf|hh\/mm|dd\/mm|mm\/dd/.test(low) && !/\d{4,}/.test(low);
+    }
+
+    function getRecordValue(record, channel) {
+      for (const alias of HEADER_ALIASES[channel] || []) {
+        const key = normalizeHeader(alias);
+        if (record[key] !== undefined && record[key] !== "") return record[key];
+      }
+      return "";
+    }
+
+    function combineDateAndTime(record) {
+      const dateText = String(record.date || record.datum || "").trim();
+      const timeText = String(record.time || record.temps || record.heure || "").trim();
+      if (dateText && timeText && /^\d{1,2}[\/\-]\d{1,2}/.test(dateText) && /^\d{1,2}:\d{2}/.test(timeText)) {
+        return `${dateText} ${timeText}`;
+      }
+      return getRecordValue(record, "time");
+    }
+
+    async function handleSurfaceFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const outcome = importSurfaceRatesFromText(text, file.name);
+      refresh(`${outcome.message.replace(/\.$/, "")} from ${file.name}.`);
+      event.target.value = "";
     }
 
     /* Parsing and unit normalization */
@@ -2405,8 +2797,10 @@
 
     function runRefresh(message) {
       normalizeRows();
+      if (state.surfaceRates?.length) applyMergedSurfaceRates();
       const rows = applySpikeFilter(state.rows);
       state.periods = detectPeriods(rows);
+      state.vsh04Deconv = computeTestVsh04(rows, state.periods);
       state.analysis = null;
       state.quality = buildDataQualityChecks();
       state.multiBuildup = analyzeMultipleBuildups(rows, state.periods, state.events);
@@ -2468,6 +2862,57 @@
     }
 
     function detectPeriods(rows) {
+      const mode = els.periodDetector?.value || "v81";
+      if (mode === "v81" && window.WelltestPtaEngine) {
+        return detectPeriodsV81(rows);
+      }
+      return detectPeriodsLegacy(rows);
+    }
+
+    function detectPeriodsV81(rows) {
+      if (!rows.length) return [];
+      const runCv = els.detectorCv?.checked !== false && rows.length < 8000;
+      let result;
+      try {
+        result = window.WelltestPtaEngine.detectEvents(rows, {}, runCv);
+      } catch (error) {
+        state.detectorMeta = {error: error.message};
+        return detectPeriodsLegacy(rows);
+      }
+      state.detectorMeta = {
+        pReservoir: result.detection.pReservoir,
+        noiseFloor: result.detection.noiseFloor,
+        cv: result.cv || null,
+        method: "V8.1 (welltest-pta)"
+      };
+      const segments = [];
+      let hasFlow = false;
+      for (const seg of result.segments) {
+        const base = seg.eventType === "buildup" ? "shut-in" : "flow";
+        let autoType = seg.eventType === "buildup" ? "shut-in" : "flow";
+        let confidence = "high";
+        let reason = seg.eventType === "buildup"
+          ? "V8.1 pressure buildup (welltest-pta)."
+          : "V8.1 pressure drawdown (welltest-pta).";
+        if (seg.eventType === "drawdown" && !hasFlow) {
+          autoType = "cleanup";
+          reason = "First V8.1 drawdown; treated as cleanup.";
+        }
+        if (seg.eventType === "drawdown") hasFlow = true;
+        segments.push({
+          base,
+          startIndex: seg.startIndex,
+          endIndex: seg.endIndex,
+          autoType,
+          confidence,
+          reason,
+          eventType: seg.eventType
+        });
+      }
+      return segments.map((segment, index) => makePeriod(segment, index, rows));
+    }
+
+    function detectPeriodsLegacy(rows) {
       if (!rows.length) return [];
       const threshold = inputNumber("shutThreshold", 10);
       const segments = [];
@@ -2707,6 +3152,12 @@
       });
       analysis.typeCurve = buildTypeCurveOverlay(analysis, inputs);
       analysis.deconvolution = computeDeconvolution(analysis);
+      if (state.vsh04Deconv && !state.vsh04Deconv.error) {
+        analysis.vsh04Deconv = state.vsh04Deconv;
+        const method = els.deconvMethod?.value || "both";
+        if (method === "vsh04") analysis.deconvolution = attachVsh04ToDeconv(analysis.deconvolution, state.vsh04Deconv, true);
+        else if (method === "both") analysis.deconvolution = attachVsh04ToDeconv(analysis.deconvolution, state.vsh04Deconv, false);
+      }
       analysis.superposition = analyzeSuperposition(analysis);
     }
 
@@ -4839,6 +5290,57 @@
         : `WBS + radial (${basis}): k ${fmt(k, 2)} md, S ${fmt(S, 1)}, CD ${fmt(CD, 0)}`};
     }
 
+    function computeTestVsh04(rows, periods) {
+      const method = els.deconvMethod?.value || "both";
+      if (method === "superposition" || !window.WelltestPtaEngine?.deconvolveVsh04 || !rows?.length || !periods?.length) return null;
+      const ptaPeriods = periods.filter(period => ["shut-in", "flow", "cleanup", "restart", "afterflow"].includes(period.type));
+      if (ptaPeriods.length < 2) return null;
+      try {
+        return window.WelltestPtaEngine.deconvolveVsh04({
+          rows,
+          periods: ptaPeriods.map(period => ({
+            ...period,
+            startHr: (period.start.timeMs - rows[0].timeMs) / 3600000
+          })),
+          defaultQ: inputNumber("defaultFlowRate", 850),
+          nu: inputNumber("vsh04Nu", 0.01),
+          nResponseNodes: Math.round(inputNumber("vsh04Nodes", 50))
+        });
+      } catch (error) {
+        return {error: error.message, method: "vSH04"};
+      }
+    }
+
+    function attachVsh04ToDeconv(superDeconv, vsh04, vsh04Only) {
+      if (!vsh04) return superDeconv;
+      if (!superDeconv && vsh04Only) {
+        return {
+          method: "vSH04",
+          points: [],
+          derivatives: [],
+          vsh04,
+          summary: vsh04.summary,
+          stabilityLevel: vsh04.converged ? "stable" : "marginal",
+          stabilityNote: vsh04.converged ? "vSH04 solver converged." : "vSH04 solver stopped before full convergence — compare with raw log-log.",
+          segments: [],
+          affectedSegments: [],
+          rateCv: 0,
+          meanCorrectionPct: 0,
+          interpretationDependencyPct: 0
+        };
+      }
+      if (!superDeconv) return null;
+      const merged = {...superDeconv, vsh04};
+      if (vsh04Only) {
+        merged.summary = vsh04.summary;
+        merged.method = "vSH04";
+      } else {
+        merged.summary = `${superDeconv.summary}\n\n--- vSH04 multi-event deconvolution (welltest-pta) ---\n\n${vsh04.summary}`;
+        merged.method = "superposition+vSH04";
+      }
+      return merged;
+    }
+
     function computeDeconvolution(analysis) {
       if (!analysis?.points?.length) return null;
       const qRef = analysis.q;
@@ -5788,6 +6290,7 @@
       renderWorkflow();
       renderDataTable();
       renderPeriods();
+      renderSurfaceRateStatus();
       renderTrend();
       renderHorner();
       renderDerivative();
@@ -5872,7 +6375,32 @@
       }).join("");
     }
 
+    function renderDetectorCv() {
+      if (!els.detectorCvSummary) return;
+      const mode = els.periodDetector?.value || "v81";
+      if (mode === "legacy") {
+        els.detectorCvSummary.textContent = "Legacy rate-threshold detector: periods split when rate crosses the shut-in threshold.";
+        return;
+      }
+      const meta = state.detectorMeta;
+      if (!meta) {
+        els.detectorCvSummary.textContent = "V8.1 pressure-based event detector from welltest-pta 0.1.0 (Hampel despike + Savitzky–Golay + tail trim).";
+        return;
+      }
+      if (meta.error) {
+        els.detectorCvSummary.textContent = `V8.1 detector error (${meta.error}); fell back to legacy rate threshold.`;
+        return;
+      }
+      let text = `V8.1 — P_res ≈ ${fmt(meta.pReservoir, 1)} psi, noise σ̂ ≈ ${fmt(meta.noiseFloor, 2)} psi.`;
+      if (meta.cv) {
+        text += ` CV ${fmt(meta.cv.overallScore, 1)}/100 (${meta.cv.grade}): ${meta.cv.refNDd} drawdown(s), ${meta.cv.refNBu} buildup(s).`;
+        if (meta.cv.overallScore < 60) text += " Manual period review recommended.";
+      }
+      els.detectorCvSummary.textContent = text;
+    }
+
     function renderPeriods() {
+      renderDetectorCv();
       if (!state.periods.length) {
         els.periodBody.innerHTML = '<tr><td colspan="7" class="muted">No periods detected yet.</td></tr>';
         return;
@@ -6369,16 +6897,59 @@
     function renderDeconvolution() {
       const analysis = state.analysis;
       const deconv = analysis?.deconvolution;
-      if (!deconv?.points?.length) {
-        els.deconvSummary.textContent = "Load data to build superposition deconvolution and rate-normalized buildup curves for messy DST sequences.";
+      const vsh04 = deconv?.vsh04 || state.vsh04Deconv;
+      const hasSuper = !!(deconv?.points?.length);
+      const hasVsh04 = !!(vsh04 && !vsh04.error && vsh04.t?.length);
+      if (!hasSuper && !hasVsh04) {
+        const err = state.vsh04Deconv?.error;
+        els.deconvSummary.textContent = err
+          ? `vSH04 deconvolution failed: ${err}. Load a multi-period DST or use superposition kernel.`
+          : "Load data to build superposition and/or vSH04 deconvolution curves for messy DST sequences.";
         purgePlot(els.deconvChart);
-        els.deconvChart.innerHTML = emptySvg("Need a buildup with rate history to plot deconvolution.");
+        els.deconvChart.innerHTML = emptySvg("Need PTA periods and buildup data for deconvolution plots.");
         if (els.deconvAuditBody) els.deconvAuditBody.innerHTML = '<tr><td colspan="7" class="muted">Kernel audit appears after buildup analysis.</td></tr>';
-        if (els.deconvFormula) els.deconvFormula.textContent = "Formula: Δp_decon = Δp_raw / superposition_kernel; kernel built from pre-buildup Δq and elapsed time to shut-in.";
+        if (els.deconvFormula) els.deconvFormula.textContent = "Superposition: Δp_decon = Δp_raw / kernel. vSH04: encoded z-formulation (von Schroeter–Hollaender–Gringarten 2004).";
+        return;
+      }
+      if (!hasSuper && hasVsh04) {
+        els.deconvSummary.textContent = vsh04.summary;
+        purgePlot(els.deconvChart);
+        if (typeof PLOTLY_READY === "function" && PLOTLY_READY()) {
+          const tOk = [];
+          const pu = [];
+          const tD = [];
+          const dpu = [];
+          for (let i = 0; i < vsh04.t.length; i += 1) {
+            if (vsh04.t[i] > 0 && Number.isFinite(vsh04.pu?.[i])) {
+              tOk.push(vsh04.t[i]);
+              pu.push(vsh04.pu[i]);
+            }
+            if (vsh04.t[i] > 0 && Number.isFinite(vsh04.dpu?.[i])) {
+              tD.push(vsh04.t[i]);
+              dpu.push(Math.abs(vsh04.dpu[i]));
+            }
+          }
+          const traces = [];
+          if (tOk.length) traces.push({x: tOk, y: pu, name: "vSH04 pᵤ", mode: "lines", line: {color: "#c7a6ff", width: 1.6}, hovertemplate: "Δt %{x:.3f}<br>pᵤ %{y:.2f}<extra></extra>"});
+          if (tD.length) traces.push({x: tD, y: dpu, name: "vSH04 |dpᵤ/dln t|", mode: "markers", marker: {color: "#ff7b8a", size: 5}, hovertemplate: "Δt %{x:.3f}<br>|dpᵤ| %{y:.2f}<extra></extra>"});
+          if (traces.length) {
+            renderPlot(els.deconvChart, traces, {
+              height: PLOT_HEIGHT,
+              xaxis: axisStyle({title: "Δt, hr (log)", type: "log"}),
+              yaxis: axisStyle({title: "pᵤ / |dpᵤ|, psi (log)", type: "log"})
+            });
+          } else {
+            els.deconvChart.innerHTML = vsh04LogLogSvg(vsh04);
+          }
+        } else {
+          els.deconvChart.innerHTML = vsh04LogLogSvg(vsh04);
+        }
+        if (els.deconvAuditBody) els.deconvAuditBody.innerHTML = '<tr><td colspan="7" class="muted">vSH04 uses full-test rate history — kernel audit is for superposition mode.</td></tr>';
+        if (els.deconvFormula) els.deconvFormula.textContent = `vSH04: z(σ)=ln(dp_u/d ln t), regularisation ν=${vsh04.nu}, ${vsh04.t.length} nodes, pᵢ=${fmt(vsh04.pInitial, 1)} psi.`;
         return;
       }
       els.deconvSummary.textContent = deconv.summary;
-      if (PLOTLY_READY() && deconv.points?.length) {
+      if (typeof PLOTLY_READY === "function" && PLOTLY_READY() && deconv.points?.length) {
         const raw = deconv.points.filter(p => (p.dt || p.x) > 0 && (p.raw || p.deltaP || p.y) > 0);
         const dcon = deconv.points.filter(p => (p.dt || p.x) > 0 && (p.deconvolved || p.decon) > 0);
         const der = (deconv.derivatives || deconv.derivative || []).filter(p => (p.dt || p.x) > 0 && Number.isFinite(p.derivative ?? p.y) && (p.derivative ?? p.y) !== 0);
@@ -6409,6 +6980,23 @@
             hovertemplate: "Δt %{x:.3f}<br>Δp′ %{text}<extra>× = negative</extra>"
           });
         }
+        if (hasVsh04) {
+          const tOk = [];
+          const pu = [];
+          for (let i = 0; i < vsh04.t.length; i += 1) {
+            if (vsh04.t[i] > 0 && Number.isFinite(vsh04.pu?.[i])) {
+              tOk.push(vsh04.t[i]);
+              pu.push(vsh04.pu[i]);
+            }
+          }
+          if (tOk.length) {
+            traces.push({
+              x: tOk, y: pu, name: "vSH04 pᵤ", mode: "lines",
+              line: {color: "#c7a6ff", width: 1.5, dash: "dot"},
+              hovertemplate: "Δt %{x:.3f}<br>vSH04 pᵤ %{y:.2f}<extra></extra>"
+            });
+          }
+        }
         if (traces.length) {
           renderPlot(els.deconvChart, traces, {
             height: PLOT_HEIGHT,
@@ -6424,7 +7012,7 @@
         els.deconvChart.innerHTML = deconvLogLogSvg(deconv);
       }
       if (els.deconvAuditBody) {
-        els.deconvAuditBody.innerHTML = deconv.segments.map(segment => `<tr>
+        els.deconvAuditBody.innerHTML = (deconv.segments || []).map(segment => `<tr>
           <td>${segment.number}</td>
           <td>${escapeHtml(segment.type)}</td>
           <td>${fmt(segment.avgRate, 1)}</td>
@@ -6432,13 +7020,14 @@
           <td>${fmt(segment.durationHr, 2)}</td>
           <td>${fmt(segment.kernelSharePct, 1)}%</td>
           <td>${segment.affected ? '<span class="badge alert">affected</span>' : '<span class="badge">minor</span>'}</td>
-        </tr>`).join("");
+        </tr>`).join("") || '<tr><td colspan="7" class="muted">Kernel audit appears after buildup analysis.</td></tr>';
       }
       if (els.deconvFormula) {
         const sample = deconv.auditPoints?.[0];
+        const vsh04Note = deconv.vsh04 ? ` vSH04 ||r||=${fmt(deconv.vsh04.residualNorm, 1)} psi, ${deconv.vsh04.converged ? "converged" : "partial"} fit.` : "";
         els.deconvFormula.textContent = sample
-          ? `Example at ${fmt(sample.dt, 3)} hr: raw ${fmt(sample.raw, 1)} psi, kernel ${fmt(sample.kernel, 3)}, deconvolved ${fmt(sample.deconvolved, 1)} psi (${fmt(sample.correctionPct, 1)}% correction).`
-          : "Formula: Δp_decon = Δp_raw / superposition_kernel.";
+          ? `Superposition example at ${fmt(sample.dt, 3)} hr: raw ${fmt(sample.raw, 1)} psi, kernel ${fmt(sample.kernel, 3)}, deconvolved ${fmt(sample.deconvolved, 1)} psi (${fmt(sample.correctionPct, 1)}% correction).${vsh04Note}`
+          : `Superposition: Δp_decon = Δp_raw / kernel.${vsh04Note}`;
       }
       const dominance = state.analysis?.curveDominance;
       if (els.curveDominanceSummary) {
@@ -7182,6 +7771,30 @@
       </svg>`;
     }
 
+    function vsh04LogLogSvg(vsh04) {
+      const width = 920;
+      const height = 310;
+      const pad = {l: 68, r: 28, t: 24, b: 48};
+      const pu = vsh04.t.map((t, i) => ({x: t, y: Math.abs(vsh04.pu[i])})).filter(p => p.x > 0 && p.y > 0);
+      const deriv = vsh04.t.map((t, i) => ({x: t, y: Math.abs(vsh04.dpuDlnt[i])})).filter(p => p.x > 0 && p.y > 0);
+      const all = pu.concat(deriv);
+      if (!all.length) return emptySvg("Need positive vSH04 response points.");
+      const xMin = Math.min(...all.map(point => point.x));
+      const xMax = Math.max(...all.map(point => point.x));
+      const yMin = Math.min(...all.map(point => point.y));
+      const yMax = Math.max(...all.map(point => point.y));
+      const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
+      const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
+      return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
+        ${makeGrid(width, height, pad)}
+        <path d="${pathFor(pu, xScale, yScale)}" fill="none" stroke="#c7a6ff" stroke-width="2.4"/>
+        <path d="${pathFor(deriv, xScale, yScale)}" fill="none" stroke="#ff7b8a" stroke-width="2.2" stroke-dasharray="6 4"/>
+        ${axisLabels(width, height, pad, "equivalent time hr (log)", "unit-rate response (log)", "")}
+        ${xTicks(value => xScale(10 ** value), Math.log10(xMin), Math.log10(xMax), height - pad.b, value => fmt(10 ** value, 2))}
+        ${yTicks(value => yScale(10 ** value), Math.log10(yMin), Math.log10(yMax), pad.l, "left", value => fmt(10 ** value, 0))}
+      </svg>`;
+    }
+
     function deconvLogLogSvg(deconv) {
       const width = 920;
       const height = 310;
@@ -7682,6 +8295,9 @@
         manualPeriods: state.manualPeriods,
         importStats: state.importStats,
         importIssues: state.importIssues,
+        surfaceRates: state.surfaceRates,
+        surfaceMergeStats: state.surfaceMergeStats,
+        surfaceImportStats: state.surfaceImportStats,
         analysis: includeAnalysis ? compactAnalysis() : undefined
       };
     }
@@ -7761,7 +8377,12 @@
       state.manualPeriods = payload.manualPeriods || {};
       state.importStats = payload.importStats || state.importStats;
       state.importIssues = payload.importIssues || [];
+      state.surfaceRates = Array.isArray(payload.surfaceRates) ? payload.surfaceRates : [];
+      state.surfaceMergeStats = payload.surfaceMergeStats || null;
+      state.surfaceImportStats = payload.surfaceImportStats || state.surfaceImportStats;
       normalizeRows();
+      normalizeSurfaceRates();
+      if (state.surfaceRates.length && state.rows.length) applyMergedSurfaceRates();
     }
 
     function currentInputs() {
@@ -7783,6 +8404,12 @@
         bourdetSmoothing: inputNumber("bourdetSmoothing", 0.15),
         spikeFilter: els.spikeFilter?.value || "standard",
         derivativeTimeFunction: els.derivTimeFn?.value || "superposition",
+        periodDetector: els.periodDetector?.value || "v81",
+        detectorCv: els.detectorCv?.checked !== false,
+        deconvMethod: els.deconvMethod?.value || "both",
+        vsh04Nu: inputNumber("vsh04Nu", 0.01),
+        vsh04Nodes: inputNumber("vsh04Nodes", 50),
+        defaultFlowRate: inputNumber("defaultFlowRate", 850),
         showTypeCurve: els.showTypeCurve?.checked !== false,
         hornerStartHr: inputNumber("hornerStart", 0.25),
         hornerEndHr: inputNumber("hornerEnd", 999),
@@ -7813,6 +8440,12 @@
       });
       if (inputs.spikeFilter && els.spikeFilter) els.spikeFilter.value = inputs.spikeFilter;
       if (inputs.derivativeTimeFunction && els.derivTimeFn) els.derivTimeFn.value = inputs.derivativeTimeFunction;
+      if (inputs.periodDetector && els.periodDetector) els.periodDetector.value = inputs.periodDetector;
+      if (inputs.detectorCv !== undefined && els.detectorCv) els.detectorCv.checked = !!inputs.detectorCv;
+      if (inputs.deconvMethod && els.deconvMethod) els.deconvMethod.value = inputs.deconvMethod;
+      if (inputs.vsh04Nu !== undefined && els.vsh04Nu) els.vsh04Nu.value = inputs.vsh04Nu;
+      if (inputs.vsh04Nodes !== undefined && els.vsh04Nodes) els.vsh04Nodes.value = inputs.vsh04Nodes;
+      if (inputs.defaultFlowRate !== undefined && els.defaultFlowRate) els.defaultFlowRate.value = inputs.defaultFlowRate;
       if (inputs.activeBuildupKey && els.buildupSelect) els.buildupSelect.value = inputs.activeBuildupKey;
       if (inputs.showTypeCurve !== undefined && els.showTypeCurve) els.showTypeCurve.checked = !!inputs.showTypeCurve;
       if (inputs.bourdetSmoothing !== undefined) syncBourdetControls(Number(inputs.bourdetSmoothing));
