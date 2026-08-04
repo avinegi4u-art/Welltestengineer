@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DST Pressure Transient Analyzer Pro v2.14 - Welltest Engineer</title>
+  <title>DST Pressure Transient Analyzer Pro v2.15 - Welltest Engineer</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M14 49C22 20 26 15 32 15s10 5 18 34' stroke='%233dd7b6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M13 43h38' stroke='%2363a7ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='15' r='6' fill='%23eef5ff'/%3E%3C/svg%3E" />
   <!-- Interactive Plotly charts when online; SVG fallback keeps the app fully offline. -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
@@ -707,7 +707,7 @@
           </svg>
         </div>
         <div>
-          <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.14</span></h1>
+          <h1>DST Pressure Transient Analyzer Pro <span class="mono" style="font-size:0.45em;color:var(--muted)">v2.15</span></h1>
           <p class="sub">Interactive Plotly PTA workspace — zoom/pan/select-fit charts, Horner & Bourdet, boundary & composite screening, Bayesian uncertainty, gating, and office sign-off. Offline SVG fallback.</p>
         </div>
       </div>
@@ -787,8 +787,9 @@
             <div>
               <h3>CSV file or pasted rows</h3>
               <div class="fields">
-                <label>Import CSV file
-                  <input id="csvFile" type="file" accept=".csv,text/csv" />
+                <label>Import gauge file
+                  <span class="help">CSV, or a memory-gauge text export (.txt/.dat/.asc/.prn/.tsv) with a commented header block, a units row, and separate date and time columns.</span>
+                  <input id="csvFile" type="file" accept=".csv,.txt,.dat,.asc,.prn,.tsv,.tab,.log,text/csv,text/plain" />
                 </label>
                 <label>Time zone treatment
                   <select id="timeMode">
@@ -1617,7 +1618,7 @@
       if (!ev || !ev.points || !ev.points.length) return;
       const dts = ev.points.map(p => (typeof p.customdata === "number" ? p.customdata : NaN)).filter(Number.isFinite);
       if (dts.length < 2) return;
-      const lo = Math.min(...dts), hi = Math.max(...dts);
+      const lo = minOf(dts), hi = maxOf(dts);
       if (els.hornerStart) els.hornerStart.value = Number(Math.max(0.001, lo).toFixed(3));
       if (els.hornerEnd) els.hornerEnd.value = Number(hi.toFixed(3));
       refresh(`Radial-flow window set to ${fmt(lo, 3)}-${fmt(hi, 3)} hr from chart selection.`);
@@ -1842,36 +1843,383 @@
     }
 
     /* Parsing and unit normalization */
+
+    // Downhole memory gauges (Metrolog, Kuster, Spartek, Geospec, Panex ...) export plain
+    // text, not CSV: a commented instrument header, a column-name row, a separate units /
+    // format row, then whitespace-aligned columns with the date and the clock in two
+    // different fields. The importer therefore sniffs the delimiter, walks past the header
+    // block, and reassembles a timestamp instead of assuming "comma + one header line".
+    const COMMENT_LINE = /^\s*(?:#|!|\/\/|\*|%)/;
+    const META_PAIR = /^\s*(?:#|!|\/\/|\*|%)?\s*([A-Za-z][A-Za-z0-9 ._()\/-]{0,48}?)\s*[:=]\s+(\S.*?)\s*$/;
+    const DATE_TOKEN = /^(\d{1,4})([-/.])(\d{1,2})\2(\d{1,4})$/;
+    const CLOCK_TOKEN = /^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?\s*([AaPp][Mm])?$/;
+    const DATE_FORMAT_TOKEN = /^(d{1,4}|m{1,4}|y{2,4})([-/.])(d{1,4}|m{1,4}|y{2,4})\2(d{1,4}|m{1,4}|y{2,4})$/i;
+    const TIME_FORMAT_TOKEN = /^h{1,2}[:.]m{1,2}(?:[:.]s{1,2}(?:\.s{1,3})?)?(?:\s*(?:am\/pm|a\/p))?$/i;
+    const UNIT_TOKEN = /^(?:psi[ag]?|kpa|k?pascals?|bara?g?|mpa|atm|kg\/cm2?|deg\s*[cfk]|degrees?\s*[cfk]?|[cfk]|°\s*[cfk]|bpd|bbl\/d|stb\/d|b\/d|m3\/d|sm3\/d|mscf\/d|mmscf\/d|scf\/d|e3m3\/d|hr|hrs|hours?|min|mins|sec|secs|s|ft|m|md|api|frac|-{1,3}|n\/?a)$/i;
+    const MAX_IMPORT_ISSUES = 40;
+
+    const DELIMITERS = [
+      {key: "comma", label: "comma", split: line => splitCsvLine(line)},
+      {key: "tab", label: "tab", split: line => line.split("\t").map(cell => cell.trim())},
+      {key: "semicolon", label: "semicolon", split: line => line.split(";").map(cell => cell.trim())},
+      {key: "pipe", label: "pipe", split: line => line.split("|").map(cell => cell.trim())},
+      {key: "whitespace", label: "whitespace-aligned", split: line => line.trim().split(/\s+/)}
+    ];
+
     function parseCsv(text, source = "import") {
-      const lines = String(text || "").split(/\r?\n/).filter(line => line.trim().length);
-      const result = {rows: [], issues: [], rawRows: Math.max(0, lines.length - 1), parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: []};
-      if (lines.length < 2) {
-        result.issues.push("CSV requires a header and at least one data row.");
+      const result = {rows: [], issues: [], rawRows: 0, parsedRows: 0, invalidRows: 0, unsortedRows: 0, unitNotes: [], meta: {}};
+      const body = [];
+      String(text || "").split(/\r\n|\r|\n/).forEach(line => {
+        if (!line.trim()) return;
+        if (COMMENT_LINE.test(line)) {
+          collectMeta(result.meta, line);
+          return;
+        }
+        body.push(line);
+      });
+      if (!body.length) {
+        result.issues.push("No readings found - the file is empty or contains only header comments.");
         return result;
       }
-      const rawHeaders = splitCsvLine(lines[0]);
-      const headers = rawHeaders.map(normalizeHeader);
-      const unitMap = inferUnits(rawHeaders);
+
+      const delimiter = detectDelimiter(body);
+      const layout = locateHeader(body, delimiter);
+      if (!layout.headers) {
+        result.rawRows = body.length;
+        result.invalidRows = body.length;
+        result.issues.push("Could not find a time/date column and a pressure column. Expected column names such as 'Date'/'Time'/'Timestamp' and 'Pressure'/'BHP'.");
+        return result;
+      }
+      body.slice(0, layout.headerIndex).forEach(line => collectMeta(result.meta, line));
+
+      const dataLines = body.slice(layout.dataIndex);
+      result.rawRows = dataLines.length;
+      if (!dataLines.length) {
+        result.issues.push("A header row was found but there are no readings below it.");
+        return result;
+      }
+
+      const headers = layout.headers.map(normalizeHeader);
+      const unitMap = inferUnits(layout.unitHeaders);
+      const timeSpec = resolveTimeColumns(dataLines, delimiter, layout);
+      if (timeSpec.issue) result.issues.push(timeSpec.issue);
+
       result.unitNotes = Object.entries(unitMap)
         .filter(([, unit]) => unit.inferred)
         .map(([channel, unit]) => `${channel} interpreted from header as ${unit.value}.`);
+      if (delimiter.key !== "comma") result.unitNotes.push(`Columns read as ${delimiter.label} separated.`);
+      if (timeSpec.note) result.unitNotes.push(timeSpec.note);
+      const metaNote = describeMeta(result.meta);
+      if (metaNote) result.unitNotes.push(metaNote);
+
       let previousTime = -Infinity;
-      lines.slice(1).forEach((line, index) => {
-        const values = splitCsvLine(line);
+      const rollover = {lastClockMs: null, dayOffset: 0};
+      for (let index = 0; index < dataLines.length; index += 1) {
+        const values = delimiter.split(dataLines[index]);
         const record = {};
-        values.forEach((value, i) => record[headers[i] || `col_${i}`] = value);
+        for (let i = 0; i < values.length; i += 1) record[headers[i] || `col_${i}`] = values[i];
+        const stamp = buildTimestamp(values, timeSpec, rollover);
+        if (stamp) {
+          record.time = stamp;
+          record.timestamp = stamp;
+        }
         const parsed = rowFromRecord(record, {source, rawIndex: index, unitMap});
         if (!parsed.row) {
           result.invalidRows += 1;
-          result.issues.push(`Row ${index + 2}: ${parsed.issue || "missing timestamp or BHP"}.`);
-          return;
+          if (result.issues.length < MAX_IMPORT_ISSUES) {
+            result.issues.push(`Row ${layout.dataIndex + index + 1}: ${parsed.issue || "missing timestamp or BHP"}.`);
+          }
+          continue;
         }
         if (parsed.row.timeMs < previousTime) result.unsortedRows += 1;
         previousTime = parsed.row.timeMs;
         result.rows.push(parsed.row);
-      });
+      }
+      if (result.invalidRows > MAX_IMPORT_ISSUES) {
+        result.issues.push(`... and ${result.invalidRows - MAX_IMPORT_ISSUES} further rejected row(s) not listed.`);
+      }
       result.parsedRows = result.rows.length;
       return result;
+    }
+
+    function collectMeta(meta, line) {
+      const match = String(line).match(META_PAIR);
+      if (!match) return;
+      const key = match[1].trim();
+      const value = match[2].trim();
+      if (!key || !value || CLOCK_TOKEN.test(key)) return;
+      if (!meta[key]) meta[key] = value;
+    }
+
+    function describeMeta(meta) {
+      const pick = names => {
+        const key = Object.keys(meta).find(item => names.some(name => normalizeHeader(item) === normalizeHeader(name)));
+        return key ? meta[key] : "";
+      };
+      const parts = [
+        pick(["well", "well name", "wellbore"]) && `well ${pick(["well", "well name", "wellbore"])}`,
+        pick(["field"]) && `field ${pick(["field"])}`,
+        pick(["job no", "job number", "job", "test", "dst"]) && `job ${pick(["job no", "job number", "job", "test", "dst"])}`,
+        pick(["gauge depth", "depth"]) && `gauge depth ${pick(["gauge depth", "depth"])}`,
+        pick(["serial number", "serial", "gauge serial"]) && `gauge S/N ${pick(["serial number", "serial", "gauge serial"])}`
+      ].filter(Boolean);
+      return parts.length ? `File header: ${parts.join(", ")}.` : "";
+    }
+
+    // Score each candidate separator on how consistently it yields the same multi-column
+    // shape, so a whitespace-aligned gauge dump is not mistaken for a one-column CSV.
+    function detectDelimiter(body) {
+      const sample = sampleLines(body, 200);
+      let best = null;
+      DELIMITERS.forEach(delimiter => {
+        const counts = new Map();
+        sample.forEach(line => {
+          const size = delimiter.split(line).length;
+          if (size > 1) counts.set(size, (counts.get(size) || 0) + 1);
+        });
+        let modalCount = 0;
+        let modalSize = 0;
+        counts.forEach((hits, size) => {
+          if (hits > modalCount || (hits === modalCount && size > modalSize)) {
+            modalCount = hits;
+            modalSize = size;
+          }
+        });
+        if (!modalSize) return;
+        const score = (modalCount / sample.length) * 100 + Math.min(modalSize, 12);
+        if (!best || score > best.score + 1e-9) best = {delimiter, score, modalSize};
+      });
+      return best ? best.delimiter : DELIMITERS[0];
+    }
+
+    function sampleLines(body, limit) {
+      if (body.length <= limit) return body.slice();
+      const stride = Math.ceil(body.length / limit);
+      const out = [];
+      for (let i = 0; i < body.length; i += stride) out.push(body[i]);
+      return out;
+    }
+
+    // The header is the first row that names both a time-like and a pressure-like column;
+    // the row after it is a units/format row when it carries no numbers.
+    function locateHeader(body, delimiter) {
+      const limit = Math.min(body.length, 60);
+      for (let i = 0; i < limit; i += 1) {
+        const tokens = delimiter.split(body[i]);
+        if (tokens.length < 2) continue;
+        if (!headerNamesChannels(tokens)) continue;
+        const unitTokens = i + 1 < body.length ? delimiter.split(body[i + 1]) : [];
+        const hasUnitRow = isUnitRow(unitTokens, tokens.length);
+        return {
+          headerIndex: i,
+          dataIndex: i + (hasUnitRow ? 2 : 1),
+          headers: tokens,
+          unitTokens: hasUnitRow ? unitTokens : [],
+          unitHeaders: hasUnitRow ? tokens.map((name, idx) => `${name} ${unitTokens[idx] || ""}`.trim()) : tokens
+        };
+      }
+      // Headerless numeric dump: label the columns by what the first row actually contains.
+      const positional = positionalHeaders(delimiter.split(body[0]));
+      if (positional) {
+        return {headerIndex: 0, dataIndex: 0, headers: positional, unitTokens: [], unitHeaders: positional};
+      }
+      return {headers: null};
+    }
+
+    function headerNamesChannels(tokens) {
+      const found = new Set();
+      tokens.forEach(token => {
+        const normalized = normalizeHeader(token);
+        if (!normalized || /^\d+$/.test(normalized)) return;
+        Object.entries(HEADER_ALIASES).forEach(([channel, aliases]) => {
+          if (aliases.some(alias => normalized === normalizeHeader(alias) || normalized.includes(normalizeHeader(alias)))) found.add(channel);
+        });
+      });
+      return found.has("time") && found.has("bhp");
+    }
+
+    function isUnitRow(tokens, expected) {
+      if (!tokens.length || tokens.length !== expected) return false;
+      if (tokens.some(token => Number.isFinite(toNum(token)))) return false;
+      const recognised = tokens.filter(token => UNIT_TOKEN.test(token) || DATE_FORMAT_TOKEN.test(token) || TIME_FORMAT_TOKEN.test(token)).length;
+      return recognised >= Math.max(1, Math.ceil(tokens.length * 0.4));
+    }
+
+    function positionalHeaders(tokens) {
+      const classes = tokens.map(classifyToken);
+      if (!classes.some(type => type === "date" || type === "clock" || type === "datetime")) return null;
+      if (!classes.some(type => type === "number")) return null;
+      let numberSeen = 0;
+      return classes.map(type => {
+        if (type === "date") return "date";
+        if (type === "clock") return "time";
+        if (type === "datetime") return "timestamp";
+        if (type !== "number") return "text";
+        numberSeen += 1;
+        return numberSeen === 1 ? "pressure" : numberSeen === 2 ? "temperature" : `col_${numberSeen}`;
+      });
+    }
+
+    function classifyToken(token) {
+      const text = String(token || "").trim();
+      if (!text) return "empty";
+      if (DATE_TOKEN.test(text)) return "date";
+      if (CLOCK_TOKEN.test(text)) return "clock";
+      if (/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}[ T]\d{1,2}:\d{2}/.test(text)) return "datetime";
+      if (Number.isFinite(toNum(text))) return "number";
+      return "text";
+    }
+
+    // Works out which column(s) carry the timestamp and, when the date is ambiguous
+    // (03-02-22 is either 3 Feb or 2 Mar), which component order the gauge wrote.
+    function resolveTimeColumns(dataLines, delimiter, layout) {
+      const first = delimiter.split(dataLines[0]);
+      const classes = first.map(classifyToken);
+      const spec = {dateIndex: -1, clockIndex: -1, stampIndex: -1, order: null, note: "", issue: ""};
+      spec.stampIndex = classes.indexOf("datetime");
+      spec.dateIndex = classes.indexOf("date");
+      spec.clockIndex = classes.indexOf("clock");
+      if (spec.stampIndex < 0 && spec.dateIndex < 0 && spec.clockIndex < 0) return spec;
+
+      const hint = hintedDateOrder(layout.unitTokens);
+      if (spec.stampIndex >= 0 || spec.dateIndex >= 0) {
+        const column = spec.stampIndex >= 0 ? spec.stampIndex : spec.dateIndex;
+        const resolved = resolveDateOrder(dataLines, delimiter, column, hint);
+        spec.order = resolved.order;
+        spec.note = resolved.order
+          ? `Dates read as ${resolved.order.join("").toUpperCase()} (${resolved.source}).`
+          : "";
+        if (!resolved.order) spec.issue = "Date component order could not be established; dates were left to the browser to interpret.";
+      } else {
+        spec.note = "File has clock times only - readings were placed on a synthetic date starting 2000-01-01, which preserves elapsed time.";
+      }
+      return spec;
+    }
+
+    function hintedDateOrder(unitTokens) {
+      for (const token of unitTokens || []) {
+        const match = String(token).match(DATE_FORMAT_TOKEN);
+        if (!match) continue;
+        const order = [match[1], match[3], match[4]].map(part => part[0].toLowerCase());
+        if (new Set(order).size === 3 && order.every(letter => "dmy".includes(letter))) return order;
+      }
+      return null;
+    }
+
+    function resolveDateOrder(dataLines, delimiter, column, hint) {
+      if (hint) return {order: hint, source: "format row in the file"};
+      const parts = [];
+      let previous = "";
+      for (let i = 0; i < dataLines.length; i += 1) {
+        const cell = delimiter.split(dataLines[i])[column];
+        if (!cell || cell === previous) continue;
+        previous = cell;
+        const match = String(cell).split(/[ T]/)[0].match(DATE_TOKEN);
+        if (match) parts.push([match[1], match[3], match[4]]);
+        if (parts.length > 4000) break;
+      }
+      if (!parts.length) return {order: null, source: "none"};
+      if (parts[0][0].length === 4) return {order: ["y", "m", "d"], source: "four-digit leading year"};
+      if (parts[0][2].length === 4) {
+        const firstMaxIso = maxOf(parts.map(part => Number(part[0])));
+        const secondMaxIso = maxOf(parts.map(part => Number(part[1])));
+        if (firstMaxIso > 12) return {order: ["d", "m", "y"], source: "a day value above 12"};
+        if (secondMaxIso > 12) return {order: ["m", "d", "y"], source: "a day value above 12"};
+      }
+      const firstMax = maxOf(parts.map(part => Number(part[0])));
+      const secondMax = maxOf(parts.map(part => Number(part[1])));
+      if (firstMax > 12 && secondMax <= 12) return {order: ["d", "m", "y"], source: "a day value above 12"};
+      if (secondMax > 12 && firstMax <= 12) return {order: ["m", "d", "y"], source: "a day value above 12"};
+      // Both readings are arithmetically valid - gauge records run forwards in time, so
+      // prefer whichever order keeps the file chronological.
+      const dmy = chronologyScore(parts, ["d", "m", "y"]);
+      const mdy = chronologyScore(parts, ["m", "d", "y"]);
+      if (Math.abs(dmy - mdy) > 1e-9) {
+        return {order: dmy > mdy ? ["d", "m", "y"] : ["m", "d", "y"], source: "chronological order of the records"};
+      }
+      const separator = String(delimiter.split(dataLines[0])[column] || "").includes("/") ? "/" : "-";
+      return separator === "/"
+        ? {order: ["m", "d", "y"], source: "month-first default for slash-separated dates"}
+        : {order: ["d", "m", "y"], source: "day-first default for dash-separated dates"};
+    }
+
+    function chronologyScore(parts, order) {
+      let ok = 0;
+      let total = 0;
+      let previous = -Infinity;
+      parts.forEach(part => {
+        const value = dateKeyFromParts(part, order);
+        if (value === null) return;
+        total += 1;
+        if (value >= previous) ok += 1;
+        previous = value;
+      });
+      return total ? ok / total : 0;
+    }
+
+    function dateKeyFromParts(part, order) {
+      const year = fullYear(part[order.indexOf("y")]);
+      const month = Number(part[order.indexOf("m")]);
+      const day = Number(part[order.indexOf("d")]);
+      if (!Number.isFinite(year) || !(month >= 1 && month <= 12) || !(day >= 1 && day <= 31)) return null;
+      return year * 10000 + month * 100 + day;
+    }
+
+    function fullYear(text) {
+      const value = Number(text);
+      if (!Number.isFinite(value)) return NaN;
+      if (String(text).trim().length > 2) return value;
+      return value < 70 ? 2000 + value : 1900 + value;
+    }
+
+    function buildTimestamp(values, spec, rollover) {
+      if (spec.stampIndex >= 0) return isoTimestamp(values[spec.stampIndex], "", spec.order);
+      if (spec.dateIndex >= 0) return isoTimestamp(values[spec.dateIndex], spec.clockIndex >= 0 ? values[spec.clockIndex] : "", spec.order);
+      if (spec.clockIndex >= 0) return isoFromClockOnly(values[spec.clockIndex], rollover);
+      return "";
+    }
+
+    function isoTimestamp(dateText, clockText, order) {
+      const raw = String(dateText || "").trim();
+      if (!raw) return "";
+      const split = raw.split(/[ T]/);
+      const datePart = split[0];
+      const clock = normalizeClock(clockText || split.slice(1).join(" "));
+      const match = datePart.match(DATE_TOKEN);
+      if (!match) return "";
+      const parts = [match[1], match[3], match[4]];
+      const resolved = order || (parts[0].length === 4 ? ["y", "m", "d"] : ["d", "m", "y"]);
+      const year = fullYear(parts[resolved.indexOf("y")]);
+      const month = Number(parts[resolved.indexOf("m")]);
+      const day = Number(parts[resolved.indexOf("d")]);
+      if (!Number.isFinite(year) || !(month >= 1 && month <= 12) || !(day >= 1 && day <= 31)) return "";
+      return `${padNum(year, 4)}-${padNum(month, 2)}-${padNum(day, 2)}T${clock || "00:00:00"}`;
+    }
+
+    function normalizeClock(text) {
+      const match = String(text || "").trim().match(CLOCK_TOKEN);
+      if (!match) return "";
+      let hours = Number(match[1]);
+      const meridiem = (match[4] || "").toLowerCase();
+      if (meridiem === "pm" && hours < 12) hours += 12;
+      if (meridiem === "am" && hours === 12) hours = 0;
+      const seconds = match[3] || "00";
+      return `${padNum(hours, 2)}:${match[2]}:${seconds.includes(".") ? seconds : padNum(Number(seconds), 2)}`;
+    }
+
+    function isoFromClockOnly(text, rollover) {
+      const clock = normalizeClock(text);
+      if (!clock) return "";
+      const [h, m, s] = clock.split(":");
+      const clockMs = (Number(h) * 3600 + Number(m) * 60 + Number(s)) * 1000;
+      if (rollover.lastClockMs !== null && clockMs < rollover.lastClockMs - 1000) rollover.dayOffset += 1;
+      rollover.lastClockMs = clockMs;
+      const day = new Date(Date.UTC(2000, 0, 1 + rollover.dayOffset));
+      return `${day.getUTCFullYear()}-${padNum(day.getUTCMonth() + 1, 2)}-${padNum(day.getUTCDate(), 2)}T${clock}`;
+    }
+
+    function padNum(value, width) {
+      return String(value).padStart(width, "0");
     }
 
     function splitCsvLine(line) {
@@ -2277,10 +2625,16 @@
         const rateJump = last && base === "flow" && last.base === "flow" && Math.abs(row.rate - last.avgRate) > Math.max(80, Math.abs(last.avgRate) * 0.28);
         const longGap = index > 0 && (row.timeMs - rows[index - 1].timeMs) / 3600000 > 0.75;
         if (!last || last.base !== base || rateJump || longGap) {
-          segments.push({base, startIndex: index, endIndex: index, avgRate: row.rate});
+          segments.push({base, startIndex: index, endIndex: index, avgRate: row.rate, rateSum: Number.isFinite(row.rate) ? row.rate : 0, rateCount: Number.isFinite(row.rate) ? 1 : 0});
         } else {
           last.endIndex = index;
-          last.avgRate = average(rows.slice(last.startIndex, last.endIndex + 1).map(item => item.rate));
+          // Running mean: re-slicing and re-averaging the segment on every row is O(n^2)
+          // and stalls for minutes on a full memory-gauge record.
+          if (Number.isFinite(row.rate)) {
+            last.rateSum += row.rate;
+            last.rateCount += 1;
+          }
+          last.avgRate = last.rateCount ? last.rateSum / last.rateCount : 0;
         }
       });
       const expanded = [];
@@ -3043,7 +3397,7 @@
       if (dpRegime && Number.isFinite(plateau) && plateau > 0) {
         const window = derivs.filter(point => point.dt >= dpRegime.startDt && point.dt <= dpRegime.endDt && point.derivative > 0);
         if (window.length >= 2) {
-          const troughVal = Math.min(...window.map(point => point.derivative));
+          const troughVal = minOf(window.map(point => point.derivative));
           const ratio = troughVal / plateau;
           omega = clamp(ratio * ratio * 0.9, 0.005, 0.45);
           const troughPoint = window.find(point => point.derivative === troughVal) || window[0];
@@ -3647,11 +4001,11 @@
     function envelopeInterval(intervals) {
       const valid = intervals.filter(item => Number.isFinite(item?.low) && Number.isFinite(item?.high));
       if (!valid.length) return null;
-      const low = Math.max(...valid.map(item => item.low));
-      const high = Math.min(...valid.map(item => item.high));
+      const low = maxOf(valid.map(item => item.low));
+      const high = minOf(valid.map(item => item.high));
       const mids = valid.map(item => item.mid).filter(Number.isFinite);
       const mid = mids.length ? average(mids) : (low + high) / 2;
-      if (high < low) return {low: Math.min(...valid.map(item => item.low)), high: Math.max(...valid.map(item => item.high)), mid, disjoint: true};
+      if (high < low) return {low: minOf(valid.map(item => item.low)), high: maxOf(valid.map(item => item.high)), mid, disjoint: true};
       return {low, mid, high, disjoint: false};
     }
 
@@ -4261,7 +4615,7 @@
           }
         }
       }
-      const best = vals.indexOf(Math.min(...vals));
+      const best = vals.indexOf(minOf(vals));
       return {x: simplex[best], f: vals[best], evals};
     }
 
@@ -4624,8 +4978,8 @@
       const S = matched ? matched.skin : Number.isFinite(analysis.skin) ? analysis.skin : 0;
       const CD = matched?.CD > 0 ? matched.CD : estimateDimensionlessStorage(analysis, inputs);
       const times = analysis.points.map(point => point.dt).filter(dt => dt > 0);
-      const tMin = Math.min(...times);
-      const tMax = Math.max(...times);
+      const tMin = minOf(times);
+      const tMax = maxOf(times);
       if (!(tMin > 0 && tMax > tMin)) return null;
       const useSuperposition = analysis.derivativeBasis === "superposition time";
       const dts = Array.from({length: 81}, (_, i) => tMin * Math.pow(tMax / tMin, i / 80));
@@ -4655,7 +5009,7 @@
       );
       const rateCv = coefficientOfVariation(analysis.flowPeriods.map(period => period.avgRate));
       const meanCorrectionPct = average(points.map(point => point.correctionPct));
-      const maxCorrectionPct = Math.max(...points.map(point => point.correctionPct).filter(Number.isFinite), 0);
+      const maxCorrectionPct = maxOf(points.map(point => point.correctionPct).filter(Number.isFinite), 0);
       const totalAbsDq = analysis.flowPeriods.reduce((sum, period, idx) => {
         const qPrev = idx === 0 ? 0 : Math.max(analysis.flowPeriods[idx - 1].avgRate, 0);
         return sum + Math.abs(period.avgRate - qPrev);
@@ -5133,7 +5487,7 @@
       return sumTerms / Math.max(qRef, 1e-9);
     }
     function selectedFitWindow(points) {
-      const maxDt = Math.max(...points.map(point => point.dt));
+      const maxDt = maxOf(points.map(point => point.dt));
       const manual = {
         start: Math.max(0.001, inputNumber("hornerStart", Math.max(0.05, maxDt * 0.15))),
         end: Math.min(inputNumber("hornerEnd", maxDt), maxDt)
@@ -5143,7 +5497,7 @@
     }
 
     function suggestRadialFitWindow(points, derivatives = null) {
-      const maxDt = Math.max(...points.map(point => point.dt));
+      const maxDt = maxOf(points.map(point => point.dt));
       const derivs = derivatives || computeBuildupDerivative(points, clamp(inputNumber("bourdetSmoothing", 0.15), 0.05, 0.6));
       const regimes = classifyRegimes(points, derivs);
       const radial = regimes.find(regime => regime.name === "radial flow");
@@ -5384,11 +5738,22 @@
       checks.push(qc(duplicateRows ? "warn" : "ok", "Duplicate rows", duplicateRows ? `${duplicateRows} duplicate row signature(s) found; duplicates are preserved and flagged.` : "No exact duplicate row signatures."));
       checks.push(qc(duplicateTimes ? "warn" : "ok", "Duplicate timestamps", duplicateTimes ? `${duplicateTimes} repeated timestamp(s) found; inspect gauge merge/source feeds.` : "No repeated timestamps."));
       const gaps = samplingGapDetails();
-      checks.push(qc(gaps.length ? "warn" : "ok", "Irregular sampling", gaps.length ? `${gaps.length} gap(s) exceed 1 hr; largest ${fmt(Math.max(...gaps.map(g => g.gapHr)), 2)} hr.` : "No sampling gap above 1 hr.", gaps.length ? `Exclude interval ${gaps.sort((a, b) => b.gapHr - a.gapHr)[0].from} to ${gaps.sort((a, b) => b.gapHr - a.gapHr)[0].to} or mark as data loss.` : ""));
+      checks.push(qc(gaps.length ? "warn" : "ok", "Irregular sampling", gaps.length ? `${gaps.length} gap(s) exceed 1 hr; largest ${fmt(maxOf(gaps.map(g => g.gapHr)), 2)} hr.` : "No sampling gap above 1 hr.", gaps.length ? `Exclude interval ${gaps.sort((a, b) => b.gapHr - a.gapHr)[0].from} to ${gaps.sort((a, b) => b.gapHr - a.gapHr)[0].to} or mark as data loss.` : ""));
       const badPressure = state.rows.filter(row => row.bhp <= 0 || row.bhp > 30000).length;
       checks.push(qc(badPressure ? "alert" : "ok", "Pressure range / unit mismatch", badPressure ? `${badPressure} BHP value(s) are outside 0-30000 psi after unit conversion.` : `Pressure values are plausible in psi. ${state.importStats.unitNotes.join(" ")}`));
       const badRates = state.rows.filter(row => Math.abs(row.rate) > 200000).length;
       checks.push(qc(badRates ? "alert" : "ok", "Rate range / unit mismatch", badRates ? `${badRates} rate value(s) exceed 200,000 bpd equivalent.` : "Surface rates are within broad DST screening limits."));
+      // A memory-gauge export usually carries pressure and temperature only. Period
+      // detection keys off rate, so without it every reading falls below the shut-in
+      // threshold and the whole record is labelled as one shut-in. Say so rather than
+      // letting that pass as a confident answer.
+      const hasRateChannel = state.rows.some(row => row.explicitRate
+        || Math.abs(row.rate || 0) > 0 || Math.abs(row.oil || 0) > 0
+        || Math.abs(row.water || 0) > 0 || Math.abs(row.gas || 0) > 0);
+      checks.push(qc(hasRateChannel ? "ok" : "alert", "Rate channel present", hasRateChannel
+        ? "A rate column was imported, so flow and shut-in periods can be detected automatically."
+        : "No rate column was found in the imported data. Automatic flow/shut-in detection keys off rate, so the whole record is being reported as a single shut-in and no buildup can be analysed.",
+        hasRateChannel ? "" : "Import the surface rate history alongside the gauge file, or paste a rate column, before relying on any period, Horner, or derivative output."));
       const missingSurface = state.rows.filter(row => row.whp == null || row.temp == null).length;
       checks.push(qc(missingSurface ? "warn" : "ok", "Surface channels", missingSurface ? `${missingSurface} row(s) are missing WHP or temperature.` : "WHP and temperature are present for all rows."));
       const unstable = unstableFlowPeriods();
@@ -5578,7 +5943,7 @@
         const jump = Math.abs(state.rows[i].temp - state.rows[i - 1].temp);
         if (jump > 10) jumps.push(jump);
       }
-      return jumps.length ? `${jumps.length} adjacent temperature jump(s) exceed 10 F; largest ${fmt(Math.max(...jumps), 1)} F.` : "";
+      return jumps.length ? `${jumps.length} adjacent temperature jump(s) exceed 10 F; largest ${fmt(maxOf(jumps), 1)} F.` : "";
     }
 
     /* Rendering */
@@ -5696,18 +6061,61 @@
       });
     }
 
+    // Plotting every reading of a multi-day memory-gauge record is hundreds of thousands of
+    // SVG vertices. Bucket the record and keep the min and max of each bucket, which holds
+    // the visible shape (spikes, shut-in tops, drawdown troughs) at a fraction of the cost.
+    // Analysis always runs on the full-resolution rows; only the chart is thinned.
+    const MAX_PLOT_POINTS = 4000;
+
+    function plotIndices(rows, maxPoints = MAX_PLOT_POINTS) {
+      const total = rows.length;
+      if (total <= maxPoints) {
+        const all = new Array(total);
+        for (let i = 0; i < total; i += 1) all[i] = i;
+        return all;
+      }
+      const buckets = Math.max(1, Math.floor(maxPoints / 2));
+      const width = total / buckets;
+      const keep = [];
+      let lastKept = -1;
+      const push = index => {
+        if (index > lastKept) {
+          keep.push(index);
+          lastKept = index;
+        }
+      };
+      for (let bucket = 0; bucket < buckets; bucket += 1) {
+        const start = Math.floor(bucket * width);
+        const end = Math.min(total, Math.floor((bucket + 1) * width));
+        if (end <= start) continue;
+        let lowIndex = start;
+        let highIndex = start;
+        for (let i = start + 1; i < end; i += 1) {
+          if (rows[i].bhp < rows[lowIndex].bhp) lowIndex = i;
+          if (rows[i].bhp > rows[highIndex].bhp) highIndex = i;
+        }
+        push(Math.min(lowIndex, highIndex));
+        push(Math.max(lowIndex, highIndex));
+      }
+      push(total - 1);
+      return keep;
+    }
+
     function renderTrend() {
       if (state.rows.length < 2) {
         purgePlot(els.trendChart);
         els.trendChart.innerHTML = emptySvg("Load readings to plot pressure, rate, periods, and events.");
         return;
       }
+      const indices = plotIndices(state.rows);
+      const thinned = indices.length < state.rows.length;
       if (PLOTLY_READY()) {
-        const x = state.rows.map(r => new Date(r.timeMs));
-        const bhp = state.rows.map(r => r.bhp);
-        const rate = state.rows.map(r => r.rate);
+        const x = indices.map(i => new Date(state.rows[i].timeMs));
+        const bhp = indices.map(i => state.rows[i].bhp);
+        const rate = indices.map(i => state.rows[i].rate);
         const shutX = [], shutY = [];
-        state.rows.forEach((r, i) => {
+        indices.forEach(i => {
+          const r = state.rows[i];
           const per = periodAtIndex(i);
           if (per === "shut-in" || per === "afterflow") { shutX.push(new Date(r.timeMs)); shutY.push(r.bhp); }
         });
@@ -5728,13 +6136,16 @@
         }));
         renderPlot(els.trendChart, traces, {
           height: PLOT_HEIGHT, shapes, annotations,
-          xaxis: axisStyle({title: "time"}),
+          xaxis: axisStyle({title: thinned ? `time (chart thinned to ${indices.length} of ${state.rows.length} readings; analysis uses all)` : "time"}),
           yaxis: axisStyle({title: "BHP, psi"}),
           yaxis2: axisStyle({title: "rate, bpd", overlaying: "y", side: "right", showgrid: false})
         });
         return;
       }
-      const points = state.rows.map((row, index) => ({x: row.timeMs, bhp: row.bhp, rate: row.rate, period: periodAtIndex(index)}));
+      const points = indices.map(index => {
+        const row = state.rows[index];
+        return {x: row.timeMs, bhp: row.bhp, rate: row.rate, period: periodAtIndex(index)};
+      });
       els.trendChart.innerHTML = lineSvg({
         series: [
           {points: points.map(p => ({x: p.x, y: p.bhp, period: p.period})), color: "#63a7ff"},
@@ -5768,7 +6179,7 @@
         const mk = arr => ({x: arr.map(p => p.logH), y: arr.map(p => p.pressure), customdata: arr.map(p => p.dt)});
         const uPts = mk(unsel), sPts = mk(selPts);
         const xs = analysis.points.map(p => p.logH);
-        const xMin = Math.min(...xs), xMax = Math.max(...xs);
+        const xMin = minOf(xs), xMax = maxOf(xs);
         const fitLine = {
           x: [xMin, xMax],
           y: [analysis.fit.intercept + analysis.fit.slope * xMin, analysis.fit.intercept + analysis.fit.slope * xMax]
@@ -5854,7 +6265,7 @@
             hovertemplate: "Δt %{x:.3f} hr<br>Δp′ %{text} psi<extra>derivative (× = negative)</extra>"}
         ];
         const tVals = deltaPts.map(p => p.dt).concat(derPts.map(p => p.dt));
-        const tMin = Math.min(...tVals), tMax = Math.max(...tVals);
+        const tMin = minOf(tVals), tMax = maxOf(tVals);
         if (Number.isFinite(analysis.plateau) && analysis.plateau > 0) {
           traces.push({x: [tMin, tMax], y: [analysis.plateau, analysis.plateau], name: "radial plateau",
             mode: "lines", line: {color: "#7ee787", width: 1.5, dash: "dot"}, hoverinfo: "skip"});
@@ -6439,7 +6850,7 @@
             hovertemplate: "q %{x:.1f} bpd<br>p %{y:.1f} psi<br>%{text}<extra></extra>"}
         ];
         if (sr.baseFit && Number.isFinite(sr.baseFit.slope)) {
-          const xMin = Math.min(...stages.map(s => s.rate)), xMax = Math.max(...stages.map(s => s.rate));
+          const xMin = minOf(stages.map(s => s.rate)), xMax = maxOf(stages.map(s => s.rate));
           traces.push({
             x: [xMin, xMax],
             y: [sr.baseFit.intercept + sr.baseFit.slope * xMin, sr.baseFit.intercept + sr.baseFit.slope * xMax],
@@ -6559,10 +6970,10 @@
     function stepRateSvg(sr) {
       const width = 920, height = 310, pad = {l: 72, r: 28, t: 24, b: 48};
       const stages = sr.stages;
-      const xMin = Math.min(...stages.map(s => s.rate));
-      const xMax = Math.max(...stages.map(s => s.rate));
-      const yMin = Math.min(...stages.map(s => s.pressure));
-      const yMax = Math.max(...stages.map(s => s.pressure));
+      const xMin = minOf(stages.map(s => s.rate));
+      const xMax = maxOf(stages.map(s => s.rate));
+      const yMin = minOf(stages.map(s => s.pressure));
+      const yMax = maxOf(stages.map(s => s.pressure));
       const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
       const yScale = makeScale(yMin, yMax, height - pad.b, pad.t);
       const baseLine = [{x: xMin, y: sr.baseFit.intercept + sr.baseFit.slope * xMin}, {x: xMax, y: sr.baseFit.intercept + sr.baseFit.slope * xMax}];
@@ -6598,12 +7009,12 @@
       const falloff = sr.falloff?.points || [];
       if (injective.length < 2 && falloff.length < 2) return emptySvg('Need valid reference pressure or post-step shut-in to plot injectivity/falloff.');
       const xValues = injective.length ? injective.map(s => s.rate) : falloff.map(p => p.dt);
-      const xMin = Math.min(...xValues), xMax = Math.max(...xValues);
+      const xMin = minOf(xValues), xMax = maxOf(xValues);
       const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
       const yLeftVals = injective.length ? injective.map(s => s.injectivity) : [0,1];
       const yRightVals = falloff.length ? falloff.map(p => p.pressure) : [0,1];
-      const yLScale = makeScale(Math.min(...yLeftVals), Math.max(...yLeftVals), height - pad.b, pad.t);
-      const yRScale = makeScale(Math.min(...yRightVals), Math.max(...yRightVals), height - pad.b, pad.t);
+      const yLScale = makeScale(minOf(yLeftVals), maxOf(yLeftVals), height - pad.b, pad.t);
+      const yRScale = makeScale(minOf(yRightVals), maxOf(yRightVals), height - pad.b, pad.t);
       const injPath = injective.length ? pathFor(injective.map(s => ({x:s.rate,y:s.injectivity})), xScale, yLScale) : '';
       const fallPath = falloff.length ? pathFor(falloff.map(p => ({x:p.dt,y:p.pressure})), xScale, yRScale) : '';
       const labels = sr.falloff ? `<text x="${pad.l+8}" y="${pad.t+14}" fill="#c7a6ff" font-size="11">Falloff plotted against shut-in time on same x-span for screening only</text>` : '';
@@ -6616,8 +7027,8 @@
         ${labels}
         ${axisLabels(width, height, pad, injective.length ? 'rate bpd' : 'falloff time hr', 'injectivity index q/Δp', 'falloff pressure psi')}
         ${xTicks(xScale, xMin, xMax, height - pad.b, value => fmt(value, injective.length ? 0 : 2))}
-        ${yTicks(yLScale, Math.min(...yLeftVals), Math.max(...yLeftVals), pad.l, 'left', value => fmt(value, 4))}
-        ${yTicks(yRScale, Math.min(...yRightVals), Math.max(...yRightVals), width - pad.r, 'right', value => fmt(value, 0))}
+        ${yTicks(yLScale, minOf(yLeftVals), maxOf(yLeftVals), pad.l, 'left', value => fmt(value, 4))}
+        ${yTicks(yRScale, minOf(yRightVals), maxOf(yRightVals), width - pad.r, 'right', value => fmt(value, 0))}
       </svg>`;
     }
 
@@ -6644,13 +7055,13 @@
       const height = 310;
       const pad = {l: 66, r: 62, t: 24, b: 48};
       const allX = series.flatMap(s => s.points.map(p => p.x));
-      const xMin = Math.min(...allX);
-      const xMax = Math.max(...allX);
+      const xMin = minOf(allX);
+      const xMax = maxOf(allX);
       const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
       const left = series[0];
       const right = series[1];
-      const yScale = makeScale(minOf(left.points, "y"), maxOf(left.points, "y"), height - pad.b, pad.t);
-      const rScale = makeScale(minOf(right.points, "y"), maxOf(right.points, "y"), height - pad.b, pad.t);
+      const yScale = makeScale(minByKey(left.points, "y"), maxByKey(left.points, "y"), height - pad.b, pad.t);
+      const rScale = makeScale(minByKey(right.points, "y"), maxByKey(right.points, "y"), height - pad.b, pad.t);
       const periodMarkers = left.points.map(p => p.period && p.period !== "flow" ? `<circle cx="${xScale(p.x)}" cy="${yScale(p.y)}" r="3.1" fill="${periodColor(p.period)}"/>` : "").join("");
       const eventMarkers = events.filter(event => event.timeMs >= xMin && event.timeMs <= xMax).map((event, index) => {
         const x = xScale(event.timeMs);
@@ -6663,8 +7074,8 @@
         ${periodMarkers}${eventMarkers}
         ${axisLabels(width, height, pad, xLabel, yLabel, rightLabel)}
         ${xTicks(xScale, xMin, xMax, height - pad.b, formatX)}
-        ${yTicks(yScale, minOf(left.points, "y"), maxOf(left.points, "y"), pad.l, "left")}
-        ${yTicks(rScale, minOf(right.points, "y"), maxOf(right.points, "y"), width - pad.r, "right")}
+        ${yTicks(yScale, minByKey(left.points, "y"), maxByKey(left.points, "y"), pad.l, "left")}
+        ${yTicks(rScale, minByKey(right.points, "y"), maxByKey(right.points, "y"), width - pad.r, "right")}
       </svg>`;
     }
 
@@ -6672,10 +7083,10 @@
       const width = 920;
       const height = 310;
       const pad = {l: 68, r: 28, t: 24, b: 48};
-      const xMin = minOf(points, "x");
-      const xMax = maxOf(points, "x");
-      const yMin = minOf(points, "y");
-      const yMax = maxOf(points, "y");
+      const xMin = minByKey(points, "x");
+      const xMax = maxByKey(points, "x");
+      const yMin = minByKey(points, "y");
+      const yMax = maxByKey(points, "y");
       const xScale = makeScale(xMin, xMax, pad.l, width - pad.r);
       const yScale = makeScale(yMin, yMax, height - pad.b, pad.t);
       const fitLine = [
@@ -6703,10 +7114,10 @@
       const typePoints = typeCurve ? typeCurve.pressure.concat(typeCurve.derivative) : [];
       const all = delta.concat(derivative).concat(typePoints);
       if (!all.length) return emptySvg("Need positive delta pressure and derivative points.");
-      const xMin = Math.min(...all.map(p => p.x));
-      const xMax = Math.max(...all.map(p => p.x));
-      const yMin = Math.min(...all.map(p => p.y));
-      const yMax = Math.max(...all.map(p => p.y));
+      const xMin = minOf(all.map(p => p.x));
+      const xMax = maxOf(all.map(p => p.x));
+      const yMin = minOf(all.map(p => p.y));
+      const yMax = maxOf(all.map(p => p.y));
       const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
       const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
       const anchorX = derivative.length ? derivative[Math.floor(derivative.length * 0.35)]?.x || xMin : xMin;
@@ -6760,10 +7171,10 @@
         .map(point => ({x: point.dt, y: Math.abs(point.derivative), negative: point.derivative < 0}));
       const all = raw.concat(deconvolved).concat(deriv);
       if (!all.length) return emptySvg("Need positive deconvolution points.");
-      const xMin = Math.min(...all.map(point => point.x));
-      const xMax = Math.max(...all.map(point => point.x));
-      const yMin = Math.min(...all.map(point => point.y));
-      const yMax = Math.max(...all.map(point => point.y));
+      const xMin = minOf(all.map(point => point.x));
+      const xMax = maxOf(all.map(point => point.x));
+      const yMin = minOf(all.map(point => point.y));
+      const yMax = maxOf(all.map(point => point.y));
       const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
       const yScale = value => makeScale(Math.log10(yMin), Math.log10(yMax), height - pad.b, pad.t)(Math.log10(value));
       return `<svg viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg">
@@ -6787,10 +7198,10 @@
         selected: analysis.selected.includes(point)
       }));
       if (points.length < 2) return emptySvg("Need shut-in pressure points for semilog MDH plot.");
-      const xMin = Math.min(...points.map(point => point.x));
-      const xMax = Math.max(...points.map(point => point.x));
-      const yMin = Math.min(...points.map(point => point.y));
-      const yMax = Math.max(...points.map(point => point.y));
+      const xMin = minOf(points.map(point => point.x));
+      const xMax = maxOf(points.map(point => point.x));
+      const yMin = minOf(points.map(point => point.y));
+      const yMax = maxOf(points.map(point => point.y));
       const xScale = value => makeScale(Math.log10(xMin), Math.log10(xMax), pad.l, width - pad.r)(Math.log10(value));
       const yScale = makeScale(yMin, yMax, height - pad.b, pad.t);
       const selected = analysis.selected.filter(point => point.dt > 0);
@@ -7546,6 +7957,26 @@
       return values.reduce((total, value) => total + value, 0);
     }
 
+    // Loop-based extremes. Math.min(...rows) overflows the argument stack somewhere
+    // north of 100k values, which a 5-second memory gauge run reaches in half a day.
+    function minOf(values, seed = Infinity) {
+      let out = seed;
+      for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (value < out) out = value;
+      }
+      return out;
+    }
+
+    function maxOf(values, seed = -Infinity) {
+      let out = seed;
+      for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (value > out) out = value;
+      }
+      return out;
+    }
+
     function average(values) {
       const clean = values.filter(Number.isFinite);
       return clean.length ? sum(clean) / clean.length : 0;
@@ -7590,15 +8021,15 @@
       return Math.min(max, Math.max(min, value));
     }
 
-    function minOf(points, key) {
-      const min = Math.min(...points.map(point => point[key]));
-      const max = Math.max(...points.map(point => point[key]));
+    function minByKey(points, key) {
+      const min = minOf(points.map(point => point[key]));
+      const max = maxOf(points.map(point => point[key]));
       return min === max ? min - 1 : min;
     }
 
-    function maxOf(points, key) {
-      const min = Math.min(...points.map(point => point[key]));
-      const max = Math.max(...points.map(point => point[key]));
+    function maxByKey(points, key) {
+      const min = minOf(points.map(point => point[key]));
+      const max = maxOf(points.map(point => point[key]));
       return min === max ? max + 1 : max;
     }
 
