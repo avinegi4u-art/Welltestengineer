@@ -873,6 +873,7 @@
               <button id="exportJson" class="small">Export JSON</button>
             </div>
           </div>
+          <p id="caseSaveStatus" class="muted" style="margin:0 0 0.7rem; font-size:0.82rem">Nothing autosaved yet in this browser.</p>
           <div class="scroll">
             <table>
               <thead>
@@ -1699,9 +1700,11 @@
       bindPlotTools();
       setManualTimeNow();
       setEventTimeNow();
-      loadSavedCase();
-      refresh();
-      syncPlotToolbars();
+      // loadSavedCase may need IndexedDB (async) for large cases, so refresh once it settles.
+      loadSavedCase().catch(error => console.warn("Could not restore saved case", error)).finally(() => {
+        refresh();
+        syncPlotToolbars();
+      });
       window.addEventListener("resize", () => resizeCharts());
     });
 
@@ -7649,11 +7652,134 @@
       setTimeout(() => win.print(), 300);
     }
 
+    /* Case persistence -------------------------------------------------------
+       A memory-gauge record is ~114k readings. Stored as an array of row objects
+       that serialized to 37 MB, which no browser will accept into localStorage
+       (~5 MB cap) — so every save threw QuotaExceededError, the error was
+       swallowed, and the user was still told the case had been saved. Rows are
+       now stored columnar with dictionary and delta encoding, and anything that
+       still will not fit falls back to IndexedDB, which has no 5 MB cap. Every
+       save path reports what actually happened. */
+
+    const CASE_SCHEMA = 3;
+    const CASE_KEY = "dstPtaCase";
+    const CASE_DB = "dstPtaStore";
+    const CASE_STORE = "cases";
+
+    // Columns kept per reading, with the value substituted when one is absent.
+    // id and timeText are deliberately dropped: nothing ever reads them back and
+    // together they were ~11 MB of the old payload. rawIndex IS kept — the row
+    // sort tie-break and the timestamp-order QC check both depend on it.
+    const ROW_COLUMNS = [
+      ["rawIndex", 0], ["timeMs", 0], ["bhp", 0], ["rate", 0], ["oil", 0],
+      ["water", 0], ["gas", 0], ["whp", null], ["temp", null], ["explicitRate", false]
+    ];
+
+    function encodeColumn(values) {
+      const n = values.length;
+      if (!n) return {c: null};
+      let constant = true;
+      for (let i = 1; i < n; i += 1) {
+        if (values[i] !== values[0]) { constant = false; break; }
+      }
+      if (constant) return {c: values[0]};
+      // Delta encoding is applied only to integer columns (timestamps, indices).
+      // Running it on floats would accumulate representation error on decode.
+      let integral = true;
+      for (let i = 0; i < n; i += 1) {
+        if (!Number.isInteger(values[i])) { integral = false; break; }
+      }
+      if (integral) {
+        const deltas = new Array(n);
+        deltas[0] = values[0];
+        let arithmetic = n > 2;
+        for (let i = 1; i < n; i += 1) {
+          deltas[i] = values[i] - values[i - 1];
+          if (i > 1 && deltas[i] !== deltas[1]) arithmetic = false;
+        }
+        if (arithmetic) return {start: values[0], step: deltas[1]};
+        if (JSON.stringify(deltas).length < JSON.stringify(values).length) return {d: deltas};
+      }
+      return {v: values};
+    }
+
+    function decodeColumn(encoded, n, blank) {
+      const out = new Array(n);
+      if (!encoded) { out.fill(blank); return out; }
+      if (Object.prototype.hasOwnProperty.call(encoded, "c")) { out.fill(encoded.c); return out; }
+      if (Object.prototype.hasOwnProperty.call(encoded, "start")) {
+        for (let i = 0; i < n; i += 1) out[i] = encoded.start + encoded.step * i;
+        return out;
+      }
+      if (encoded.d) {
+        let running = 0;
+        for (let i = 0; i < n; i += 1) {
+          running = i ? running + encoded.d[i] : encoded.d[0];
+          out[i] = running;
+        }
+        return out;
+      }
+      for (let i = 0; i < n; i += 1) out[i] = encoded.v[i];
+      return out;
+    }
+
+    function encodeRows(rows) {
+      const n = rows.length;
+      const buffers = {};
+      ROW_COLUMNS.forEach(([key]) => { buffers[key] = new Array(n); });
+      const sources = [], sourceIds = new Map();
+      const unitSets = [], unitIds = new Map();
+      const sourceCol = new Array(n), unitCol = new Array(n);
+      for (let i = 0; i < n; i += 1) {
+        const row = rows[i];
+        for (let c = 0; c < ROW_COLUMNS.length; c += 1) {
+          const key = ROW_COLUMNS[c][0];
+          const value = row[key];
+          buffers[key][i] = value === undefined ? ROW_COLUMNS[c][1] : value;
+        }
+        const source = row.source || "";
+        if (!sourceIds.has(source)) { sourceIds.set(source, sources.length); sources.push(source); }
+        sourceCol[i] = sourceIds.get(source);
+        const unitKey = JSON.stringify(row.units || null);
+        if (!unitIds.has(unitKey)) { unitIds.set(unitKey, unitSets.length); unitSets.push(row.units || null); }
+        unitCol[i] = unitIds.get(unitKey);
+      }
+      const cols = {};
+      ROW_COLUMNS.forEach(([key]) => { cols[key] = encodeColumn(buffers[key]); });
+      cols.source = encodeColumn(sourceCol);
+      cols.units = encodeColumn(unitCol);
+      return {n, sources, unitSets, cols};
+    }
+
+    function decodeRows(encoded) {
+      if (!encoded || !Number.isFinite(encoded.n)) return [];
+      const n = encoded.n;
+      const cols = encoded.cols || {};
+      const decoded = {};
+      ROW_COLUMNS.forEach(([key, blank]) => { decoded[key] = decodeColumn(cols[key], n, blank); });
+      const sourceCol = decodeColumn(cols.source, n, 0);
+      const unitCol = decodeColumn(cols.units, n, 0);
+      const sources = encoded.sources || [];
+      const unitSets = encoded.unitSets || [];
+      const rows = new Array(n);
+      for (let i = 0; i < n; i += 1) {
+        const row = {};
+        ROW_COLUMNS.forEach(([key]) => { row[key] = decoded[key][i]; });
+        row.source = sources[sourceCol[i]] || "";
+        const units = unitSets[unitCol[i]];
+        if (units) row.units = units;
+        row.id = `${row.timeMs}-case-${i}`;
+        rows[i] = row;
+      }
+      return rows;
+    }
+
     function casePayload(includeAnalysis = false) {
       return {
         version: APP_VERSION,
+        schema: CASE_SCHEMA,
         savedAt: new Date().toISOString(),
-        rows: state.rows,
+        readings: encodeRows(state.rows),
         inputs: currentInputs(),
         units: currentUnits(),
         details: currentDetails(),
@@ -7665,24 +7791,112 @@
       };
     }
 
+    /* IndexedDB fallback for cases too large for localStorage. */
+    function idbOpen() {
+      if (typeof indexedDB === "undefined") return Promise.reject(new Error("IndexedDB is unavailable in this browser"));
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(CASE_DB, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(CASE_STORE)) request.result.createObjectStore(CASE_STORE);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function idbWrite(key, value) {
+      const db = await idbOpen();
+      try {
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(CASE_STORE, "readwrite");
+          tx.objectStore(CASE_STORE).put(value, key);
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        });
+      } finally { db.close(); }
+    }
+
+    async function idbRead(key) {
+      const db = await idbOpen();
+      try {
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction(CASE_STORE, "readonly").objectStore(CASE_STORE).get(key);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      } finally { db.close(); }
+    }
+
+    async function idbRemove(key) {
+      const db = await idbOpen();
+      try {
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(CASE_STORE, "readwrite");
+          tx.objectStore(CASE_STORE).delete(key);
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+      } finally { db.close(); }
+    }
+
+    function formatBytes(bytes) {
+      if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
+      if (bytes >= 1024) return `${Math.round(bytes / 1024)} kB`;
+      return `${bytes} B`;
+    }
+
+    function setCaseSaveStatus(text, tone) {
+      const el = document.getElementById("caseSaveStatus");
+      if (!el) return;
+      el.textContent = text;
+      el.style.color = tone === "alert" ? "var(--bad)" : "";
+    }
+
+    // localStorage first: its write is synchronous, so it is the only store that
+    // can still complete while the page is being torn down at pagehide.
+    async function writeCaseSnapshot() {
+      const text = JSON.stringify(casePayload(false));
+      const bytes = text.length;
+      try {
+        localStorage.setItem(CASE_KEY, text);
+        idbRemove(CASE_KEY).catch(() => {});
+        return {ok: true, bytes, where: "this browser"};
+      } catch (localError) {
+        try {
+          await idbWrite(CASE_KEY, text);
+          try { localStorage.removeItem(CASE_KEY); } catch (ignored) { /* nothing stored */ }
+          return {ok: true, bytes, where: "this browser's local database"};
+        } catch (dbError) {
+          const reason = (dbError && dbError.message) || (localError && localError.message) || "browser storage is full";
+          return {ok: false, bytes, message: reason};
+        }
+      }
+    }
+
     let persistTimer = null;
 
-    function persistCaseNow() {
+    async function persistCaseNow() {
       if (persistTimer) {
         clearTimeout(persistTimer);
         persistTimer = null;
       }
+      const result = await writeCaseSnapshot();
       try {
-        localStorage.setItem("dstPtaCase", JSON.stringify(casePayload(false)));
         localStorage.setItem("dstPtaInputs", JSON.stringify(currentInputs()));
-      } catch (error) {
-        console.warn("Unable to persist DST case locally", error);
+      } catch (ignored) { /* inputs are tiny; a failure here is covered by the case status */ }
+      if (result.ok) {
+        setCaseSaveStatus(`Saved ${formatBytes(result.bytes)} to ${result.where} at ${new Date().toLocaleTimeString()}.`);
+      } else {
+        setCaseSaveStatus(`NOT SAVED - ${result.message}. Use "Download case" to keep this work.`, "alert");
+        console.warn("Unable to persist DST case locally", result.message);
       }
+      return result;
     }
 
-    // Serializing the full case (all gauge rows) on every recompute/poll tick stutters the
-    // main thread on dense datasets, so autosave is trailing-debounced; explicit saves and
-    // page hide/unload flush immediately via persistCaseNow().
+    // Serializing the case on every recompute/poll tick stutters the main thread on
+    // dense datasets, so autosave is trailing-debounced; explicit saves and page
+    // hide/unload flush immediately via persistCaseNow().
     function persistCase() {
       if (persistTimer) clearTimeout(persistTimer);
       persistTimer = setTimeout(() => {
@@ -7696,20 +7910,24 @@
       if (document.visibilityState === "hidden" && persistTimer) persistCaseNow();
     });
 
-    function saveCase() {
-      persistCaseNow();
-      alert("DST case saved in this browser.");
+    async function saveCase() {
+      const result = await persistCaseNow();
+      if (result.ok) {
+        alert(`DST case saved in ${result.where} (${formatBytes(result.bytes)}).`);
+      } else {
+        alert(`The case could NOT be saved in this browser.\n\n${result.message}\n\nYour data is still loaded. Use "Download case" to write it to a file.`);
+      }
     }
 
     function downloadCase() {
-      download(`dst-pta-case-${stamp()}.json`, JSON.stringify(casePayload(false), null, 2), "application/json");
+      download(`dst-pta-case-${stamp()}.json`, JSON.stringify(casePayload(false)), "application/json");
     }
 
     async function handleCaseImport(event) {
       const file = event.target.files[0];
       if (!file) return;
       const payload = safeJson(await file.text());
-      if (!payload || !Array.isArray(payload.rows)) {
+      if (!payload || !(payload.readings || Array.isArray(payload.rows))) {
         alert("Case file is not a valid DST PTA case JSON.");
         return;
       }
@@ -7718,24 +7936,40 @@
       event.target.value = "";
     }
 
-    function saveInputs() {
-      localStorage.setItem("dstPtaInputs", JSON.stringify(currentInputs()));
-      persistCaseNow();
-      alert("Analysis inputs saved.");
+    async function saveInputs() {
+      try {
+        localStorage.setItem("dstPtaInputs", JSON.stringify(currentInputs()));
+      } catch (error) {
+        alert(`Analysis inputs could not be saved: ${error.message}`);
+        return;
+      }
+      const result = await persistCaseNow();
+      alert(result.ok ? "Analysis inputs saved." : `Inputs saved, but the gauge data could not be: ${result.message}`);
     }
 
-    function loadSavedCase() {
+    async function loadSavedCase() {
       const savedInputs = safeJson(localStorage.getItem("dstPtaInputs"));
       if (savedInputs) applyInputs(savedInputs);
-      const saved = safeJson(localStorage.getItem("dstPtaCase"));
-      if (saved) applyCasePayload(saved);
+      let saved = safeJson(localStorage.getItem(CASE_KEY));
+      if (!saved) {
+        const stored = await idbRead(CASE_KEY).catch(() => null);
+        if (stored) saved = safeJson(stored);
+      }
+      if (!saved) return false;
+      applyCasePayload(saved);
+      const when = saved.savedAt ? new Date(saved.savedAt).toLocaleString() : "earlier";
+      setCaseSaveStatus(`Restored ${state.rows.length.toLocaleString()} reading(s) saved ${when}.`);
+      return true;
     }
 
     function applyCasePayload(payload) {
       if (payload.inputs) applyInputs(payload.inputs);
       if (payload.units) applyUnits(payload.units);
       if (payload.details) applyDetails(payload.details);
-      state.rows = Array.isArray(payload.rows) ? payload.rows : [];
+      // schema 3 stores columns; cases written by earlier builds stored row objects.
+      state.rows = payload.readings
+        ? decodeRows(payload.readings)
+        : (Array.isArray(payload.rows) ? payload.rows : []);
       state.events = Array.isArray(payload.events) ? payload.events : [];
       state.manualPeriods = payload.manualPeriods || {};
       state.importStats = payload.importStats || state.importStats;
