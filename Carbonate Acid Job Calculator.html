@@ -554,12 +554,8 @@ footer a:hover { color: var(--text-muted); }
   font-size: 12px;
   color: var(--text-muted);
 }
-</style>
-</head>
 
-<body>
-
-  /* === DELETE BUTTON === */
+/* ═══ DELETE BUTTON ═══ */
 .btn-delete {
   margin-left: auto;
   padding: 0;
@@ -582,17 +578,22 @@ footer a:hover { color: var(--text-muted); }
   transform: none;
 }
 
-/* === PRINT STYLES === */
+/* ═══ PRINT STYLES ═══ */
 @media print {
   body { background: white; color: black; }
   .page-wrap { max-width: 100%; }
   .tabs-nav, .btn, .edit-hint, .add-item-row, .check-actions { display: none; }
   .tab-panel { display: block !important; }
-  .check-item input[type="checkbox"] { 
-    print-color-adjust: exact; 
-    -webkit-print-color-adjust: exact; 
+  .check-item input[type="checkbox"] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
+</style>
+</head>
+
+<body>
+
 <div class="page-wrap">
 
   <!-- ═══ HEADER ═══ -->
@@ -703,11 +704,13 @@ footer a:hover { color: var(--text-muted); }
             <option value="dolomite">Dolomite (CaMg(CO₃)₂)</option>
           </select>
         </div>
-            <div class="form-group">
-      <label for="galft-bht">Bottomhole Temp. (°F)</label>
-      <input type="number" id="galft-bht" value="200" step="5" min="40">
-    </div>
-  </div>
+        <div class="form-group">
+          <label for="galft-bht">Bottomhole Temp. (°F)</label>
+          <input type="number" id="galft-bht" value="200" step="5" min="40">
+        </div>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
           <label>Treatment Intensity</label>
           <select id="intensity">
@@ -1327,11 +1330,14 @@ function calcGalFt() {
   const interval = parseFloat(document.getElementById('perf-interval').value);
   const conc = parseInt(document.getElementById('galft-conc').value);
   const formation = document.getElementById('formation-type').value;
+  const bht = parseFloat(document.getElementById('galft-bht').value);
   const intensity = document.getElementById('intensity').value;
   const summary = document.getElementById('galft-summary');
   const tbody = document.querySelector('#galft-results tbody');
+  const warningBox = document.getElementById('galft-warning');
   summary.textContent = '';
   tbody.textContent = '';
+  warningBox.style.display = 'none';
 
   // Gal/ft ranges based on intensity
   const ranges = {
@@ -1341,8 +1347,8 @@ function calcGalFt() {
   };
   const allowedFormations = new Set(['limestone', 'dolomite']);
 
-  if (!Number.isFinite(interval) || interval <= 0 || !ranges[intensity] || !allowedFormations.has(formation)) {
-    appendTableMessage(tbody, 'Enter a valid interval, formation, and treatment intensity.', 2);
+  if (!Number.isFinite(interval) || interval <= 0 || !Number.isFinite(bht) || bht <= 0 || !ranges[intensity] || !allowedFormations.has(formation)) {
+    appendTableMessage(tbody, 'Enter a valid interval, bottomhole temperature, formation, and treatment intensity.', 2);
     return;
   }
 
@@ -1386,11 +1392,15 @@ function calcGalFt() {
     </div>
   `;
 
+  // Retarder warning: HCl spending time drops sharply above 225°F
+  warningBox.style.display = bht > 225 ? 'block' : 'none';
+
   // Detail table
   tbody.innerHTML = `
     <tr><td>Perforated Interval</td><td class="val-accent">${interval} ft</td></tr>
     <tr><td>HCl Concentration</td><td>${conc}%</td></tr>
     <tr><td>Formation Type</td><td>${formation === 'limestone' ? 'Limestone (CaCO₃)' : 'Dolomite (CaMg(CO₃)₂)'}</td></tr>
+    <tr><td>Bottomhole Temp.</td><td${bht > 225 ? ' class="val-error"' : ''}>${bht}°F</td></tr>
     <tr><td>Treatment Intensity</td><td style="text-transform:capitalize">${intensity}</td></tr>
     <tr><td>Gal/Ft Range</td><td>${low} – ${high} gal/ft</td></tr>
     <tr><td>Total Volume (low)</td><td>${totalLow.toLocaleString()} gal (${(totalLow/42).toFixed(1)} bbl)</td></tr>
@@ -2202,6 +2212,18 @@ function renderChecklist() {
 
       row.appendChild(checkbox);
       row.appendChild(label);
+
+      if (item.custom) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn-delete';
+        deleteBtn.setAttribute('aria-label', `Remove "${item.text}"`);
+        deleteBtn.dataset.idx = String(globalIdx);
+        deleteBtn.dataset.testid = `btn-delete-${globalIdx}`;
+        deleteBtn.textContent = '✕';
+        row.appendChild(deleteBtn);
+      }
+
       container.appendChild(row);
     });
   });
@@ -2211,6 +2233,16 @@ function renderChecklist() {
     cb.addEventListener('change', (e) => {
       checklistState[parseInt(e.target.dataset.idx)].checked = e.target.checked;
       saveChecklistState();
+    });
+  });
+
+  // Wire up delete buttons (custom items only)
+  container.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.currentTarget.dataset.idx);
+      checklistState.splice(idx, 1);
+      saveChecklistState();
+      renderChecklist();
     });
   });
 }
