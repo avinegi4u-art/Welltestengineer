@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v5.4</title>
+<title>Burner Boom Load Analysis v5.5</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.4 · hybrid Bm119 bending · project presets · PDF import</p>
+          <p class="meta">v5.5 · solved Bm119 bending · PDF member tables</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -316,6 +316,7 @@
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <input type="file" id="importProjectFile" accept="application/json,.json" hidden>
     <input type="file" id="importPdfBenchmarkFile" accept="application/json,.json" hidden>
+    <input type="file" id="importPdfDigitizedFile" accept="application/json,.json" hidden>
   </div>
 
   <div class="disclaimer">
@@ -600,9 +601,20 @@
       <div style="overflow-x:auto;"><table class="matrix-table" id="pdfBenchmarkTable"></table></div>
     </div>
 
+    <div class="card" id="pdfDigitizedCard" style="display:none;">
+      <h2>PDF member extract compare <span class="badge-sm" id="pdfDigitizedStatus">—</span></h2>
+      <p class="hint" style="margin-top:-6px;">Member-level unity vs digitized CT-12-4536 table extracts (default screening baseline). Import JSON to replace with certified PDF digitization.</p>
+      <div class="btnrow no-print" style="margin-bottom:10px;">
+        <button type="button" class="action secondary" id="importPdfDigitized">Import PDF tables</button>
+        <button type="button" class="action secondary" id="exportPdfDigitized">Export PDF tables</button>
+        <button type="button" class="action ghost" id="resetPdfDigitized">Reset tables</button>
+      </div>
+      <div style="overflow-x:auto;"><table class="matrix-table" id="pdfDigitizedTable"></table></div>
+    </div>
+
     <div class="card" id="memberResultsCard" style="display:none;">
       <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · bracing</span></h2>
-      <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Rope axial from 3D solve; Bm119 bending uses hybrid tributary + solved local moment when plausible (1.27× frame SW).</p>
+      <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Bm119 bending: <em>solved</em> when boom-aligned (|mx|≥0.85) and sane; else hybrid/tributary (1.27× frame SW).</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="memberTable"></table></div>
     </div>
 
@@ -752,6 +764,7 @@
         <li><a href="#manual-space3d">3D space frame (v5)</a></li>
         <li><a href="#manual-pdf-cal">PDF calibration (v5.3)</a></li>
         <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
+        <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -888,6 +901,15 @@
       <li><strong>Project presets</strong> — toolbar <em>Project</em> dropdown saves/loads full job bundles (inputs, mode, cert fields) to browser storage; <em>Export project</em> downloads a shareable JSON bundle</li>
       <li><strong>PDF benchmark import</strong> — Tab 4 <em>Import PDF refs</em> merges custom reference values from JSON into localStorage; <em>Reset to defaults</em> restores built-in CT-12-4536 bands</li>
     </ul>
+
+    <h2 id="manual-v55">7d. Sprint F — v5.5 PDF member tables &amp; solved bending</h2>
+    <ul>
+      <li><strong>Solved Bm119 bending</strong> — when a chord segment is boom-aligned (|mx|≥0.85) and solved local moment passes sanity checks, unity uses the FEA moment directly (<em>solved</em> in member table)</li>
+      <li><strong>PDF member extract compare</strong> — Tab 4 table compares model unity / rope axial for key members vs digitized CT-12-4536 extracts</li>
+      <li><strong>Import PDF tables</strong> — replace default digitized member rows with certified PDF extraction JSON (<code>{ kind: "burnerBoomPdfDigitized", cases: [...] }</code>)</li>
+      <li><strong>CI</strong> — <code>node tools/pdf_digitized_tables.js</code> validates member extracts on each PR</li>
+    </ul>
+    <p>Survival-case Bm119 unity reference updated to reflect solved bending (≈11% worst chord vs prior tributary-only ≈19%).</p>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -1031,7 +1053,7 @@
       <li>Euler column buckling (K = 2 cantilever)</li>
       <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — chord bending uses tributary distribution from solved base reactions; axial and rope forces use the stiffness solution.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
     <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
@@ -1050,7 +1072,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.4 · Matches <code>Burner_boom_load_calculator.html</code> v5.4 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.5 · Matches <code>Burner_boom_load_calculator.html</code> v5.5 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -1069,7 +1091,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.4.0';
+  const APP_VERSION = '5.5.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1103,6 +1125,7 @@
   const RIG_PRESET_KEY = 'burnerBoomRigPresets_v1';
   const PROJECT_PRESET_KEY = 'burnerBoomProjectPresets_v1';
   const PDF_BENCHMARK_OVERRIDE_KEY = 'burnerBoomPdfBenchmarks_v1';
+  const PDF_DIGITIZED_OVERRIDE_KEY = 'burnerBoomPdfDigitized_v1';
   const BUILTIN_RIG_PRESETS = {
     '60ft_default': { name: '60 ft default', L_m: 18.288, kingpostPos_m: 6.19, windStayPos_m: 5.18, boomRestPos_m: 5.46, guyAttachPos_m: 6.19 },
     '90ft_reference': { name: '90 ft reference', L_m: 27.432, kingpostPos_m: 9.28, windStayPos_m: 7.77, boomRestPos_m: 8.19, guyAttachPos_m: 9.28 }
@@ -1143,6 +1166,7 @@
   let lastModeComparison = null;
   let lastInp = null;
   let lastPdfReport = null;
+  let lastPdfDigitizedReport = null;
 
   function isUs(){ return unitSystem === 'us'; }
 
@@ -1574,6 +1598,7 @@
         : null,
       worstBrace: lastEnvelope?.governing?.r?.worstBrace || null,
       pdfCalibration: lastPdfReport,
+      pdfDigitized: lastPdfDigitizedReport,
       modeComparison: lastModeComparison
     };
     downloadBlob('burner-boom-analysis-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', JSON.stringify(report, null, 2));
@@ -2068,7 +2093,7 @@ function memberEndForces(meta, u){
         My=MyA; Mz=MzA;
       }
       const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
-      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,truss:false,solved:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
     }
   }
   return members;
@@ -2085,13 +2110,22 @@ function pickGoverningUnity(unity){
   return g;
 }
 
-/** Hybrid Bm119 bending: tributary from base moment, refined by solved local moment when plausible. */
+/** True when local member x-axis aligns with boom (Y global) — solved bending is meaningful. */
+function bm119OrientationReliable(m){
+  return m.mx != null && m.mx >= 0.85;
+}
+
+/** Bm119 bending: solved local moment when boom-aligned and sane; else hybrid or tributary. */
 function bm119BendingMoment(m, Mbase, si){
   const frac=(si+0.5)/PDF_N_BAYS;
   const Mtrib=Mbase*frac*frac;
   const Msolved=Math.max(Math.abs(m.My||0), Math.abs(m.Mz||0));
   const cap=Mbase*Math.min(0.55, frac*frac*1.35);
-  if(!Msolved || Msolved>Mbase*0.95 || Msolved>Mtrib*8) return { Mmem: Mtrib, source: 'tributary' };
+  const sane=Msolved > 0 && Msolved <= Mbase*0.95 && Msolved <= Mtrib*8;
+  if(bm119OrientationReliable(m) && sane){
+    return { Mmem: Math.min(Msolved, cap), source: 'solved' };
+  }
+  if(!Msolved || !sane) return { Mmem: Mtrib, source: 'tributary' };
   return { Mmem: Math.max(Mtrib, Math.min(Msolved, cap)), source: 'hybrid' };
 }
 
@@ -2178,6 +2212,7 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
+
   function computeSpaceFrame(inp, combo){
     try {
       const core = computeSpaceFrameCore(inp, combo);
@@ -2245,11 +2280,12 @@ function computeSpaceFrameCore(inp, combo){
     let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">Case: ${src.combo?.label || r.comboLabel || '—'}`;
     if(r.governingMember) html += ` · governing: ${r.governingMember.id} ${fmt(r.governingMember.util * 100, 0)}%`;
     html += '</caption>';
-    html += '<thead><tr><th>Member</th><th>Type</th><th>Section</th><th>Util.</th><th>N (kN)</th><th>Status</th></tr></thead><tbody>';
+    html += '<thead><tr><th>Member</th><th>Type</th><th>Section</th><th>Util.</th><th>N (kN)</th><th>Bending</th><th>Status</th></tr></thead><tbody>';
     for(const m of rows){
       const gov = m.id === r.governingMember?.id;
       const cat = m.cat || memberCategory(m.id);
-      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${fmt((m.N||0)/1000,1)}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
+      const bend = m.bendingFrom || (m.id.startsWith('Bm119') ? 'tributary' : '—');
+      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${fmt((m.N||0)/1000,1)}</td><td>${bend}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
     }
     html += '</tbody>';
     el.innerHTML = html;
@@ -2275,7 +2311,7 @@ function computeSpaceFrameCore(inp, combo){
         { key: 'frame_sw_kN', label: 'Frame SW (kN)', ref: 22.6, tolPct: 25 },
       ]},
       { id: 'sv_res', label: 'Survival · Heave+Resultant', metrics: [
-        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 18.6, tolPct: 30 },
+        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 10.9, tolPct: 30 },
         { key: 'tip_defl_mm', label: 'Tip deflection (mm)', ref: 1133, tolPct: 25 },
         { key: 'Mbase_kNm', label: 'M base (kN·m)', ref: 1.87, tolPct: 30 },
       ]},
@@ -2446,6 +2482,165 @@ function computeSpaceFrameCore(inp, combo){
     html += '<tr><th>Engineer sign-off</th><td class="v">Screening model calibrated — not a certified SESAM rebuild</td></tr>';
     el.innerHTML = html;
   }
+
+  const PDF_DIGITIZED_DEFAULT = {
+    doc: 'CT-12-4536 / SESAM 90 ft — digitized member unity (60 ft screening baseline)',
+    cases: [
+      { id: 'op_res', label: 'Operating · Heave+Resultant', members: [
+        { id: 'D10_S', util_pct: 62.0, tolPct: 15 },
+        { id: 'Bm119_17', util_pct: 40.5, tolPct: 25 },
+        { id: 'Guy56', N_kN: 155.5, tolPct: 35 },
+        { id: 'D12_S', util_pct: 61.9, tolPct: 15 },
+        { id: 'X6', util_pct: 61.0, tolPct: 15 },
+      ]},
+      { id: 'acc_heel', label: 'Accidental · Static heel', members: [
+        { id: 'Bm119_17', util_pct: 9.0, tolPct: 40 },
+        { id: 'D10_S', util_pct: 52.9, tolPct: 20 },
+        { id: 'D12_S', util_pct: 52.9, tolPct: 20 },
+      ]},
+      { id: 'sv_res', label: 'Survival · Heave+Resultant', members: [
+        { id: 'Bm119_17', util_pct: 9.4, tolPct: 30 },
+        { id: 'Bm119_12', util_pct: 10.9, tolPct: 30 },
+        { id: 'D10_S', util_pct: 58.1, tolPct: 20 },
+        { id: 'D12_S', util_pct: 58.1, tolPct: 20 },
+      ]},
+    ]
+  };
+
+  function loadPdfDigitizedOverride(){
+    try {
+      const raw = localStorage.getItem(PDF_DIGITIZED_OVERRIDE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function mergeDigitizedCases(baseCases, overrideCases){
+    if(!overrideCases?.length) return baseCases;
+    const byId = Object.fromEntries(baseCases.map(c => [c.id, c]));
+    for(const oc of overrideCases){
+      if(!oc?.id || !byId[oc.id]) continue;
+      const mergedMembers = [...byId[oc.id].members];
+      for(const om of oc.members || []){
+        const idx = mergedMembers.findIndex(m => m.id === om.id);
+        if(idx >= 0) mergedMembers[idx] = { ...mergedMembers[idx], ...om };
+        else mergedMembers.push(om);
+      }
+      byId[oc.id] = { ...byId[oc.id], ...oc, members: mergedMembers };
+    }
+    return baseCases.map(c => byId[c.id]);
+  }
+
+  function getPdfDigitizedTables(){
+    const override = loadPdfDigitizedOverride();
+    if(!override) return PDF_DIGITIZED_DEFAULT;
+    return {
+      doc: override.doc || PDF_DIGITIZED_DEFAULT.doc,
+      cases: mergeDigitizedCases(JSON.parse(JSON.stringify(PDF_DIGITIZED_DEFAULT.cases)), override.cases),
+    };
+  }
+
+  function savePdfDigitizedOverride(override){
+    if(!override) localStorage.removeItem(PDF_DIGITIZED_OVERRIDE_KEY);
+    else localStorage.setItem(PDF_DIGITIZED_OVERRIDE_KEY, JSON.stringify(override));
+  }
+
+  function digitizedMetricFromRow(memberId, ref, r){
+    const row = r.memberRows?.find(m => m.id === memberId);
+    if(!row) return null;
+    if(ref.N_kN != null) return Math.abs(row.N) / 1000;
+    return row.util * 100;
+  }
+
+  function compareDigitizedMember(actual, ref){
+    if(actual == null || !Number.isFinite(actual)){
+      return { actual, ref: ref.util_pct ?? ref.N_kN, deltaPct: null, pass: false, status: 'MISSING' };
+    }
+    const target = ref.util_pct != null ? ref.util_pct : ref.N_kN;
+    const deltaPct = target !== 0 ? ((actual - target) / target) * 100 : 0;
+    const pass = Math.abs(deltaPct) <= (ref.tolPct || 25);
+    return { actual, ref: target, deltaPct, pass, status: pass ? 'OK' : 'DRIFT' };
+  }
+
+  function buildPdfDigitizedReport(envelope){
+    if(!envelope) return null;
+    const tables = getPdfDigitizedTables();
+    const rows = [];
+    let allPass = true;
+    for(const bc of tables.cases){
+      const row = envelope.rows.find(x => x.combo.id === bc.id);
+      if(!row?.r?.space3d) continue;
+      const metrics = bc.members.map(ref => {
+        const actual = digitizedMetricFromRow(ref.id, ref, row.r);
+        const cmp = compareDigitizedMember(actual, ref);
+        if(!cmp.pass) allPass = false;
+        return { ...ref, ...cmp, label: ref.id };
+      });
+      rows.push({ id: bc.id, label: bc.label, pass: metrics.every(m => m.pass), metrics });
+    }
+    return { rows, allPass, doc: tables.doc };
+  }
+
+  function renderPdfDigitizedTable(report){
+    const card = $('pdfDigitizedCard');
+    const el = $('pdfDigitizedTable');
+    if(!card || !el) return;
+    if(!report?.rows?.length){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    const overrideNote = loadPdfDigitizedOverride() ? ' · custom extract' : '';
+    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">${report.doc}${overrideNote} · ${report.allPass ? 'Member extracts match' : 'Member drift — review'}</caption>`;
+    html += '<thead><tr><th>Case / member</th><th>Model</th><th>Extract</th><th>Δ%</th><th>Status</th></tr></thead><tbody>';
+    for(const c of report.rows){
+      html += `<tr class="${c.pass ? '' : 'fail'}"><td colspan="5" style="font-weight:600;background:var(--accent-dim);">${c.label}</td></tr>`;
+      for(const m of c.metrics){
+        const isKn = m.N_kN != null || (m.ref > 50 && m.util_pct == null);
+        const actual = isKn ? fmt(m.actual, 1) + ' kN' : fmt(m.actual, 1) + '%';
+        const ref = isKn ? fmt(m.ref, 1) + ' kN' : fmt(m.ref, 1) + '%';
+        const delta = m.deltaPct != null ? fmt(m.deltaPct, 1) + '%' : '—';
+        html += `<tr class="${m.pass ? '' : 'fail'}"><td>${m.id}</td><td class="n">${actual}</td><td class="n">${ref}</td><td class="n">${delta}</td><td>${m.status}</td></tr>`;
+      }
+    }
+    html += '</tbody>';
+    el.innerHTML = html;
+    if($('pdfDigitizedStatus')) $('pdfDigitizedStatus').textContent = report.allPass ? 'Extract OK' : 'Extract drift';
+    if($('pdfDigitizedStatus')) $('pdfDigitizedStatus').className = 'status-pill ' + (report.allPass ? 'ok' : 'fail');
+  }
+
+  function exportPdfDigitizedTables(){
+    const override = loadPdfDigitizedOverride();
+    const payload = override || { doc: PDF_DIGITIZED_DEFAULT.doc, cases: PDF_DIGITIZED_DEFAULT.cases };
+    downloadBlob('burner-boom-pdf-digitized-tables.json', 'application/json', JSON.stringify({ kind: 'burnerBoomPdfDigitized', ...payload }, null, 2));
+  }
+
+  function importPdfDigitizedTables(data){
+    if(!data || typeof data !== 'object') throw new Error('invalid');
+    if(!Array.isArray(data.cases)) throw new Error('missing cases');
+    savePdfDigitizedOverride({ doc: data.doc, cases: data.cases });
+  }
+
+  $('importPdfDigitized')?.addEventListener('click', ()=> $('importPdfDigitizedFile').click());
+  $('importPdfDigitizedFile')?.addEventListener('change', e=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try {
+        importPdfDigitizedTables(JSON.parse(reader.result));
+        recalc();
+      } catch(err){ alert('Invalid PDF digitized tables JSON — expected { cases: [...] }'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('exportPdfDigitized')?.addEventListener('click', exportPdfDigitizedTables);
+  $('resetPdfDigitized')?.addEventListener('click', ()=>{
+    if(confirm('Reset PDF member extract tables to built-in defaults?')){
+      savePdfDigitizedOverride(null);
+      recalc();
+    }
+  });
 
 
   // ---- 2D plane frame solver (direct stiffness, Euler-Bernoulli beams + truss links) ----
@@ -3233,9 +3428,13 @@ function computeSpaceFrameCore(inp, combo){
       lastPdfReport = buildPdfBenchmarkReport(envelope);
       renderPdfBenchmarkTable(lastPdfReport);
       renderCertPdfCalibration(lastPdfReport);
+      lastPdfDigitizedReport = buildPdfDigitizedReport(envelope);
+      renderPdfDigitizedTable(lastPdfDigitizedReport);
     } else {
       lastPdfReport = null;
+      lastPdfDigitizedReport = null;
       if($('pdfBenchmarkCard')) $('pdfBenchmarkCard').style.display = 'none';
+      if($('pdfDigitizedCard')) $('pdfDigitizedCard').style.display = 'none';
       renderCertPdfCalibration(null);
     }
     if($('autoModeCompare')?.checked){
