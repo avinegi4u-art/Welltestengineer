@@ -389,6 +389,16 @@ function pickGoverningUnity(unity){
   return g;
 }
 
+/** Hybrid Bm119 bending: tributary from base moment, refined by solved local moment when plausible. */
+function bm119BendingMoment(m, Mbase, si){
+  const frac=(si+0.5)/PDF_N_BAYS;
+  const Mtrib=Mbase*frac*frac;
+  const Msolved=Math.max(Math.abs(m.My||0), Math.abs(m.Mz||0));
+  const cap=Mbase*Math.min(0.55, frac*frac*1.35);
+  if(!Msolved || Msolved>Mbase*0.95 || Msolved>Mtrib*8) return { Mmem: Mtrib, source: 'tributary' };
+  return { Mmem: Math.max(Mtrib, Math.min(Msolved, cap)), source: 'hybrid' };
+}
+
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
   let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
@@ -407,8 +417,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     let Mmem=0;
     if(m.id.startsWith('Bm119')){
       const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
-      const frac=(si+0.5)/PDF_N_BAYS;
-      Mmem=Mbase*frac*frac;
+      const bend=bm119BendingMoment(m, Mbase, si);
+      Mmem=bend.Mmem;
+      var bendingFrom=bend.source;
     } else if(m.id.startsWith('V')){
       Nmem=Math.abs(m.N);
       Mmem=0;
@@ -424,8 +435,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
     if(cat==='brace' && util>worstBrace.util) worstBrace={util,id:m.id,sn:m.sn,sigma,allow};
+    const bendTag=m.id.startsWith('Bm119') ? (bendingFrom || 'tributary') : (m.id.startsWith('V') ? 'axial' : 'solved cap');
     return {...m,cat,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
-      axialFrom:'3D solved',bendingFrom:m.id.startsWith('Bm119')?'3D base tributary':'solved cap'};
+      axialFrom:'3D solved',bendingFrom:bendTag};
   });
   return {rows,worst,worstBrace};
 }
@@ -470,7 +482,7 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {
