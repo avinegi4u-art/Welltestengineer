@@ -54,7 +54,7 @@ function assert(cond, msg) {
   }
 }
 
-const model = sf.buildModel(INP_60FT.L_m);
+const model = sf.buildModel(INP_60FT.L_m, INP_60FT);
 assert(Math.abs(model.sc - 1) < 0.001, '60 ft model scale sc ≈ 1');
 assert(Math.abs(model.dy - sf.PDF_DY_M) < 0.001, 'bay spacing = 1.016 m');
 assert(Math.abs(model.nodes[model.nk(18, 0)].y - INP_60FT.L_m) < 0.001, 'tip at 18.288 m');
@@ -81,6 +81,19 @@ assert(frameWeightN > 5000 && frameWeightN < 80000, `frame self-weight ${(frameW
 
 const guy = opRes.members.find(m => m.id === 'Guy56');
 assert(guy && guy.N > 1000, 'Guy56 axial from 3D solve');
+
+const modelGuys = sf.buildModel(INP_60FT.L_m, { ...INP_60FT, nGuysEffective: 3 });
+assert(modelGuys.elements.some(e => e.id === 'GuySp5'), 'Sp5 guy when nGuysEffective >= 2');
+assert(modelGuys.elements.some(e => e.id === 'GuySp6'), 'Sp6 guy when nGuysEffective >= 3');
+assert(modelGuys.nodes.filter(n => n.tag && n.tag.startsWith('Sp')).length >= 5, 'Sp anchors grow with extra guys');
+
+const braceRow = opRes.unity.rows.find(m => /^[DVX]\d/.test(m.id));
+assert(braceRow && braceRow.util >= 0, 'bracing unity in member rows');
+
+const accInp = { ...INP_60FT, accidentalDryFactor: 0.85, accidentalHeel_deg: 5 };
+const accCore = sf.computeSpaceFrameCore(accInp, MATRIX_COMBOS[6]);
+assert(Number.isFinite(accCore.unity.worst.util), 'acc_heel with heel geometry solves');
+assert(accCore.unity.worstBrace, 'worstBrace tracked');
 
 if (failed) {
   console.error(`\n${failed} regression failure(s)`);

@@ -7,6 +7,7 @@ HTML = ROOT / 'Burner_boom_load_calculator.html'
 SRC = ROOT / 'tools' / 'space_frame_3d.js'
 
 START = '  // ---- 3D space frame (PDF topology) ----'
+# HTML-only wrappers (computeSpaceFrame, renderMemberTable) must stay between END marker and 2D block.
 END = '  // ---- 2D plane frame solver'
 
 lines = []

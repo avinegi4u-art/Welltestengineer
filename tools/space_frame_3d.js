@@ -12,6 +12,60 @@ const PDF_SW_FACTOR = 1.27; // SESAM structural dead-load multiplier on frame se
 
 function pdfGeomScale(Lm){ return Lm / PDF_L_PDF90_M; }
 
+/** Deck anchor catalogue — CT-12-4536 90 ft PDF coordinates (scaled by gs at runtime). */
+const PDF_ANCHORS_90 = [
+  { tag: 'Sp1',  x: 0.35,  y: 2.20,  z: 8.50 },
+  { tag: 'Sp2',  x: -0.35, y: 2.20,  z: 8.50 },
+  { tag: 'Sp3',  x: 0.50,  y: 3.88,  z: 0.02 },
+  { tag: 'Sp4',  x: -0.50, y: 9.28,  z: 9.00 },
+  { tag: 'Sp5',  x: 0.42,  y: 4.80,  z: 7.20 },
+  { tag: 'Sp6',  x: -0.42, y: 4.80,  z: 7.20 },
+  { tag: 'Sp7',  x: 0.55,  y: 6.50,  z: 8.00 },
+  { tag: 'Sp8',  x: -0.38, y: 5.28,  z: 6.36 },
+  { tag: 'Sp9',  x: 0.48,  y: 11.00, z: 9.50 },
+  { tag: 'Sp10', x: -0.48, y: 11.00, z: 9.50 },
+];
+
+const EXTRA_GUY_LINKS = [
+  { id: 'GuySp5',  anchor: 'Sp5',  corner: 0, sn: 'Rope_pipe_30mm_eff', minGuys: 2 },
+  { id: 'GuySp6',  anchor: 'Sp6',  corner: 1, sn: 'Rope_pipe_30mm_eff', minGuys: 3 },
+  { id: 'GuySp7',  anchor: 'Sp7',  corner: 2, sn: 'Rope_pipe_35mm_eff', minGuys: 4 },
+  { id: 'GuySp9',  anchor: 'Sp9',  corner: 2, sn: 'Rope_pipe_40mm_eff', minGuys: 5 },
+  { id: 'GuySp10', anchor: 'Sp10', corner: 3, sn: 'Rope_pipe_40mm_eff', minGuys: 6 },
+  { id: 'GuySp1',  anchor: 'Sp1',  corner: 0, sn: 'Rope_pipe_30mm_eff', minGuys: 7 },
+  { id: 'GuySp2',  anchor: 'Sp2',  corner: 1, sn: 'Rope_pipe_30mm_eff', minGuys: 8 },
+];
+
+function memberCategory(id){
+  if(id.startsWith('Bm119')) return 'chord';
+  if(/^Guy|^Stay/.test(id)) return 'rope';
+  if(/^[DVX]\d/.test(id)) return 'brace';
+  if(/^Bm\d/.test(id)) return 'chord';
+  return 'other';
+}
+
+function isUnityTableMember(m){
+  const c = memberCategory(m.id);
+  return (c === 'chord' && m.id.startsWith('Bm119')) || c === 'rope' || c === 'brace';
+}
+
+function dryFractionAtY(y, Lm, inp, useCombo, combo){
+  if(!useCombo || combo.condition !== 'accidental') return 1;
+  const dryTip = inp.accidentalDryFactor != null ? inp.accidentalDryFactor : 0.85;
+  const t = Math.min(1, Math.max(0, y / Math.max(Lm, 1e-9)));
+  return 1 - (1 - dryTip) * t;
+}
+
+function heelRad(inp, useCombo, combo){
+  if(!useCombo || combo.condition !== 'accidental') return 0;
+  return (inp.accidentalHeel_deg != null ? inp.accidentalHeel_deg : 5) * Math.PI / 180;
+}
+
+function applyHeelLoad(addLoad, node, W, heel){
+  if(Math.abs(heel) < 1e-9) addLoad(node, 0, 0, -W);
+  else addLoad(node, W * Math.sin(heel), 0, -W * Math.cos(heel));
+}
+
 const PDF_SECTIONS = {
   box_75x75x6:       { A: 1656,  Iy: 1.32e6,  Iz: 1.32e6,  J: 2.64e6,  Zy: 35200, Zz: 35200, E: PDF_E, truss: false },
   box_90x90x8:       { A: 2624,  Iy: 2.97e6,  Iz: 2.97e6,  J: 5.94e6,  Zy: 66000, Zz: 66000, E: PDF_E, truss: false },
@@ -96,7 +150,7 @@ function gaussSolve(K,n,b){
   const x=new Float64Array(n); for(let i=0;i<n;i++) x[i]=m[i*(n+1)+n]; return x;
 }
 
-function buildModel(Lm){
+function buildModel(Lm, inp = {}){
   const gs=pdfGeomScale(Lm), sc=Lm/PDF_L_DESIGN_M, dy=Lm/PDF_N_BAYS;
   const hw=0.45*gs, hh=0.375*gs;
   const nodes=[], nk=(si,c)=>si*4+c;
@@ -117,17 +171,36 @@ function buildModel(Lm){
     }
     if(si%3===0) add(`X${si}`, nk(si,0), nk(si,2), 'L_200x100x10', false);
   }
-  const yKing=9.28*gs, ySp8=5.28*gs, yStay=7.77*gs, yBoomRest=8.19*gs;
-  const siG=Math.round(yKing/dy);
-  const sp4=nodes.length; nodes.push({x:-0.5*gs,y:yKing,z:9*gs,tag:'Sp4'});
-  add('Guy56', nk(siG,2), sp4, 'Rope_pipe_56mm_eff', true);
-  add('Guy40', nk(siG,3), sp4, 'Rope_pipe_40mm_eff', true);
-  const sp8=nodes.length; nodes.push({x:-0.38*gs,y:ySp8,z:6.36*gs,tag:'Sp8'});
-  add('GuyLat35', nk(siG,1), sp8, 'Rope_pipe_35mm_eff', true);
-  const siW=Math.round(yStay/dy);
-  const sp3=nodes.length; nodes.push({x:0.5*gs,y:yStay*0.5,z:0.02,tag:'Sp3'});
-  add('Stay30', nk(siW,1), sp3, 'Rope_pipe_30mm_eff', true);
-  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy)};
+  const yKing=inp.guyAttachPos_m ?? inp.kingpostPos_m ?? 9.28*gs;
+  const yStay=inp.windStayPos_m ?? 7.77*gs;
+  const yBoomRest=inp.boomRestPos_m ?? 8.19*gs;
+  const siG=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/dy)));
+  const siW=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yStay/dy)));
+  const nGuys=Math.max(1, inp.nGuysEffective || 1);
+  const neededAnchors=new Set(['Sp3','Sp4','Sp8']);
+  for(const g of EXTRA_GUY_LINKS){
+    if(nGuys >= g.minGuys) neededAnchors.add(g.anchor);
+  }
+  const anchorIdx={};
+  for(const a of PDF_ANCHORS_90){
+    if(!neededAnchors.has(a.tag)) continue;
+    let y=a.y*gs, x=a.x*gs, z=a.z*gs;
+    if(a.tag==='Sp4'){ y=yKing; x=-0.5*gs; z=9*gs; }
+    if(a.tag==='Sp3'){ y=yStay*0.5; x=0.5*gs; z=0.02; }
+    const idx=nodes.length;
+    nodes.push({x,y,z,tag:a.tag});
+    anchorIdx[a.tag]=idx;
+  }
+  add('Guy56', nk(siG,2), anchorIdx.Sp4, 'Rope_pipe_56mm_eff', true);
+  add('Guy40', nk(siG,3), anchorIdx.Sp4, 'Rope_pipe_40mm_eff', true);
+  add('GuyLat35', nk(siG,1), anchorIdx.Sp8, 'Rope_pipe_35mm_eff', true);
+  add('Stay30', nk(siW,1), anchorIdx.Sp3, 'Rope_pipe_30mm_eff', true);
+  for(const g of EXTRA_GUY_LINKS){
+    if(nGuys >= g.minGuys && anchorIdx[g.anchor] != null){
+      add(g.id, nk(siG, g.corner), anchorIdx[g.anchor], g.sn, true);
+    }
+  }
+  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy), anchorIdx};
 }
 
 function solve3d(model, loads, supports){
@@ -161,16 +234,24 @@ function solve3d(model, loads, supports){
   return {u,R,meta,ndof};
 }
 
+function ropeAnchorNodes(model){
+  const anchors=new Set();
+  for(const el of model.elements){
+    if(!el.tr) continue;
+    for(const idx of [el.i, el.j]){
+      const tag=model.nodes[idx].tag;
+      if(tag && tag.startsWith('Sp')) anchors.add(idx);
+    }
+  }
+  return anchors;
+}
+
 function buildSupports3d(model, combo, inp){
   const sup=[];
   const active=s=>combo && combo.supports.includes(s);
-  const sp4=model.nodes.findIndex(n=>n.tag==='Sp4');
-  const sp8=model.nodes.findIndex(n=>n.tag==='Sp8');
-  const sp3=model.nodes.findIndex(n=>n.tag==='Sp3');
-  // Ship-side rope anchors stay fixed whenever truss links exist (prevents mechanisms).
-  if(sp4>=0) sup.push({node:sp4,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
-  if(sp8>=0) sup.push({node:sp8,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
-  if(sp3>=0) sup.push({node:sp3,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
+  for(const node of ropeAnchorNodes(model)){
+    sup.push({node,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
+  }
   if(active('lifting')){
     const mid=model.nk(Math.floor(PDF_N_BAYS/2),2);
     sup.push({node:mid, ux:1, uy:1, uz:1, rx:1, ry:1, rz:1});
@@ -192,8 +273,8 @@ function computeSpaceFrameLoads(inp, combo, model){
   const useCombo=!!combo;
   const lf=useCombo?(combo.condition==='lifting'?inp.liftingLoadFactor:combo.loadFactor):1;
   let wMult=lf;
-  if(useCombo && combo.condition==='accidental') wMult*=inp.accidentalDryFactor;
   const sfZ=useCombo?combo.sfZ:1, sfY=useCombo?combo.sfY:1, sfX=useCombo?combo.sfX:1;
+  const heel=heelRad(inp, useCombo, combo);
   const windMultX=useCombo?combo.windX:1, windMultY=useCombo?combo.windY:1, daf=inp.DAF;
   let windSpeed=inp.windSpeed_ms;
   if(useCombo && combo.condition==='survival') windSpeed*=1.15;
@@ -214,26 +295,33 @@ function computeSpaceFrameLoads(inp, combo, model){
     if(el.tr||el.sec.truss) continue;
     const a=model.nodes[el.i], b=model.nodes[el.j];
     const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
-    const W=rhoSteel*el.sec.A*Lmm*g*swFactor*deadMult;
+    const yMid=(a.y+b.y)/2;
+    const dry=dryFractionAtY(yMid, inp.L_m, inp, useCombo, combo);
+    const W=rhoSteel*el.sec.A*Lmm*g*swFactor*deadMult*dry;
     frameWeightN+=W;
-    addLoad(el.i,0,0,-W/2);
-    addLoad(el.j,0,0,-W/2);
+    applyHeelLoad(addLoad, el.i, W/2, heel);
+    applyHeelLoad(addLoad, el.j, W/2, heel);
   }
   const wAddedLine=wAdded*swFactor*deadMult;
-  for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    addLoad(model.nk(si,c),0,0,-wAddedLine*model.dy/4);
+  for(let si=0;si<PDF_N_BAYS;si++){
+    const yMid=(si+0.5)*model.dy;
+    const dry=dryFractionAtY(yMid, inp.L_m, inp, useCombo, combo);
+    const wBay=wAddedLine*dry*model.dy/4;
+    for(let c=0;c<4;c++) applyHeelLoad(addLoad, model.nk(si,c), wBay, heel);
   }
-  const Ptip=inp.tipLoad_kg*g*liveMult;
+  const dryTip=dryFractionAtY(inp.L_m, inp.L_m, inp, useCombo, combo);
+  const Ptip=inp.tipLoad_kg*g*liveMult*dryTip;
   const Pextra=inp.extraLoad_kg*g*liveMult;
   const refVertical=frameWeightN+wAddedLine*inp.L_m;
   const fxDyn=useCombo?refVertical*sfX/Math.max(sfZ,1e-9)/inp.L_m:0;
   for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
     addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
   }
-  addLoad(model.nk(PDF_N_BAYS,2),0,0,-Ptip);
+  applyHeelLoad(addLoad, model.nk(PDF_N_BAYS,2), Ptip, heel);
   if(inp.extraLoad_kg>0){
     const si=Math.min(PDF_N_BAYS,Math.max(0,Math.round(inp.extraPos_m/model.dy)));
-    addLoad(model.nk(si,2),0,0,-Pextra);
+    const dryExtra=dryFractionAtY(inp.extraPos_m, inp.L_m, inp, useCombo, combo);
+    applyHeelLoad(addLoad, model.nk(si,2), Pextra*dryExtra, heel);
   }
   if(useCombo && windMultY>0){
     const wy=wWind*inp.L_m*windMultY;
@@ -293,12 +381,14 @@ function memberEndForces(meta, u){
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
   let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
+  let worstBrace={util:0,id:'—',sn:'',sigma:0,allow};
   const rows=members.map(m=>{
     const sec=PDF_SECTIONS[m.sn]||{};
+    const cat=memberCategory(m.id);
     if(m.truss){
       const tAllow=(sec.allow||120)*1000;
       const util=Math.max(0,Math.abs(m.N))/tAllow;
-      return {...m,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
+      return {...m,cat,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
     }
     const A=sec.A||2624;
     const Zy=sec.Zy||66000, Zz=sec.Zz||Zy;
@@ -316,14 +406,15 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     const sigma=sa+sb;
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
-    return {...m,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
+    if(cat==='brace' && util>worstBrace.util) worstBrace={util,id:m.id,sn:m.sn,sigma,allow};
+    return {...m,cat,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
       axialFrom:'3D solved',bendingFrom:m.id.startsWith('Bm119')?'3D base tributary':'solved cap'};
   });
-  return {rows,worst};
+  return {rows,worst,worstBrace};
 }
 
 function computeSpaceFrameCore(inp, combo){
-  const model=buildModel(inp.L_m);
+  const model=buildModel(inp.L_m, inp);
   const {loads}=computeSpaceFrameLoads(inp, combo, model);
   const supports=buildSupports3d(model, combo, inp);
   const sol=solve3d(model, loads, supports);
@@ -342,10 +433,10 @@ function computeSpaceFrameCore(inp, combo){
   const sigmaEq=unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
-  const guyM=members.find(m=>m.id==='GuyLat35');
   const stayM=members.find(m=>m.id==='Stay30');
   const kpR=members.filter(m=>m.id.startsWith('Guy')).reduce((s,m)=>s+Math.abs(m.N),0);
-  const guyT=guyM?Math.abs(guyM.N)/1000/inp.nGuysEffective:0;
+  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
+  const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
@@ -359,7 +450,7 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, PDF_SECTIONS, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {
