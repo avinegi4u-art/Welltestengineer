@@ -160,6 +160,15 @@
     </ul>
     <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
 
+    <h2 id="manual-pdf-cal">7b. PDF calibration benchmark (v5.3)</h2>
+    <p>Tab 4 includes a <strong>PDF calibration benchmark</strong> table when using <strong>3D space frame</strong> mode. It compares model output for three reference combinations (<em>Operating · Heave+Resultant</em>, <em>Accidental · Static heel</em>, <em>Survival · Heave+Resultant</em>) against calibrated screening bands derived from the CT-12-4536 / SESAM 90&nbsp;ft report scaled to the 60&nbsp;ft default case.</p>
+    <ul>
+      <li><strong>Status OK</strong> — metric within stated ± tolerance of the reference screening value</li>
+      <li><strong>DRIFT</strong> — outside tolerance; review inputs or model assumptions before relying on results</li>
+      <li><strong>Governing member</strong> — highest unity among Bm119 chord, ropes, and bracing (v5.3+)</li>
+    </ul>
+    <p>Tab 5 certificate includes a <strong>PDF screening calibration</strong> appendix when 3D mode is active. CI runs <code>node tools/pdf_benchmarks.js</code> on each PR.</p>
+
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
@@ -320,7 +329,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.2 · Matches <code>Burner_boom_load_calculator.html</code> v5.2 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.3 · Matches <code>Burner_boom_load_calculator.html</code> v5.3 · For preliminary engineering use only.
     </footer>
     
 </div>

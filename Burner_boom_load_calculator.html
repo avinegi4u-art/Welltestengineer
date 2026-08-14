@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v5</title>
+<title>Burner Boom Load Analysis v5.3</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.2 · Sp5–Sp10 guys · bracing unity · rig presets</p>
+          <p class="meta">v5.3 · PDF calibration · governing member unity</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -578,6 +578,12 @@
       <div style="overflow-x:auto;"><table class="matrix-table" id="modeCompareTable"><tbody><tr><td class="hint">Click <strong>Compare modes</strong> to run all solvers.</td></tr></tbody></table></div>
     </div>
 
+    <div class="card" id="pdfBenchmarkCard" style="display:none;">
+      <h2>PDF calibration benchmark <span class="badge-sm" id="pdfCalibStatus">—</span></h2>
+      <p class="hint" style="margin-top:-6px;">Compares 3D model output to CT-12-4536 / SESAM 60&nbsp;ft screening reference bands (default inputs). For engineering traceability — not certified PDF extraction.</p>
+      <div style="overflow-x:auto;"><table class="matrix-table" id="pdfBenchmarkTable"></table></div>
+    </div>
+
     <div class="card" id="memberResultsCard" style="display:none;">
       <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · bracing</span></h2>
       <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Rope axial from 3D solve; Bm119 bending from 3D base-moment tributary (1.27× frame SW).</p>
@@ -699,6 +705,7 @@
       </div>
       <table class="report" id="certTable" style="margin-top:14px;"></table>
       <table class="report" id="certAnalysisTable" style="margin-top:14px;display:none;"></table>
+      <table class="report" id="certPdfTable" style="margin-top:14px;display:none;"></table>
       <div class="cert-grid no-print" style="display:none;"></div>
       <div class="cert-grid" style="margin-top:20px;">
         <div class="sig-line">Tested by — signature &amp; date</div>
@@ -845,6 +852,15 @@
       <li><strong>Rig presets:</strong> toolbar <em>Rig</em> dropdown + <em>Save rig</em> stores support positions in browser localStorage</li>
     </ul>
     <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
+
+    <h2 id="manual-pdf-cal">7b. PDF calibration benchmark (v5.3)</h2>
+    <p>Tab 4 includes a <strong>PDF calibration benchmark</strong> table when using <strong>3D space frame</strong> mode. It compares model output for three reference combinations (<em>Operating · Heave+Resultant</em>, <em>Accidental · Static heel</em>, <em>Survival · Heave+Resultant</em>) against calibrated screening bands derived from the CT-12-4536 / SESAM 90&nbsp;ft report scaled to the 60&nbsp;ft default case.</p>
+    <ul>
+      <li><strong>Status OK</strong> — metric within stated ± tolerance of the reference screening value</li>
+      <li><strong>DRIFT</strong> — outside tolerance; review inputs or model assumptions before relying on results</li>
+      <li><strong>Governing member</strong> — highest unity among Bm119 chord, ropes, and bracing (v5.3+)</li>
+    </ul>
+    <p>Tab 5 certificate includes a <strong>PDF screening calibration</strong> appendix when 3D mode is active. CI runs <code>node tools/pdf_benchmarks.js</code> on each PR.</p>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -1006,7 +1022,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.2 · Matches <code>Burner_boom_load_calculator.html</code> v5.2 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.3 · Matches <code>Burner_boom_load_calculator.html</code> v5.3 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -1025,7 +1041,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.2.0';
+  const APP_VERSION = '5.3.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1096,6 +1112,7 @@
   let lastEnvelope = null;
   let lastModeComparison = null;
   let lastInp = null;
+  let lastPdfReport = null;
 
   function isUs(){ return unitSystem === 'us'; }
 
@@ -1403,6 +1420,7 @@
           .map(m => ({ id: m.id, type: m.cat || memberCategory(m.id), section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass }))
         : null,
       worstBrace: lastEnvelope?.governing?.r?.worstBrace || null,
+      pdfCalibration: lastPdfReport,
       modeComparison: lastModeComparison
     };
     downloadBlob('burner-boom-analysis-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', JSON.stringify(report, null, 2));
@@ -1895,6 +1913,17 @@ function memberEndForces(meta, u){
   return members;
 }
 
+function pickGoverningUnity(unity){
+  let g={util:unity.worst.util,id:unity.worst.id,cat:'chord',sigma:unity.worst.sigma,sn:unity.worst.sn,pass:unity.worst.util<=1};
+  for(const m of unity.rows){
+    if(m.truss && m.util>g.util) g={util:m.util,id:m.id,cat:'rope',sigma:m.sigma,sn:m.sn,pass:m.pass};
+  }
+  if(unity.worstBrace && unity.worstBrace.id!=='—' && unity.worstBrace.util>g.util){
+    g={util:unity.worstBrace.util,id:unity.worstBrace.id,cat:'brace',sigma:unity.worstBrace.sigma,sn:unity.worstBrace.sn,pass:unity.worstBrace.util<=1};
+  }
+  return g;
+}
+
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
   let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
@@ -1915,11 +1944,17 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
       const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
       const frac=(si+0.5)/PDF_N_BAYS;
       Mmem=Mbase*frac*frac;
+    } else if(m.id.startsWith('V')){
+      Nmem=Math.abs(m.N);
+      Mmem=0;
+    } else if(m.id.startsWith('D') || m.id.startsWith('X')){
+      Nmem=Math.abs(m.N);
+      Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)), allow*Zy*0.5);
     } else if(m.solved){
       Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)),Mbase*0.5);
     }
     const sa=Nmem/A;
-    const sb=Mmem/Zy+(m.id.startsWith('Bm119')?0:Math.abs(m.Mz)/Zz);
+    const sb=Mmem/Zy;
     const sigma=sa+sb;
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
@@ -1932,7 +1967,8 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
 
 function computeSpaceFrameCore(inp, combo){
   const model=buildModel(inp.L_m, inp);
-  const {loads}=computeSpaceFrameLoads(inp, combo, model);
+  const loadInfo=computeSpaceFrameLoads(inp, combo, model);
+  const {loads}=loadInfo;
   const supports=buildSupports3d(model, combo, inp);
   const sol=solve3d(model, loads, supports);
   const members=memberEndForces(sol.meta, sol.u);
@@ -1941,13 +1977,14 @@ function computeSpaceFrameCore(inp, combo){
   for(let c=0;c<4;c++){ Mbase+=Math.hypot(sol.R[6*c+4], sol.R[6*c+5]); Vres+=Math.hypot(sol.R[6*c], sol.R[6*c+1]); Nax+=Math.abs(sol.R[6*c+2]); }
   Mbase/=4; Vres/=4; Nax/=4;
   const unity=memberUnityFromModel(members, model, Mbase, Nax, inp.Fy_MPa*tempFactor, inp.SF);
+  const governing=pickGoverningUnity(unity);
   const tipN=model.nk(PDF_N_BAYS,2);
   const dRes=Math.hypot(sol.u[6*tipN], sol.u[6*tipN+1], sol.u[6*tipN+2]);
   const OD=inp.OD_mm, t=Math.min(inp.t_mm, inp.OD_mm/2-0.01);
   const A=Math.PI/4*(OD*OD-(OD-2*t)*(OD-2*t));
   const I=Math.PI/64*(Math.pow(OD,4)-Math.pow(OD-2*t,4));
   const Z=I/(OD/2);
-  const sigmaEq=unity.worst.sigma||0;
+  const sigmaEq=governing.sigma||unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
   const stayM=members.find(m=>m.id==='Stay30');
@@ -1962,19 +1999,21 @@ function computeSpaceFrameCore(inp, combo){
     boomrest:{R_kN:0,ok:true},
     guys:{T_kN:guyT,util:inp.guyAllow_kN>0?guyT/inp.guyAllow_kN*100:0,ok:inp.guyAllow_kN<=0||guyT<=inp.guyAllow_kN}
   };
-  const pass=unity.worst.util<=1 && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
+  const memberPass=governing.util<=1;
+  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
     && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
-  return {model, sol, members, unity, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN};
+  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
   function computeSpaceFrame(inp, combo){
     try {
       const core = computeSpaceFrameCore(inp, combo);
+      const gov = core.governing;
       const Lmm = inp.L_m * 1000;
-      const utilStress = core.unity.worst.util;
-      const sigmaEq = core.unity.worst.sigma || 0;
+      const utilStress = gov.util;
+      const sigmaEq = gov.sigma || core.unity.worst.sigma || 0;
       const allow = core.allow;
-      const actualSF = core.actualSF;
+      const actualSF = sigmaEq > 0 ? inp.Fy_MPa / sigmaEq : Infinity;
       const Mres = core.Mbase;
       const Vres = core.Vres;
       const N_d = core.Nax;
@@ -2001,14 +2040,15 @@ function computeSpaceFrameCore(inp, combo){
         A: core.A, I: core.I, Z: core.Z, OD: core.OD, ID: core.OD - 2 * core.t, L: Lmm, theta: inp.angle_deg * Math.PI / 180,
         wSelf: 0, wAdded: 0, wGravity: 0, Ptip: 0, Pextra: 0, xp: 0,
         Mgrav_d: Mres, Vgrav_d: Vres, N_d, Mwind: 0, Vwind: 0, Mres, Vres,
-        sigmaBend, sigmaAxial: sigmaAxial, sigmaCombined: sigmaBend + sigmaAxial, tau, sigmaEq,
+        sigmaBend, sigmaAxial, sigmaCombined: sigmaBend + sigmaAxial, tau, sigmaEq,
         allow, actualSF, dVert: dRes, dWind: 0, dRes, defLimit, boltTension_kN, boltUtil, R: Rbolt,
         xs, Mg, Mw, Mr, defl, predictedTestDefl: dRes, testLoad_kg: inp.swl_kg * inp.testFactor,
         Dt: core.t > 0 ? core.OD / core.t : 0, Pcr: 0, bucklingSF: Infinity, bucklingPass: true, t: core.t,
-        comboLabel: combo ? combo.label : null, supports: core.supportsOut, utilStress, pass,
+        comboLabel: combo ? combo.label : null, comboId: combo ? combo.id : null, supports: core.supportsOut, utilStress, pass,
         Fx_total: Vres, Fz_total: N_d, Fy_ax: N_d,
         space3d: true, frameNodes: core.model.nodes.length, frameMembers: core.model.elements.length,
         memberRows: core.unity.rows, worstMember: core.unity.worst, worstBrace: core.unity.worstBrace,
+        governingMember: gov, frameWeight_kN: core.frameWeightN / 1000,
         bm119Count: core.model.elements.filter(e => e.id.startsWith('Bm119')).length
       };
     } catch (_e) {
@@ -2030,15 +2070,132 @@ function computeSpaceFrameCore(inp, combo){
     }
     const rows = r.memberRows.filter(isUnityTableMember).sort((a,b) => b.util - a.util).slice(0, 25);
     let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">Case: ${src.combo?.label || r.comboLabel || '—'}`;
-    if(r.worstBrace?.id && r.worstBrace.id !== '—') html += ` · worst brace: ${r.worstBrace.id} ${fmt(r.worstBrace.util * 100, 0)}%`;
+    if(r.governingMember) html += ` · governing: ${r.governingMember.id} ${fmt(r.governingMember.util * 100, 0)}%`;
     html += '</caption>';
     html += '<thead><tr><th>Member</th><th>Type</th><th>Section</th><th>Util.</th><th>N (kN)</th><th>Status</th></tr></thead><tbody>';
     for(const m of rows){
-      const gov = m.id === r.worstMember?.id;
+      const gov = m.id === r.governingMember?.id;
       const cat = m.cat || memberCategory(m.id);
       html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${fmt((m.N||0)/1000,1)}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
     }
     html += '</tbody>';
+    el.innerHTML = html;
+  }
+
+  const PDF_BENCHMARKS = {
+    doc: 'CT-12-4536 / SESAM 90 ft — 60 ft screening calibration',
+    cases: [
+      { id: 'op_res', label: 'Operating · Heave+Resultant', metrics: [
+        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 40.5, tolPct: 25 },
+        { key: 'bm119_id', label: 'Governing chord', ref: 'Bm119_17', kind: 'string' },
+        { key: 'governing_util_pct', label: 'Governing util.', ref: 62.0, tolPct: 20 },
+        { key: 'governing_id', label: 'Governing member', ref: 'D10_S', kind: 'string' },
+        { key: 'tip_defl_mm', label: 'Tip deflection (mm)', ref: 1567, tolPct: 20 },
+        { key: 'Mbase_kNm', label: 'M base (kN·m)', ref: 3.67, tolPct: 30 },
+        { key: 'frame_sw_kN', label: 'Frame SW (kN)', ref: 79.3, tolPct: 15 },
+        { key: 'guy56_kN', label: 'Guy56 (kN)', ref: 155.5, tolPct: 35 },
+      ]},
+      { id: 'acc_heel', label: 'Accidental · Static heel', metrics: [
+        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 9.0, tolPct: 40 },
+        { key: 'tip_defl_mm', label: 'Tip deflection (mm)', ref: 421, tolPct: 35 },
+        { key: 'Mbase_kNm', label: 'M base (kN·m)', ref: 0.90, tolPct: 40 },
+        { key: 'frame_sw_kN', label: 'Frame SW (kN)', ref: 22.6, tolPct: 25 },
+      ]},
+      { id: 'sv_res', label: 'Survival · Heave+Resultant', metrics: [
+        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 18.6, tolPct: 30 },
+        { key: 'tip_defl_mm', label: 'Tip deflection (mm)', ref: 1133, tolPct: 25 },
+        { key: 'Mbase_kNm', label: 'M base (kN·m)', ref: 1.87, tolPct: 30 },
+      ]},
+    ]
+  };
+
+  function pdfMetricFromRow(key, r){
+    const guy56 = r.memberRows?.find(m => m.id === 'Guy56');
+    switch(key){
+      case 'bm119_util_pct': return (r.worstMember?.util ?? 0) * 100;
+      case 'bm119_id': return r.worstMember?.id || '—';
+      case 'governing_util_pct': return (r.governingMember?.util ?? r.utilStress ?? 0) * 100;
+      case 'governing_id': return r.governingMember?.id || r.worstMember?.id || '—';
+      case 'tip_defl_mm': return r.dRes;
+      case 'Mbase_kNm': return r.Mres / 1e6;
+      case 'frame_sw_kN': return r.frameWeight_kN;
+      case 'guy56_kN': return guy56 ? Math.abs(guy56.N) / 1000 : null;
+      default: return null;
+    }
+  }
+
+  function comparePdfMetric(actual, metric){
+    if(metric.kind === 'string'){
+      const pass = String(actual) === String(metric.ref);
+      return { actual, ref: metric.ref, deltaPct: null, pass, status: pass ? 'OK' : 'DRIFT' };
+    }
+    if(actual == null || !Number.isFinite(actual)) return { actual, ref: metric.ref, deltaPct: null, pass: false, status: 'MISSING' };
+    const deltaPct = metric.ref !== 0 ? ((actual - metric.ref) / metric.ref) * 100 : 0;
+    const pass = Math.abs(deltaPct) <= (metric.tolPct || 25);
+    return { actual, ref: metric.ref, deltaPct, pass, status: pass ? 'OK' : 'DRIFT' };
+  }
+
+  function buildPdfBenchmarkReport(envelope){
+    if(!envelope) return null;
+    const rows = [];
+    let allPass = true;
+    for(const bc of PDF_BENCHMARKS.cases){
+      const row = envelope.rows.find(x => x.combo.id === bc.id);
+      if(!row?.r?.space3d) continue;
+      const metrics = bc.metrics.map(m => {
+        const actual = pdfMetricFromRow(m.key, row.r);
+        const cmp = comparePdfMetric(actual, m);
+        if(!cmp.pass) allPass = false;
+        return { ...m, ...cmp };
+      });
+      rows.push({ id: bc.id, label: bc.label, pass: metrics.every(m => m.pass), metrics });
+    }
+    return { rows, allPass, doc: PDF_BENCHMARKS.doc };
+  }
+
+  function renderPdfBenchmarkTable(report){
+    const card = $('pdfBenchmarkCard');
+    const el = $('pdfBenchmarkTable');
+    if(!card || !el) return;
+    if(!report?.rows?.length){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">${report.doc} · ${report.allPass ? 'Within calibration bands' : 'Drift detected — review inputs'}</caption>`;
+    html += '<thead><tr><th>Case / metric</th><th>Model</th><th>Reference</th><th>Δ%</th><th>Status</th></tr></thead><tbody>';
+    for(const c of report.rows){
+      html += `<tr class="${c.pass ? '' : 'fail'}"><td colspan="5" style="font-weight:600;background:var(--accent-dim);">${c.label}</td></tr>`;
+      for(const m of c.metrics){
+        const actual = m.kind === 'string' ? m.actual : fmt(m.actual, m.key.includes('mm') ? 0 : 1);
+        const ref = m.kind === 'string' ? m.ref : fmt(m.ref, m.key.includes('mm') ? 0 : 1);
+        const delta = m.deltaPct != null ? fmt(m.deltaPct, 1) + '%' : '—';
+        html += `<tr class="${m.pass ? '' : 'fail'}"><td>${m.label}</td><td class="n">${actual}</td><td class="n">${ref}</td><td class="n">${delta}</td><td>${m.status}</td></tr>`;
+      }
+    }
+    html += '</tbody>';
+    el.innerHTML = html;
+    if($('pdfCalibStatus')) $('pdfCalibStatus').textContent = report.allPass ? 'Calibration OK' : 'Calibration drift';
+    if($('pdfCalibStatus')) $('pdfCalibStatus').className = 'status-pill ' + (report.allPass ? 'ok' : 'fail');
+  }
+
+  function renderCertPdfCalibration(report){
+    const el = $('certPdfTable');
+    if(!el) return;
+    if(!report?.rows?.length){
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    el.style.display = '';
+    let html = '<caption style="caption-side:top;text-align:left;font-weight:600;margin-bottom:6px;">PDF screening calibration (60 ft reference model)</caption>';
+    html += `<tr><th>Calibration summary</th><td class="v">${report.allPass ? 'All reference metrics within tolerance' : 'Drift on one or more metrics — engineering review required'}</td></tr>`;
+    for(const c of report.rows){
+      const fails = c.metrics.filter(m => !m.pass);
+      html += `<tr><th>${c.label}</th><td class="v">${c.pass ? 'OK' : fails.map(m => m.label).join(', ') + ' drift'}</td></tr>`;
+    }
+    html += '<tr><th>Reference document</th><td class="v">Structural Analysis of 90 Ft Burner Boom (CT-12-4536) — scaled 60 ft screening model</td></tr>';
+    html += '<tr><th>Engineer sign-off</th><td class="v">Screening model calibrated — not a certified SESAM rebuild</td></tr>';
     el.innerHTML = html;
   }
 
@@ -2651,7 +2808,8 @@ function computeSpaceFrameCore(inp, combo){
     let html = '<caption style="caption-side:top;text-align:left;font-weight:600;margin-bottom:6px;">Structural screening (governing combination)</caption>';
     html += `<tr><th>Analysis mode</th><td class="v">${$('analysisMode').selectedOptions[0].textContent}</td></tr>`;
     html += `<tr><th>Governing combination</th><td class="v">${gov.combo.label}</td></tr>`;
-    html += `<tr><th>Worst Bm119 / member util.</th><td class="v">${fmt(gov.r.utilStress * 100, 0)}%${gov.r.worstMember ? ' · ' + gov.r.worstMember.id : ''}</td></tr>`;
+    html += `<tr><th>Governing member</th><td class="v">${fmt(gov.r.utilStress * 100, 0)}% · ${gov.r.governingMember ? gov.r.governingMember.id + ' (' + gov.r.governingMember.cat + ')' : (gov.r.worstMember ? gov.r.worstMember.id : '—')}</td></tr>`;
+    html += `<tr><th>Bm119 chord util.</th><td class="v">${fmt((gov.r.worstMember?.util ?? gov.r.utilStress) * 100, 0)}%${gov.r.worstMember ? ' · ' + gov.r.worstMember.id : ''}</td></tr>`;
     html += `<tr><th>Tip deflection</th><td class="v">${uLen_mm(gov.r.dRes)} (limit ${uLen_mm(gov.r.defLimit)})</td></tr>`;
     if(gov.r.supports){
       html += `<tr><th>Kingpost / wind stay / guy</th><td class="v">${uForce_kN(gov.r.supports.kingpost.R_kN)} / ${uForce_kN(gov.r.supports.windstay.R_kN)} / ${gov.r.supports.guys.T_kN > 0 ? uForce_kN(gov.r.supports.guys.T_kN) : '—'}</td></tr>`;
@@ -2823,6 +2981,15 @@ function computeSpaceFrameCore(inp, combo){
     drawSchematic(inp, r);
     drawBracedSchematic(inp);
     renderCertAnalysis(envelope, inp, r);
+    if(inp.analysisMode === 'space3d' && envelope){
+      lastPdfReport = buildPdfBenchmarkReport(envelope);
+      renderPdfBenchmarkTable(lastPdfReport);
+      renderCertPdfCalibration(lastPdfReport);
+    } else {
+      lastPdfReport = null;
+      if($('pdfBenchmarkCard')) $('pdfBenchmarkCard').style.display = 'none';
+      renderCertPdfCalibration(null);
+    }
     if(lastModeComparison) renderModeComparison(lastModeComparison, inp.analysisMode);
 
     // results tiles

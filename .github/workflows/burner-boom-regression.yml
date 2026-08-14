@@ -5,6 +5,7 @@ on:
     paths:
       - 'Burner_boom_load_calculator.html'
       - 'tools/space_frame_3d.js'
+      - 'tools/pdf_benchmarks.js'
       - 'tools/space_frame_regression.js'
       - '.github/workflows/burner-boom-regression.yml'
   push:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'Burner_boom_load_calculator.html'
       - 'tools/space_frame_3d.js'
+      - 'tools/pdf_benchmarks.js'
       - 'tools/space_frame_regression.js'
 
 jobs:
@@ -25,6 +27,8 @@ jobs:
           node-version: '22'
       - name: 3D module self-test
         run: node tools/space_frame_3d.js
+      - name: PDF calibration benchmarks
+        run: node tools/pdf_benchmarks.js
       - name: 60 ft regression suite
         run: node tools/space_frame_regression.js
       - name: Validate embedded calculator script
