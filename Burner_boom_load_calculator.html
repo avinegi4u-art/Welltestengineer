@@ -179,6 +179,11 @@
     color: #fff; padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   button.action.secondary { background: transparent; color: var(--series-1); border-color: var(--series-1); }
+  a.action.secondary {
+    display: inline-flex; align-items: center; text-decoration: none;
+    appearance: none; border: 1px solid var(--series-1); background: transparent;
+    color: var(--series-1); padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+  }
   button.action.ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
   button.action:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -257,6 +262,7 @@
       <option value="10sch40">NPS 10" Sch 40</option>
     </select>
     <button type="button" class="action secondary" id="preset90ft">90 ft reference</button>
+    <a class="action secondary" href="Burner_boom_load_calculator_user_manual.html" target="_blank" rel="noopener">Manual</a>
     <span class="sep"></span>
     <button type="button" class="action secondary" id="exportJson">Export JSON</button>
     <button type="button" class="action secondary" id="importJson">Import JSON</button>
