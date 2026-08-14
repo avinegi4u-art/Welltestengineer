@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.0 · 3D PDF space frame · Bm119 + rope sections · matrix envelope</p>
+          <p class="meta">v5.0 · 60 ft 3D space frame · Bm119 + ropes · matrix envelope</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -518,13 +518,13 @@
       <p class="hint" style="margin-top:-6px;">Turntable (base), kingpost, wind stay, boom rest, crane lift. In <strong>Frame solver</strong> mode these are enforced as DOF constraints + truss links; in <strong>Matrix (1D)</strong> mode as static reaction screening.</p>
       <div class="grid">
         <div class="field"><label><input type="checkbox" id="kingpostEnabled" checked style="width:auto;margin-right:6px;">Kingpost vertical support (operating / accidental)</label></div>
-        <div class="field"><label>Kingpost position from base</label><input type="number" id="kingpostPos_m" value="9.28" step="0.1" min="0"><span class="hint">m — PDF ref ≈ 9.28 m from deck</span></div>
+        <div class="field"><label>Kingpost position from base</label><input type="number" id="kingpostPos_m" value="6.19" step="0.1" min="0"><span class="hint">m — 60 ft ref ≈ 6.19 m (PDF 90 ft = 9.28 m)</span></div>
         <div class="field"><label>Kingpost rated vertical capacity</label><input type="number" id="kingpostRated_kN" value="80" step="1" min="0"><span class="hint">kN</span></div>
         <div class="field"><label><input type="checkbox" id="windStayEnabled" checked style="width:auto;margin-right:6px;">Wind-stay lateral support (operating)</label></div>
-        <div class="field"><label>Wind-stay position from base</label><input type="number" id="windStayPos_m" value="7.5" step="0.1" min="0"><span class="hint">m</span></div>
+        <div class="field"><label>Wind-stay position from base</label><input type="number" id="windStayPos_m" value="5.18" step="0.1" min="0"><span class="hint">m — 60 ft ref (PDF 90 ft = 7.77 m)</span></div>
         <div class="field"><label>Wind-stay rated lateral capacity</label><input type="number" id="windStayRated_kN" value="25" step="1" min="0"><span class="hint">kN</span></div>
         <div class="field"><label><input type="checkbox" id="boomRestEnabled" checked style="width:auto;margin-right:6px;">Boom rest vertical support (survival)</label></div>
-        <div class="field"><label>Boom rest position from base</label><input type="number" id="boomRestPos_m" value="8.19" step="0.1" min="0"><span class="hint">m</span></div>
+        <div class="field"><label>Boom rest position from base</label><input type="number" id="boomRestPos_m" value="5.46" step="0.1" min="0"><span class="hint">m — 60 ft ref (PDF 90 ft = 8.19 m)</span></div>
         <div class="field"><label>Boom rest rated capacity</label><input type="number" id="boomRestRated_kN" value="60" step="1" min="0"><span class="hint">kN</span></div>
         <div class="field"><label>Accidental dry-weight factor</label><input type="number" id="accidentalDryFactor" value="0.85" step="0.01" min="0.5" max="1"><span class="hint">Empty pipe fraction of operating weight</span></div>
         <div class="field"><label>Lifting load factor</label><input type="number" id="liftingLoadFactor" value="2" step="0.1" min="1"><span class="hint">× total weight (PDF lifting = 2)</span></div>
@@ -536,7 +536,7 @@
       <div class="grid">
         <div class="field"><label><input type="checkbox" id="guysEnabled" checked style="width:auto;margin-right:6px;">Include guyline tension check</label></div>
         <div class="field"><label>Effective guylines (windward)</label><input type="number" id="nGuysEffective" value="1" step="1" min="1" max="8"><span class="hint">Leeward guys slack — PDF uses windward only</span></div>
-        <div class="field"><label>Guy attachment position</label><input type="number" id="guyAttachPos_m" value="9.28" step="0.1" min="0"><span class="hint">m from turntable / base</span></div>
+        <div class="field"><label>Guy attachment position</label><input type="number" id="guyAttachPos_m" value="6.19" step="0.1" min="0"><span class="hint">m from turntable / base (60 ft ref)</span></div>
         <div class="field"><label>Effective guy length</label><input type="number" id="guyLength_m" value="12" step="0.1" min="1"><span class="hint">m — anchor to attachment (straight-line)</span></div>
         <div class="field"><label>Guy angle from horizontal</label><input type="number" id="guyAngle_deg" value="35" step="1" min="5" max="85"><span class="hint">degrees</span></div>
         <div class="field"><label>Allowable tension per guy</label><input type="number" id="guyAllow_kN" value="50" step="1" min="0"><span class="hint">kN</span></div>
@@ -556,7 +556,7 @@
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
       <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
-      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 18-bay braced boom (+X ⊥ boom, +Y along boom, +Z up) · box_90/75 chords · Bm119 top chords · Rope_pipe effective areas · Sp1–Sp10 supports from CT-12-4536 PDF.</p>
+      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design (18.288&nbsp;m) · 18 bays @ 1.016&nbsp;m · braced box frame (+X ⊥ boom, +Y along boom, +Z up) · Bm119 chords · Rope_pipe effective areas · topology scaled from CT-12-4536 (90&nbsp;ft PDF).</p>
     </div>
 
     <div class="card" id="memberResultsCard" style="display:none;">
@@ -804,18 +804,18 @@
     <p>The same 8 load combinations and 3-direction scale factors apply. Results feed the matrix table and PASS/FAIL checks. This is substantially closer to SESAM-style boundary conditions than 1D screening, but is still a <strong>lumped 2D model</strong> — not the full 3D braced space frame with box sections, fishplates, and member unity checks from the PDF.</p>
     <p>Use <strong>Matrix envelope (1D screening)</strong> for fast hand-checks; use <strong>Frame solver</strong> when supports and guylines must interact through stiffness in 2D.</p>
 
-    <h2 id="manual-space3d">7. 3D space frame (v5) — PDF topology</h2>
-    <p><strong>3D space frame (PDF topology)</strong> is the default mode. It builds a braced space frame matching the CT-12-4536 / SESAM report layout:</p>
+    <h2 id="manual-space3d">7. 3D space frame (v5) — 60 ft design</h2>
+    <p><strong>3D space frame (PDF topology)</strong> is the default mode. It builds a braced space frame for the standard <strong>60&nbsp;ft (18.288&nbsp;m) burner boom</strong>, with member layout and sections scaled from the CT-12-4536 / SESAM 90&nbsp;ft report:</p>
     <ul>
       <li><strong>Coordinates:</strong> +X ⊥ boom, +Y along boom, +Z up (PDF §2.1)</li>
-      <li><strong>18 bays</strong> at 1.524 m (90 ft / 18) · four corner chords (box_75 / box_90)</li>
-      <li><strong>Bm119</strong> — top starboard chord segments (box_90x90x8, A=2624 mm²) — same ID family as PDF Annex 3 worst-case members</li>
+      <li><strong>18 bays</strong> at 1.016&nbsp;m (60&nbsp;ft / 18) · four corner chords (box_75 / box_90)</li>
+      <li><strong>Bm119</strong> — top starboard chord segments (box_90x90x8, A=2624 mm²)</li>
       <li><strong>Bracing:</strong> vertical box_75, diagonal L75x75x8, cross L_200x100x10</li>
-      <li><strong>Rope trusses:</strong> Rope_pipe_22–56 mm effective areas (PDF Appendix B) for kingpost guys, lateral guy, wind stay</li>
-      <li><strong>Supports Sp1–Sp10:</strong> turntable base fixity, Sp4 kingpost, Sp8 lateral guy anchor, Sp3 wind stay (scaled to boom length)</li>
+      <li><strong>Rope trusses:</strong> Rope_pipe effective areas (PDF Appendix B) for kingpost guys, lateral guy, wind stay</li>
+      <li><strong>Supports:</strong> turntable base fixity, Sp4 kingpost (~6.19&nbsp;m on 60&nbsp;ft), Sp8 lateral guy, Sp3 wind stay — positions scale with boom length from the 90&nbsp;ft PDF geometry</li>
       <li><strong>Member table:</strong> Bm119 + rope unity; truss axial from 3D stiffness solution; chord bending from tributary of solved base reactions</li>
     </ul>
-    <p>This is the closest in-tool equivalent to the SESAM space-frame model. It still simplifies fishplate clusters, temperature derating, and full member inventory (~450 members in PDF).</p>
+    <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -1018,8 +1018,8 @@
     windSpeed_ms: 40, Cd: 1.2, rhoAir: 1.225, windExposure: 1.0, defLimitDenom: 200,
     ratedMoment_kNm: 60, ratedLoad_kN: 30, bcd_mm: 400, nBolts: 12, boltAllow_kN: 45,
     swl_kg: 110, testFactor: 1.5, permSetPct: 10,
-    kingpostPos_m: 9.28, kingpostRated_kN: 80, windStayPos_m: 7.5, windStayRated_kN: 25,
-    boomRestPos_m: 8.19, boomRestRated_kN: 60, guyAttachPos_m: 9.28, guyLength_m: 12, guyAllow_kN: 50
+    kingpostPos_m: 6.19, kingpostRated_kN: 80, windStayPos_m: 5.18, windStayRated_kN: 25,
+    boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50
   };
 
   const UNIT_FIELDS = [
@@ -1187,6 +1187,11 @@
   $('preset90ft').addEventListener('click', ()=>{
     applyDefaults();
     $('L_m').value = isUs() ? (27.432 * CONV.m_ft).toFixed(2) : 27.432;
+    $('kingpostPos_m').value = isUs() ? (9.28 * CONV.m_ft).toFixed(2) : 9.28;
+    $('windStayPos_m').value = isUs() ? (7.77 * CONV.m_ft).toFixed(2) : 7.77;
+    $('boomRestPos_m').value = isUs() ? (8.19 * CONV.m_ft).toFixed(2) : 8.19;
+    $('guyAttachPos_m').value = isUs() ? (9.28 * CONV.m_ft).toFixed(2) : 9.28;
+    $('guyLength_m').value = isUs() ? (12 * CONV.m_ft).toFixed(2) : 12;
     $('pipePreset').value = '8sch40';
     $('OD_mm').value = isUs() ? (219.1 * CONV.mm_in).toFixed(3) : 219.1;
     $('t_mm').value = isUs() ? (8.18 * CONV.mm_in).toFixed(3) : 8.18;
@@ -1322,8 +1327,14 @@
 
   // ---- 3D space frame (PDF topology) ----
 
-const PDF_L_REF_M = 27.432, PDF_N_BAYS = 18, PDF_DY_M = PDF_L_REF_M / PDF_N_BAYS;
+const PDF_L_DESIGN_M = 18.288; // 60 ft — native design baseline
+const PDF_L_PDF90_M = 27.432;  // 90 ft SESAM drawing (geometry source)
+const PDF_N_BAYS = 18;
+const PDF_DY_M = PDF_L_DESIGN_M / PDF_N_BAYS;
+const PDF_L_REF_M = PDF_L_DESIGN_M;
 const PDF_E = 200000, PDF_G = PDF_E / 2.6, PDF_E_ROPE = 150000;
+
+function pdfGeomScale(Lm){ return Lm / PDF_L_PDF90_M; }
 
 const PDF_SECTIONS = {
   box_75x75x6:       { A: 1656,  Iy: 1.32e6,  Iz: 1.32e6,  J: 2.64e6,  Zy: 35200, Zz: 35200, E: PDF_E, truss: false },
@@ -1410,10 +1421,11 @@ function gaussSolve(K,n,b){
 }
 
 function buildModel(Lm){
-  const sc=Lm/PDF_L_REF_M, hw=0.45, hh=0.375;
+  const gs=pdfGeomScale(Lm), sc=Lm/PDF_L_DESIGN_M, dy=Lm/PDF_N_BAYS;
+  const hw=0.45*gs, hh=0.375*gs;
   const nodes=[], nk=(si,c)=>si*4+c;
   for(let si=0;si<=PDF_N_BAYS;si++){
-    const y=si*PDF_DY_M*sc;
+    const y=si*dy;
     [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].forEach((p,c)=>nodes.push({x:p[0],y,z:p[1],si,c}));
   }
   const elements=[], add=(id,i,j,sn,tr)=>elements.push({id,i,j,sec:PDF_SECTIONS[sn],sn,tr});
@@ -1429,16 +1441,17 @@ function buildModel(Lm){
     }
     if(si%3===0) add(`X${si}`, nk(si,0), nk(si,2), 'L_200x100x10', false);
   }
-  const siG=Math.round(9.28/(PDF_DY_M*sc));
-  const sp4=nodes.length; nodes.push({x:-0.5,y:9.28*sc,z:9,tag:'Sp4'});
+  const yKing=9.28*gs, ySp8=5.28*gs, yStay=7.77*gs, yBoomRest=8.19*gs;
+  const siG=Math.round(yKing/dy);
+  const sp4=nodes.length; nodes.push({x:-0.5*gs,y:yKing,z:9*gs,tag:'Sp4'});
   add('Guy56', nk(siG,2), sp4, 'Rope_pipe_56mm_eff', true);
   add('Guy40', nk(siG,3), sp4, 'Rope_pipe_40mm_eff', true);
-  const sp8=nodes.length; nodes.push({x:-0.38,y:5.28*sc,z:6.36,tag:'Sp8'});
+  const sp8=nodes.length; nodes.push({x:-0.38*gs,y:ySp8,z:6.36*gs,tag:'Sp8'});
   add('GuyLat35', nk(siG,1), sp8, 'Rope_pipe_35mm_eff', true);
-  const siW=Math.round(7.77/(PDF_DY_M*sc));
-  const sp3=nodes.length; nodes.push({x:0.5,y:7.77*sc*0.5,z:0.02,tag:'Sp3'});
+  const siW=Math.round(yStay/dy);
+  const sp3=nodes.length; nodes.push({x:0.5*gs,y:yStay*0.5,z:0.02,tag:'Sp3'});
   add('Stay30', nk(siW,1), sp3, 'Rope_pipe_30mm_eff', true);
-  return {nodes, elements, nk, sc, siG, siW, siBr:Math.round(8.19/(PDF_DY_M*sc))};
+  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy)};
 }
 
 function solve3d(model, loads, supports){
@@ -1488,7 +1501,7 @@ function buildSupports3d(model, combo, inp){
   }
   for(let c=0;c<4;c++) sup.push({node:c,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
   if(active('boomrest') && inp.boomRestEnabled){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/(PDF_DY_M*model.sc))));
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/model.dy)));
     for(let c=0;c<4;c++) sup.push({node:model.nk(si,c), uz:1});
   }
   return sup;
@@ -1517,14 +1530,14 @@ function computeSpaceFrameLoads(inp, combo, model){
   const q=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
   const wWind=q*inp.Cd*(OD/1000)/1000;
   const loads=[];
-  const wBay=-wZ*PDF_DY_M*model.sc*1000;
+  const wBay=-wZ*model.dy*1000;
   const fxDyn=useCombo?(wZ*inp.L_m*1000*sfX/Math.max(sfZ,1e-9))/inp.L_m:0;
   for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*PDF_DY_M*model.sc*1000/4});
+    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*model.dy*1000/4});
   }
   loads.push({node:model.nk(PDF_N_BAYS,2), fz:-Ptip});
   if(inp.extraLoad_kg>0){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/(PDF_DY_M*model.sc))));
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/model.dy)));
     loads.push({node:model.nk(si,2), fz:-Pextra});
   }
   if(useCombo && windMultY>0) loads.push({node:model.nk(PDF_N_BAYS,2), fy:wWind*inp.L_m*1000*windMultY*sinT, fz:-wWind*inp.L_m*1000*windMultY*cosT});

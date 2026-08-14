@@ -2,8 +2,14 @@
 'use strict';
 // Self-test for 3D space frame module — run: node tools/space_frame_3d.js
 
-const PDF_L_REF_M = 27.432, PDF_N_BAYS = 18, PDF_DY_M = PDF_L_REF_M / PDF_N_BAYS;
+const PDF_L_DESIGN_M = 18.288; // 60 ft — native design baseline
+const PDF_L_PDF90_M = 27.432;  // 90 ft SESAM drawing (geometry source)
+const PDF_N_BAYS = 18;
+const PDF_DY_M = PDF_L_DESIGN_M / PDF_N_BAYS;
+const PDF_L_REF_M = PDF_L_DESIGN_M; // alias for embed scripts
 const PDF_E = 200000, PDF_G = PDF_E / 2.6, PDF_E_ROPE = 150000;
+
+function pdfGeomScale(Lm){ return Lm / PDF_L_PDF90_M; }
 
 const PDF_SECTIONS = {
   box_75x75x6:       { A: 1656,  Iy: 1.32e6,  Iz: 1.32e6,  J: 2.64e6,  Zy: 35200, Zz: 35200, E: PDF_E, truss: false },
@@ -90,10 +96,11 @@ function gaussSolve(K,n,b){
 }
 
 function buildModel(Lm){
-  const sc=Lm/PDF_L_REF_M, hw=0.45, hh=0.375;
+  const gs=pdfGeomScale(Lm), sc=Lm/PDF_L_DESIGN_M, dy=Lm/PDF_N_BAYS;
+  const hw=0.45*gs, hh=0.375*gs;
   const nodes=[], nk=(si,c)=>si*4+c;
   for(let si=0;si<=PDF_N_BAYS;si++){
-    const y=si*PDF_DY_M*sc;
+    const y=si*dy;
     [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].forEach((p,c)=>nodes.push({x:p[0],y,z:p[1],si,c}));
   }
   const elements=[], add=(id,i,j,sn,tr)=>elements.push({id,i,j,sec:PDF_SECTIONS[sn],sn,tr});
@@ -109,16 +116,17 @@ function buildModel(Lm){
     }
     if(si%3===0) add(`X${si}`, nk(si,0), nk(si,2), 'L_200x100x10', false);
   }
-  const siG=Math.round(9.28/(PDF_DY_M*sc));
-  const sp4=nodes.length; nodes.push({x:-0.5,y:9.28*sc,z:9,tag:'Sp4'});
+  const yKing=9.28*gs, ySp8=5.28*gs, yStay=7.77*gs, yBoomRest=8.19*gs;
+  const siG=Math.round(yKing/dy);
+  const sp4=nodes.length; nodes.push({x:-0.5*gs,y:yKing,z:9*gs,tag:'Sp4'});
   add('Guy56', nk(siG,2), sp4, 'Rope_pipe_56mm_eff', true);
   add('Guy40', nk(siG,3), sp4, 'Rope_pipe_40mm_eff', true);
-  const sp8=nodes.length; nodes.push({x:-0.38,y:5.28*sc,z:6.36,tag:'Sp8'});
+  const sp8=nodes.length; nodes.push({x:-0.38*gs,y:ySp8,z:6.36*gs,tag:'Sp8'});
   add('GuyLat35', nk(siG,1), sp8, 'Rope_pipe_35mm_eff', true);
-  const siW=Math.round(7.77/(PDF_DY_M*sc));
-  const sp3=nodes.length; nodes.push({x:0.5,y:7.77*sc*0.5,z:0.02,tag:'Sp3'});
+  const siW=Math.round(yStay/dy);
+  const sp3=nodes.length; nodes.push({x:0.5*gs,y:yStay*0.5,z:0.02,tag:'Sp3'});
   add('Stay30', nk(siW,1), sp3, 'Rope_pipe_30mm_eff', true);
-  return {nodes, elements, nk, sc, siG, siW, siBr:Math.round(8.19/(PDF_DY_M*sc))};
+  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy)};
 }
 
 function solve3d(model, loads, supports){
@@ -169,7 +177,7 @@ function buildSupports3d(model, combo, inp){
   }
   for(let c=0;c<4;c++) sup.push({node:c,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
   if(active('boomrest') && inp.boomRestEnabled){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/(PDF_DY_M*model.sc))));
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/model.dy)));
     for(let c=0;c<4;c++) sup.push({node:model.nk(si,c), uz:1});
   }
   return sup;
@@ -198,14 +206,14 @@ function computeSpaceFrameLoads(inp, combo, model){
   const q=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
   const wWind=q*inp.Cd*(OD/1000)/1000;
   const loads=[];
-  const wBay=-wZ*PDF_DY_M*model.sc*1000;
+  const wBay=-wZ*model.dy*1000;
   const fxDyn=useCombo?(wZ*inp.L_m*1000*sfX/Math.max(sfZ,1e-9))/inp.L_m:0;
   for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*PDF_DY_M*model.sc*1000/4});
+    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*model.dy*1000/4});
   }
   loads.push({node:model.nk(PDF_N_BAYS,2), fz:-Ptip});
   if(inp.extraLoad_kg>0){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/(PDF_DY_M*model.sc))));
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/model.dy)));
     loads.push({node:model.nk(si,2), fz:-Pextra});
   }
   if(useCombo && windMultY>0) loads.push({node:model.nk(PDF_N_BAYS,2), fy:wWind*inp.L_m*1000*windMultY*sinT, fz:-wWind*inp.L_m*1000*windMultY*cosT});
@@ -307,11 +315,11 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, PDF_SECTIONS, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, PDF_SECTIONS, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {
-    L_m: 27.432, OD_mm: 219.1, t_mm: 12.7, Fy_MPa: 355, SF: 1.5,
+    L_m: PDF_L_DESIGN_M, OD_mm: 219.1, t_mm: 8.18, Fy_MPa: 241, SF: 1.67,
     angle_deg: 15, addedW_kgpm: 0, tipLoad_kg: 0, extraLoad_kg: 0, extraPos_m: 0,
     windSpeed_ms: 25, rhoAir: 1.225, windExposure: 1, Cd: 1.2, DAF: 1,
     accidentalDryFactor: 1, liftingLoadFactor: 1.15,
