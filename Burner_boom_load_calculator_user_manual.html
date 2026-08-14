@@ -44,6 +44,7 @@
         <li><a href="#manual-pdf-cal">PDF calibration (v5.3)</a></li>
         <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
+        <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -110,6 +111,7 @@
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values convert when you switch.</td></tr>
         <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
+        <tr><td><strong>RAO / SF preset</strong></td><td>Scales matrix combination dynamic factors (sfZ, sfY, sfX) for vessel-specific screening.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
         <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions only.</td></tr>
         <tr><td><strong>Project preset</strong></td><td>Full job bundles — all tabs, analysis mode, cert fields. <strong>Save project</strong> / dropdown reload; <strong>Export project</strong> downloads a named bundle JSON.</td></tr>
@@ -179,6 +181,23 @@
       <li><strong>Auto-compare on recalc</strong> — Tab 4 checkbox runs all four solvers whenever inputs change (disable for faster recalc on slow machines)</li>
       <li><strong>Project presets</strong> — toolbar <em>Project</em> dropdown saves/loads full job bundles (inputs, mode, cert fields) to browser storage; <em>Export project</em> downloads a shareable JSON bundle</li>
       <li><strong>PDF benchmark import</strong> — Tab 4 <em>Import PDF refs</em> merges custom reference values from JSON into localStorage; <em>Reset to defaults</em> restores built-in CT-12-4536 bands</li>
+    </ul>
+
+    <h2 id="manual-v55">7d. Sprint F — v5.5 PDF member tables &amp; solved bending</h2>
+    <ul>
+      <li><strong>Solved Bm119 bending</strong> — when a chord segment is boom-aligned (|mx|≥0.85) and solved local moment passes sanity checks, unity uses the FEA moment directly (<em>solved</em> in member table)</li>
+      <li><strong>PDF member extract compare</strong> — Tab 4 table compares model unity / rope axial for key members vs digitized CT-12-4536 extracts</li>
+      <li><strong>Import PDF tables</strong> — replace default digitized member rows with certified PDF extraction JSON (<code>{ kind: "burnerBoomPdfDigitized", cases: [...] }</code>)</li>
+      <li><strong>CI</strong> — <code>node tools/pdf_digitized_tables.js</code> validates member extracts on each PR</li>
+    </ul>
+    <p>Survival-case Bm119 unity reference updated to reflect solved bending (≈11% worst chord vs prior tributary-only ≈19%).</p>
+
+    <h2 id="manual-v56">7e. Sprint G — v5.6 support reactions &amp; RAO presets</h2>
+    <ul>
+      <li><strong>Solved 3D support reactions</strong> — kingpost load from Sp4 anchor vertical reaction (~112 kN op_res, not guy axial sum); boom-rest from solved uz supports in survival (~45 kN sv_res)</li>
+      <li><strong>RAO / SF preset</strong> — toolbar scales matrix combination sfZ/sfY/sfX (default, conservative +15%, soft/stiff RAO profiles)</li>
+      <li><strong>Certificate appendices</strong> — Tab 5 adds PDF member extract screening summary alongside calibration appendix</li>
+      <li><strong>Members CSV</strong> — exports <em>Bending</em> source and boom alignment <em>mx</em></li>
     </ul>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
@@ -323,7 +342,7 @@
       <li>Euler column buckling (K = 2 cantilever)</li>
       <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — chord bending uses tributary distribution from solved base reactions; axial and rope forces use the stiffness solution.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
     <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
@@ -342,7 +361,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.4 · Matches <code>Burner_boom_load_calculator.html</code> v5.4 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.6 · Matches <code>Burner_boom_load_calculator.html</code> v5.6 · For preliminary engineering use only.
     </footer>
     
 </div>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v5.5</title>
+<title>Burner Boom Load Analysis v5.6</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.5 · solved Bm119 bending · PDF member tables</p>
+          <p class="meta">v5.6 · solved support reactions · RAO presets · cert extracts</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -282,6 +282,13 @@
       <option value="operating" selected>Operating (horizontal)</option>
       <option value="erection">Erection / raising</option>
       <option value="storm">Storm / survival wind</option>
+    </select>
+    <label for="comboScalePreset">RAO / SF</label>
+    <select id="comboScalePreset" aria-label="Matrix combo scale preset">
+      <option value="default" selected>Default screening</option>
+      <option value="conservative">Conservative (+15%)</option>
+      <option value="soft_rao">Soft RAO vessel</option>
+      <option value="stiff_rao">Stiff RAO vessel</option>
     </select>
     <span class="sep"></span>
     <label for="pipePreset">Pipe section</label>
@@ -575,7 +582,7 @@
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
       <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
-      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys (by effective guy count) · 1.27× frame SW · accidental heel geometry.</p>
+      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys · 1.27× frame SW · kingpost/boom-rest reactions from solved supports (Sp4 vertical, boom-rest uz).</p>
     </div>
 
     <div class="card" id="modeCompareCard">
@@ -734,6 +741,7 @@
       <table class="report" id="certTable" style="margin-top:14px;"></table>
       <table class="report" id="certAnalysisTable" style="margin-top:14px;display:none;"></table>
       <table class="report" id="certPdfTable" style="margin-top:14px;display:none;"></table>
+      <table class="report" id="certPdfDigitizedTable" style="margin-top:14px;display:none;"></table>
       <div class="cert-grid no-print" style="display:none;"></div>
       <div class="cert-grid" style="margin-top:20px;">
         <div class="sig-line">Tested by — signature &amp; date</div>
@@ -765,6 +773,7 @@
         <li><a href="#manual-pdf-cal">PDF calibration (v5.3)</a></li>
         <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
+        <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -831,6 +840,7 @@
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values convert when you switch.</td></tr>
         <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
+        <tr><td><strong>RAO / SF preset</strong></td><td>Scales matrix combination dynamic factors (sfZ, sfY, sfX) for vessel-specific screening.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
         <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions only.</td></tr>
         <tr><td><strong>Project preset</strong></td><td>Full job bundles — all tabs, analysis mode, cert fields. <strong>Save project</strong> / dropdown reload; <strong>Export project</strong> downloads a named bundle JSON.</td></tr>
@@ -910,6 +920,14 @@
       <li><strong>CI</strong> — <code>node tools/pdf_digitized_tables.js</code> validates member extracts on each PR</li>
     </ul>
     <p>Survival-case Bm119 unity reference updated to reflect solved bending (≈11% worst chord vs prior tributary-only ≈19%).</p>
+
+    <h2 id="manual-v56">7e. Sprint G — v5.6 support reactions &amp; RAO presets</h2>
+    <ul>
+      <li><strong>Solved 3D support reactions</strong> — kingpost load from Sp4 anchor vertical reaction (~112 kN op_res, not guy axial sum); boom-rest from solved uz supports in survival (~45 kN sv_res)</li>
+      <li><strong>RAO / SF preset</strong> — toolbar scales matrix combination sfZ/sfY/sfX (default, conservative +15%, soft/stiff RAO profiles)</li>
+      <li><strong>Certificate appendices</strong> — Tab 5 adds PDF member extract screening summary alongside calibration appendix</li>
+      <li><strong>Members CSV</strong> — exports <em>Bending</em> source and boom alignment <em>mx</em></li>
+    </ul>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -1072,7 +1090,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.5 · Matches <code>Burner_boom_load_calculator.html</code> v5.5 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.6 · Matches <code>Burner_boom_load_calculator.html</code> v5.6 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -1091,11 +1109,18 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.5.0';
+  const APP_VERSION = '5.6.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
     mpa_ksi: 0.1450377377, knm_kipft: 0.737562149, kn_kip: 0.224808943, mm_in_len: 0.0393700787
+  };
+
+  const COMBO_SCALE_PRESETS = {
+    default: { name: 'Default SESAM screening', sfMult: 1 },
+    conservative: { name: 'Conservative (+15%)', sfMult: 1.15 },
+    soft_rao: { name: 'Soft RAO vessel', sfMult: 0.92, sfYMult: 1.1 },
+    stiff_rao: { name: 'Stiff RAO vessel', sfMult: 1.12, sfYMult: 0.95 },
   };
 
   const PIPE_PRESETS = {
@@ -1119,7 +1144,7 @@
     swl_kg: 110, testFactor: 1.5, permSetPct: 10,
     kingpostPos_m: 6.19, kingpostRated_kN: 80, windStayPos_m: 5.18, windStayRated_kN: 25,
     boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50,
-    accidentalHeel_deg: 5, rigPreset: '60ft_default', autoModeCompare: false, projectPreset: ''
+    accidentalHeel_deg: 5, rigPreset: '60ft_default', autoModeCompare: false, projectPreset: '', comboScalePreset: 'default'
   };
 
   const RIG_PRESET_KEY = 'burnerBoomRigPresets_v1';
@@ -1559,12 +1584,13 @@
     const rows = gov.r.memberRows
       .filter(isUnityTableMember)
       .sort((a,b) => b.util - a.util);
-    const header = ['Member','Type','Section','Util_pct','N_kN','My_kNm','Status','GoverningCase'];
+    const header = ['Member','Type','Section','Util_pct','N_kN','My_kNm','Bending','mx','Status','GoverningCase'];
     const lines = [header.join(',')];
     for(const m of rows){
       lines.push([
         csvEscape(m.id), csvEscape(m.cat || memberCategory(m.id)), csvEscape(m.sn || ''), csvEscape(fmt(m.util * 100, 1)),
         csvEscape(fmt((m.N || 0) / 1000, 2)), csvEscape(fmt((m.My || 0) / 1e6, 2)),
+        csvEscape(m.bendingFrom || ''), csvEscape(m.mx != null ? fmt(m.mx, 3) : ''),
         csvEscape(m.pass ? 'OK' : 'FAIL'), csvEscape(gov.combo.label)
       ].join(','));
     }
@@ -1685,6 +1711,7 @@
       measDefl_mm: valMetric('measDefl_mm', v => v / CONV.mm_in),
       measSet_mm: valMetric('measSet_mm', v => v / CONV.mm_in),
       analysisMode: ($('analysisMode')?.value)||'matrix',
+      comboScalePreset: ($('comboScalePreset')?.value)||'default',
       kingpostEnabled: !!$('kingpostEnabled')?.checked,
       kingpostPos_m: valMetric('kingpostPos_m', v => v / CONV.m_ft) || 0,
       kingpostRated_kN: valMetric('kingpostRated_kN', v => v / CONV.kn_kip) || 0,
@@ -2099,6 +2126,29 @@ function memberEndForces(meta, u){
   return members;
 }
 
+function comboActive(combo, name){
+  return combo && combo.supports && combo.supports.includes(name);
+}
+
+/** Extract kingpost / boom-rest reactions from solved 3D model (not guy axial sum). */
+function supportReactions3d(model, sol, combo, inp){
+  const R = sol.R;
+  let kingpostR = 0;
+  if(comboActive(combo, 'kingpost')){
+    const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
+    if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
+    else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+  }
+  let boomrestR = 0;
+  if(comboActive(combo, 'boomrest') && inp.boomRestEnabled){
+    const si = Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m / model.dy)));
+    for(const c of [2, 3]){
+      boomrestR = Math.max(boomrestR, Math.abs(R[6 * model.nk(si, c) + 2]));
+    }
+  }
+  return { kingpostR, boomrestR };
+}
+
 function pickGoverningUnity(unity){
   let g={util:unity.worst.util,id:unity.worst.id,cat:'chord',sigma:unity.worst.sigma,sn:unity.worst.sn,pass:unity.worst.util<=1};
   for(const m of unity.rows){
@@ -2195,19 +2245,19 @@ function computeSpaceFrameCore(inp, combo){
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
   const stayM=members.find(m=>m.id==='Stay30');
-  const kpR=members.filter(m=>m.id.startsWith('Guy')).reduce((s,m)=>s+Math.abs(m.N),0);
+  const { kingpostR, boomrestR } = supportReactions3d(model, sol, combo, inp);
   const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
   const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
-    kingpost:{R_kN:kpR/1000,ok:kpR/1000<=inp.kingpostRated_kN},
+    kingpost:{R_kN:kingpostR/1000,ok:!comboActive(combo,'kingpost')||kingpostR/1000<=inp.kingpostRated_kN},
     windstay:{R_kN:stayR,ok:stayR<=inp.windStayRated_kN},
-    boomrest:{R_kN:0,ok:true},
+    boomrest:{R_kN:boomrestR/1000,ok:!comboActive(combo,'boomrest')||!inp.boomRestEnabled||boomrestR/1000<=inp.boomRestRated_kN},
     guys:{T_kN:guyT,util:inp.guyAllow_kN>0?guyT/inp.guyAllow_kN*100:0,ok:inp.guyAllow_kN<=0||guyT<=inp.guyAllow_kN}
   };
   const memberPass=governing.util<=1;
-  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
+  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.boomrest.ok && supportsOut.guys.ok
     && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
   return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
@@ -2480,6 +2530,25 @@ function computeSpaceFrameCore(inp, combo){
     }
     html += '<tr><th>Reference document</th><td class="v">Structural Analysis of 90 Ft Burner Boom (CT-12-4536) — scaled 60 ft screening model</td></tr>';
     html += '<tr><th>Engineer sign-off</th><td class="v">Screening model calibrated — not a certified SESAM rebuild</td></tr>';
+    el.innerHTML = html;
+  }
+
+  function renderCertPdfDigitized(report){
+    const el = $('certPdfDigitizedTable');
+    if(!el) return;
+    if(!report?.rows?.length){
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    el.style.display = '';
+    let html = '<caption style="caption-side:top;text-align:left;font-weight:600;margin-bottom:6px;">PDF member extract screening (digitized table)</caption>';
+    html += `<tr><th>Extract summary</th><td class="v">${report.allPass ? 'All tracked members within extract tolerance' : 'Drift on one or more members — review digitized refs'}</td></tr>`;
+    for(const c of report.rows){
+      const fails = c.metrics.filter(m => !m.pass);
+      html += `<tr><th>${c.label}</th><td class="v">${c.pass ? 'OK' : fails.map(m => m.id).join(', ') + ' drift'}</td></tr>`;
+    }
+    html += '<tr><th>Reference source</th><td class="v">CT-12-4536 digitized baseline — import JSON to replace with certified PDF extract</td></tr>';
     el.innerHTML = html;
   }
 
@@ -3147,14 +3216,24 @@ function computeSpaceFrameCore(inp, combo){
       comboLabel: combo?combo.label:null, supports, utilStress, pass, Fx_total, Fz_total, Fy_ax};
   }
 
+  function scaleMatrixCombo(combo, inp){
+    const key = inp.comboScalePreset || 'default';
+    const p = COMBO_SCALE_PRESETS[key] || COMBO_SCALE_PRESETS.default;
+    if(!p || ((p.sfMult == null || p.sfMult === 1) && !p.sfYMult)) return combo;
+    const m = p.sfMult ?? 1;
+    const my = p.sfYMult ?? m;
+    return { ...combo, sfZ: combo.sfZ * m, sfY: combo.sfY * my, sfX: combo.sfX * m };
+  }
+
   function computeEnvelope(inp){
     const useSpace = inp.analysisMode === 'space3d';
     const useFrame = inp.analysisMode === 'frame';
     const fn = useSpace ? computeSpaceFrame : (useFrame ? computeFrame : compute);
     const mode = useSpace ? 'space3d' : (useFrame ? 'frame' : 'matrix');
     const rows = MATRIX_COMBOS.map(c=>{
-      const r = fn({...inp, analysisMode: mode}, c);
-      return { combo:c, r };
+      const combo = scaleMatrixCombo(c, inp);
+      const r = fn({...inp, analysisMode: mode}, combo);
+      return { combo, r };
     });
     let gov = rows[0];
     for(const row of rows){
@@ -3430,12 +3509,14 @@ function computeSpaceFrameCore(inp, combo){
       renderCertPdfCalibration(lastPdfReport);
       lastPdfDigitizedReport = buildPdfDigitizedReport(envelope);
       renderPdfDigitizedTable(lastPdfDigitizedReport);
+      renderCertPdfDigitized(lastPdfDigitizedReport);
     } else {
       lastPdfReport = null;
       lastPdfDigitizedReport = null;
       if($('pdfBenchmarkCard')) $('pdfBenchmarkCard').style.display = 'none';
       if($('pdfDigitizedCard')) $('pdfDigitizedCard').style.display = 'none';
       renderCertPdfCalibration(null);
+      renderCertPdfDigitized(null);
     }
     if($('autoModeCompare')?.checked){
       lastModeComparison = computeModeComparison(inp);

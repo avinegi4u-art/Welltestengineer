@@ -378,6 +378,29 @@ function memberEndForces(meta, u){
   return members;
 }
 
+function comboActive(combo, name){
+  return combo && combo.supports && combo.supports.includes(name);
+}
+
+/** Extract kingpost / boom-rest reactions from solved 3D model (not guy axial sum). */
+function supportReactions3d(model, sol, combo, inp){
+  const R = sol.R;
+  let kingpostR = 0;
+  if(comboActive(combo, 'kingpost')){
+    const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
+    if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
+    else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+  }
+  let boomrestR = 0;
+  if(comboActive(combo, 'boomrest') && inp.boomRestEnabled){
+    const si = Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m / model.dy)));
+    for(const c of [2, 3]){
+      boomrestR = Math.max(boomrestR, Math.abs(R[6 * model.nk(si, c) + 2]));
+    }
+  }
+  return { kingpostR, boomrestR };
+}
+
 function pickGoverningUnity(unity){
   let g={util:unity.worst.util,id:unity.worst.id,cat:'chord',sigma:unity.worst.sigma,sn:unity.worst.sn,pass:unity.worst.util<=1};
   for(const m of unity.rows){
@@ -474,24 +497,24 @@ function computeSpaceFrameCore(inp, combo){
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
   const stayM=members.find(m=>m.id==='Stay30');
-  const kpR=members.filter(m=>m.id.startsWith('Guy')).reduce((s,m)=>s+Math.abs(m.N),0);
+  const { kingpostR, boomrestR } = supportReactions3d(model, sol, combo, inp);
   const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
   const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
-    kingpost:{R_kN:kpR/1000,ok:kpR/1000<=inp.kingpostRated_kN},
+    kingpost:{R_kN:kingpostR/1000,ok:!comboActive(combo,'kingpost')||kingpostR/1000<=inp.kingpostRated_kN},
     windstay:{R_kN:stayR,ok:stayR<=inp.windStayRated_kN},
-    boomrest:{R_kN:0,ok:true},
+    boomrest:{R_kN:boomrestR/1000,ok:!comboActive(combo,'boomrest')||!inp.boomRestEnabled||boomrestR/1000<=inp.boomRestRated_kN},
     guys:{T_kN:guyT,util:inp.guyAllow_kN>0?guyT/inp.guyAllow_kN*100:0,ok:inp.guyAllow_kN<=0||guyT<=inp.guyAllow_kN}
   };
   const memberPass=governing.util<=1;
-  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
+  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.boomrest.ok && supportsOut.guys.ok
     && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
   return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, bm119OrientationReliable, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, bm119OrientationReliable, supportReactions3d, comboActive, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {

@@ -76,6 +76,8 @@ assert(util >= 25 && util <= 55, `op_res Bm119 util ${util.toFixed(0)}% in 25–
 assert(opRes.dRes >= 900 && opRes.dRes <= 2200, `op_res tip deflection ${opRes.dRes.toFixed(0)} mm in 900–2200 band`);
 assert(opRes.governing && opRes.governing.util >= 0.4, 'governing member tracked');
 assert(opRes.governing.id === 'D10_S', 'op_res governing member D10_S brace');
+assert(opRes.supportsOut.kingpost.R_kN > 50 && opRes.supportsOut.kingpost.R_kN < 150,
+  `op_res kingpost reaction ${opRes.supportsOut.kingpost.R_kN.toFixed(1)} kN from Sp4 support (not guy sum)`);
 
 const { loads, swFactor, frameWeightN } = sf.computeSpaceFrameLoads(INP_60FT, MATRIX_COMBOS[2], model);
 assert(Math.abs(swFactor - sf.PDF_SW_FACTOR) < 0.001, 'PDF 1.27 SW factor applied');
@@ -97,7 +99,11 @@ const cal = pdf.runPdfCalibration(INP_60FT);
 assert(cal.every(c => c.pass), 'PDF calibration cases within tolerance bands');
 assert(cal[0].metrics.find(m => m.key === 'bm119_id').pass, 'op_res governing chord Bm119_17');
 
-const svRes = sf.computeSpaceFrameCore(INP_60FT, MATRIX_COMBOS.find(c => c.id === 'sv_res'));
+const svResCore = sf.computeSpaceFrameCore(INP_60FT, MATRIX_COMBOS.find(c => c.id === 'sv_res'));
+assert(svResCore.supportsOut.boomrest.R_kN > 20 && svResCore.supportsOut.boomrest.R_kN < 80,
+  `sv_res boom rest reaction ${svResCore.supportsOut.boomrest.R_kN.toFixed(1)} kN from solved supports`);
+
+const svRes = svResCore;
 const solvedBm = svRes.unity.rows.filter(m => m.id.startsWith('Bm119') && m.bendingFrom === 'solved');
 assert(solvedBm.length >= 5, `sv_res Bm119 solved bending on ${solvedBm.length} boom-aligned segments`);
 
