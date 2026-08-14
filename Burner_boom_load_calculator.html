@@ -286,8 +286,8 @@
       <div class="grid">
         <div class="field">
           <label>Boom length, L</label>
-          <input type="number" id="L_m" value="9" step="0.1" min="0.1">
-          <span class="hint">meters, base/pivot to tip</span>
+          <input type="number" id="L_m" value="18.288" step="0.1" min="0.1">
+          <span class="hint">meters, base/pivot to tip (default 60 ft = 18.288 m)</span>
         </div>
         <div class="field">
           <label>Boom angle from horizontal, θ</label>
@@ -375,8 +375,8 @@
         </div>
         <div class="field">
           <label>Secondary weight position</label>
-          <input type="number" id="extraPos_m" value="4.5" step="0.1" min="0">
-          <span class="hint">meters from base/pivot</span>
+          <input type="number" id="extraPos_m" value="9.144" step="0.1" min="0">
+          <span class="hint">meters from base/pivot (default mid-span on 60 ft boom)</span>
         </div>
         <div class="field">
           <label>Dynamic amplification factor, DAF</label>
@@ -641,8 +641,8 @@
   };
 
   const DEFAULTS = {
-    L_m: 9, angle_deg: 0, OD_mm: 219.1, t_mm: 8.18, Fy_MPa: 241, E_MPa: 200000, SF: 1.67,
-    addedW_kgpm: 15, tipLoad_kg: 80, extraLoad_kg: 30, extraPos_m: 4.5, DAF: 1.15,
+    L_m: 18.288, angle_deg: 0, OD_mm: 219.1, t_mm: 8.18, Fy_MPa: 241, E_MPa: 200000, SF: 1.67,
+    addedW_kgpm: 15, tipLoad_kg: 80, extraLoad_kg: 30, extraPos_m: 9.144, DAF: 1.15,
     windSpeed_ms: 40, Cd: 1.2, rhoAir: 1.225, windExposure: 1.0, defLimitDenom: 200,
     ratedMoment_kNm: 60, ratedLoad_kN: 30, bcd_mm: 400, nBolts: 12, boltAllow_kN: 45,
     swl_kg: 110, testFactor: 1.5, permSetPct: 10
