@@ -179,11 +179,6 @@
     color: #fff; padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   button.action.secondary { background: transparent; color: var(--series-1); border-color: var(--series-1); }
-  a.action.secondary {
-    display: inline-flex; align-items: center; text-decoration: none;
-    appearance: none; border: 1px solid var(--series-1); background: transparent;
-    color: var(--series-1); padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
-  }
   button.action.ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
   button.action:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -203,6 +198,27 @@
     margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border);
     font-size: 11px; color: var(--text-muted); line-height: 1.6;
   }
+
+  .manual-doc { font-size: 13px; line-height: 1.55; }
+  .manual-doc h2 { font-size: 15px; margin: 1.25rem 0 0.5rem; color: var(--series-1); border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+  .manual-doc h3 { font-size: 13px; margin: 1rem 0 0.35rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
+  .manual-doc h4 { font-size: 12.5px; margin: 0.75rem 0 0.25rem; color: var(--text-primary); }
+  .manual-doc p, .manual-doc li { color: var(--text-secondary); }
+  .manual-doc .toc { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 0 0 1rem; background: rgba(0,0,0,0.12); }
+  .manual-doc .toc a { color: var(--series-1); text-decoration: none; }
+  .manual-doc .toc a:hover { text-decoration: underline; }
+  .manual-doc .callout { border-left: 4px solid var(--series-1); background: var(--accent-dim); padding: 10px 12px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+  .manual-doc .callout.warn { border-left-color: var(--warning); background: rgba(245,158,11,0.12); }
+  .manual-doc .callout.good { border-left-color: var(--good); background: rgba(16,185,129,0.1); }
+  .manual-doc .workflow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
+  .manual-doc .workflow div { border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; font-size: 11px; background: rgba(0,0,0,0.1); }
+  .manual-doc .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+  .manual-doc .status-grid div { border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 12px; }
+  .manual-doc .status-grid .pass { border-left: 3px solid var(--good); }
+  .manual-doc .status-grid .warn { border-left: 3px solid var(--warning); }
+  .manual-doc .status-grid .fail { border-left: 3px solid var(--critical); }
+  .manual-doc footer { margin-top: 1.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+  @media (max-width: 760px) { .manual-doc .workflow, .manual-doc .status-grid { grid-template-columns: 1fr; } }
 
   .sig-line { border-top: 1px solid var(--text-primary); margin-top: 34px; padding-top: 4px; font-size: 11px; color: var(--text-secondary); }
   .cert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; margin-top: 10px; }
@@ -262,7 +278,7 @@
       <option value="10sch40">NPS 10" Sch 40</option>
     </select>
     <button type="button" class="action secondary" id="preset90ft">90 ft reference</button>
-    <a class="action secondary" href="Burner_boom_load_calculator_user_manual.html" target="_blank" rel="noopener">Manual</a>
+    <button type="button" class="action secondary" id="openManual">Manual</button>
     <span class="sep"></span>
     <button type="button" class="action secondary" id="exportJson">Export JSON</button>
     <button type="button" class="action secondary" id="importJson">Import JSON</button>
@@ -283,6 +299,7 @@
     <button data-tab="interface">3 · Rig / Turntable Interface</button>
     <button data-tab="results">4 · Results</button>
     <button data-tab="test">5 · Load Test Sign-off</button>
+    <button data-tab="manual">6 · Manual</button>
   </nav>
 
   <!-- ===================== PANEL 1: SECTION ===================== -->
@@ -612,6 +629,237 @@
     </div>
   </section>
 
+  <section class="panel" id="panel-manual">
+    <div class="card manual-doc">
+      <div class="btnrow no-print" style="margin-bottom:12px;">
+        <button type="button" class="action secondary" onclick="window.print()">Print / Save Manual as PDF</button>
+      </div>
+<nav class="toc" aria-label="Table of contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#manual-purpose">Purpose &amp; scope</a></li>
+        <li><a href="#manual-start">Getting started</a></li>
+        <li><a href="#manual-workflow">Recommended workflow</a></li>
+        <li><a href="#manual-toolbar">Toolbar &amp; global controls</a></li>
+        <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
+        <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
+        <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
+        <li><a href="#manual-tab3">Tab 3 — Rig / Turntable Interface</a></li>
+        <li><a href="#manual-tab4">Tab 4 — Results</a></li>
+        <li><a href="#manual-tab5">Tab 5 — Load Test Sign-off</a></li>
+        <li><a href="#manual-save">Saving &amp; sharing jobs</a></li>
+        <li><a href="#manual-print">Printing &amp; certificates</a></li>
+        <li><a href="#manual-limits">Limitations &amp; standards</a></li>
+        <li><a href="#manual-faq">FAQ &amp; troubleshooting</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="manual-purpose">1. Purpose &amp; scope</h2>
+    <p>This calculator performs a <strong>first-pass structural screening</strong> of a cantilever burner or flare boom rigged to a rig structure or turntable. It evaluates:</p>
+    <ul>
+      <li>Gravity loads (self-weight, fittings, tip equipment) with dynamic amplification</li>
+      <li>Wind load on a circular pipe (ASCE 7 / EN 1991-1-4 style)</li>
+      <li>Combined bending, axial, and shear stress (von Mises-style equivalent stress)</li>
+      <li>Base reactions vs turntable rated moment and load</li>
+      <li>Simplified bolt/pin group tension</li>
+      <li>D/t slenderness and Euler buckling screening</li>
+      <li>Deflection vs a user-set serviceability limit (L/n)</li>
+      <li>Proof-load test evaluation and printable certificate</li>
+    </ul>
+    <div class="callout warn">
+      <strong>Important:</strong> This tool does <em>not</em> replace finite-element analysis (FEA), certified lift plans, or review by a qualified structural engineer. Use it for planning, preliminary checks, and field documentation only — not as sole approval for rig-up or personnel-under-load operations.
+    </div>
+    <p><strong>Default configuration:</strong> 60&nbsp;ft boom (18.288&nbsp;m), NPS 8″ Sch&nbsp;40 pipe, operating load case (horizontal). A separate <strong>90&nbsp;ft reference</strong> preset is available in the toolbar.</p>
+
+    <h2 id="manual-start">2. Getting started</h2>
+    <ol>
+      <li>Download or copy <code>Burner_boom_load_calculator.html</code> to your computer.</li>
+      <li>Open it in a modern browser (Chrome, Edge, Firefox, Safari). Double-click the file or drag it into a browser window.</li>
+      <li>No internet connection is required after the file is saved locally.</li>
+      <li>Your last session is restored automatically from browser <code>localStorage</code> unless you click <strong>Reset</strong>.</li>
+    </ol>
+    <div class="callout good">
+      <strong>Tip:</strong> Bookmark the file path or keep calculator + manual in the same folder. Use <strong>Export JSON</strong> before clearing browser data or switching machines.
+    </div>
+
+    <h2 id="manual-workflow">3. Recommended workflow</h2>
+    <p>Work through the five tabs in order. Results update live as you type.</p>
+    <div class="workflow">
+      <div><strong>1</strong>Boom &amp; Section<br>Geometry, pipe, material</div>
+      <div><strong>2</strong>Loads &amp; Wind<br>Weights, DAF, wind, deflection limit</div>
+      <div><strong>3</strong>Interface<br>Turntable ratings, bolt group</div>
+      <div><strong>4</strong>Results<br>QC, status, charts, report</div>
+      <div><strong>5</strong>Load Test<br>Proof load, field data, certificate</div>
+    </div>
+    <ol>
+      <li>Select unit system (Metric or US) and load case (Operating, Erection, or Storm).</li>
+      <li>Confirm boom length and pipe section match the physical boom drawing.</li>
+      <li>Enter rig equipment ratings from OEM / rig documentation on Tab 3.</li>
+      <li>Review Tab 4 — resolve any <strong>FAIL</strong> on strength or capacity before rig-up.</li>
+      <li>After physical proof load test, complete Tab 5 and print the certificate.</li>
+    </ol>
+
+    <h2 id="manual-toolbar">4. Toolbar &amp; global controls</h2>
+    <table>
+      <thead><tr><th>Control</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values convert when you switch.</td></tr>
+        <tr><td><strong>Load case</strong></td><td><strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values, unchanged by preset.</td></tr>
+        <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
+        <tr><td><strong>90 ft reference</strong></td><td>Loads a 27.432&nbsp;m (90&nbsp;ft) reference case with mid-span secondary load — for comparison with the project PDF.</td></tr>
+        <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
+        <tr><td><strong>Import JSON</strong></td><td>Restores a previously exported job file.</td></tr>
+        <tr><td><strong>Reset</strong></td><td>Restores factory defaults (60&nbsp;ft boom, 8″ Sch 40, operating case).</td></tr>
+        <tr><td><strong>Theme</strong> (header)</td><td>Toggles dark / light appearance.</td></tr>
+        <tr><td><strong>Status pill</strong> (header)</td><td>Live summary of primary structural checks — see Section 5.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="manual-status">5. Understanding PASS / MARGINAL / FAIL</h2>
+    <div class="status-grid">
+      <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, and buckling are within limits.</div>
+      <div class="warn"><strong>MARGINAL — deflection</strong><br>Strength is OK but tip deflection exceeds L/n serviceability criterion. Review with engineer; may still be acceptable per operator spec.</div>
+      <div class="fail"><strong>FAIL — strength/capacity</strong><br>One or more primary checks exceeded: stress, turntable, bolts, buckling, or invalid geometry.</div>
+    </div>
+    <p>On Tab 4, individual result tiles use green / amber / red borders. The banner distinguishes <strong>primary strength</strong> failures from <strong>serviceability deflection</strong> warnings.</p>
+
+    <h2 id="manual-tab1" >6. Tab 1 — Boom &amp; Section</h2>
+    <table>
+      <thead><tr><th>Field</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Boom length, L</td><td>Base/pivot to tip. Default <strong>18.288&nbsp;m (60&nbsp;ft)</strong>.</td></tr>
+        <tr><td>Boom angle θ</td><td>Degrees from horizontal. 0° = normal operating; higher during raising/erection.</td></tr>
+        <tr><td>OD, t</td><td>Outside diameter and wall thickness. Use pipe preset or enter from mill certificate.</td></tr>
+        <tr><td>Material grade / Fy</td><td>Yield strength preset (API 5L, A36, etc.) or custom MPa/ksi.</td></tr>
+        <tr><td>E</td><td>Elastic modulus — default 200,000&nbsp;MPa (≈29,000&nbsp;ksi) for steel.</td></tr>
+        <tr><td>Safety factor SF</td><td>Allowable stress = Fy / SF. Default 1.67 (AISC ASD style).</td></tr>
+      </tbody>
+    </table>
+    <p>The <strong>Derived section properties</strong> table shows ID, area, I, Z, D/t, and distributed weight — verify against supplier data.</p>
+
+    <h2 id="manual-tab2">7. Tab 2 — Loads &amp; Wind</h2>
+    <h3>Gravity loads</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Added distributed weight</td><td>Non-steel line weight: coating, cable tray, small bore piping (kg/m or lb/ft). Steel pipe self-weight is calculated automatically.</td></tr>
+        <tr><td>Tip point weight</td><td>Concentrated load at boom tip — igniter, pilot, nozzle assembly.</td></tr>
+        <tr><td>Secondary point weight</td><td>Mid-boom equipment — ladder cage, valve, junction box.</td></tr>
+        <tr><td>Secondary weight position</td><td>Distance from base to secondary load. Default mid-span on 60&nbsp;ft boom (9.144&nbsp;m).</td></tr>
+        <tr><td>DAF</td><td>Dynamic amplification for rig motion / raising. Typical 1.10–1.30.</td></tr>
+      </tbody>
+    </table>
+    <h3>Wind</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Design wind speed</td><td>Basic wind speed (m/s or mph). Default 40&nbsp;m/s ≈ 90&nbsp;mph.</td></tr>
+        <tr><td>Cd</td><td>Drag coefficient for cylinder — 1.2 conservative (subcritical); 0.7 if supercritical/rough.</td></tr>
+        <tr><td>Air density</td><td>Default 1.225&nbsp;kg/m³ at sea level.</td></tr>
+        <tr><td>Kz·G</td><td>Combined exposure and gust factor (ASCE 7 / EN 1991-1-4). 1.0 = basic; storm preset uses 1.15.</td></tr>
+      </tbody>
+    </table>
+    <h3>Deflection limit</h3>
+    <p>Serviceability check: maximum allowable deflection = <strong>L / n</strong>. Default n = 200. This is flagged as <strong>MARGINAL</strong> if exceeded but does not alone cause a primary FAIL.</p>
+
+    <h2 id="manual-tab3">8. Tab 3 — Rig / Turntable Interface</h2>
+    <p>Enter rated capacities from rig or equipment documentation:</p>
+    <ul>
+      <li><strong>Turntable rated moment</strong> — maximum bending moment at base connection (kN·m or kip·ft).</li>
+      <li><strong>Turntable rated load</strong> — combined reaction capacity (kN or kip).</li>
+    </ul>
+    <p><strong>Bolt / pin group</strong> (simplified rigid-flange model):</p>
+    <ul>
+      <li>Bolt circle diameter (BCD), number of bolts N, allowable tension per bolt.</li>
+      <li>Max bolt tension ≈ 2M/(NR) + N_axial/N — first-pass screening only.</li>
+    </ul>
+    <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, and bolt utilization.</p>
+
+    <h2 id="manual-tab4">9. Tab 4 — Results</h2>
+    <h3>Quality checks</h3>
+    <p>Validates geometry (positive dimensions, t &lt; OD/2, D/t warning, load position within span).</p>
+    <h3>Structural summary tiles</h3>
+    <ul>
+      <li><strong>Equivalent stress σ_eq</strong> — combined bending + axial + shear (von Mises-style).</li>
+      <li><strong>Actual safety factor</strong> — Fy / σ_eq vs target SF.</li>
+      <li><strong>Buckling SF</strong> — Euler capacity with K=2 (cantilever) vs axial component.</li>
+      <li><strong>Deflection</strong> — resultant gravity + wind deflection vs L/n.</li>
+      <li><strong>Bolt utilization</strong> — percentage of allowable per-bolt tension.</li>
+    </ul>
+    <h3>Schematic &amp; charts</h3>
+    <p>The boom schematic shows angle, length, and key reactions (not to scale). Charts plot bending moment and deflection from base to tip.</p>
+    <h3>Full calculation report</h3>
+    <p>Single table suitable for copy/paste into a calculation sheet or email. All values respect the selected unit system.</p>
+
+    <h2 id="manual-tab5" >10. Tab 5 — Load Test Sign-off</h2>
+    <p>Use after a physical proof load test on the boom:</p>
+    <ol>
+      <li>Set <strong>SWL</strong> (Safe Working Load) — total rigged payload reference (kg or lb).</li>
+      <li>Set <strong>test load factor</strong> — typically 1.5× SWL.</li>
+      <li>Review <strong>predicted deflection</strong> from beam theory (static, no DAF/wind).</li>
+      <li>Enter <strong>measured deflection</strong> under test load and <strong>permanent set</strong> after unload.</li>
+      <li>Confirm <strong>visual inspection</strong> checkbox — no cracks, weld defects, or permanent distortion.</li>
+      <li>Complete certificate fields: Asset ID, rig/location, date, tested by, witnessed by.</li>
+    </ol>
+    <h3>Acceptance criteria</h3>
+    <ul>
+      <li>Permanent set ≤ configured % of measured deflection (default 10%).</li>
+      <li>Visual inspection confirmed.</li>
+      <li>Measured deflection compared to prediction within ±35% informational band (warning if outside — investigate, not automatic fail).</li>
+    </ul>
+    <p>Click <strong>Print / Save Certificate as PDF</strong> to generate a sign-off sheet with signature lines for tester, witness, certifying engineer, and client representative.</p>
+
+    <h2 id="manual-save">11. Saving &amp; sharing jobs</h2>
+    <table>
+      <thead><tr><th>Method</th><th>When to use</th></tr></thead>
+      <tbody>
+        <tr><td>Automatic (localStorage)</td><td>Same browser — resumes on reopen.</td></tr>
+        <tr><td>Export JSON</td><td>Backup, email to colleague, archive with project number.</td></tr>
+        <tr><td>Import JSON</td><td>Restore backup or open someone else's job file.</td></tr>
+        <tr><td>Reset</td><td>Return to 60&nbsp;ft default case; clears certificate text fields.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      Clearing browser site data removes auto-saved sessions. Export JSON before clearing cache or reinstalling the browser.
+    </div>
+
+    <h2 id="manual-print">12. Printing &amp; certificates</h2>
+    <ul>
+      <li><strong>Load test certificate</strong> — use the button on Tab 5; hides toolbar and tabs in print view.</li>
+      <li><strong>Full record</strong> — browser Print on Results tab after scrolling; print CSS expands all tabs for a multi-section report (toolbar hidden).</li>
+      <li>Use <em>Save as PDF</em> in the print dialog for electronic records.</li>
+    </ul>
+
+    <h2 id="manual-limits">13. Limitations &amp; standards</h2>
+    <p>Simplified models referenced in the calculator footer:</p>
+    <ul>
+      <li>AISC ASD allowable stress (Fy / SF)</li>
+      <li>API 5L / ASTM pipe grades</li>
+      <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
+      <li>EN 1991-1-4 wind on cylinders (Cd)</li>
+      <li>Euler column buckling (K = 2 cantilever)</li>
+    </ul>
+    <p><strong>Not modeled:</strong> local stress concentrations, fatigue, corrosion allowance, tapered sections, FEA-level connection detail, dynamic wind gust time history, or lift-plan rigging angles.</p>
+    <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
+
+    <h2 id="manual-faq">14. FAQ &amp; troubleshooting</h2>
+    <h4>Why does status show MARGINAL but stress passes?</h4>
+    <p>Long pipe cantilevers often exceed L/200 deflection under self-weight while stress remains acceptable. The tool separates serviceability (MARGINAL) from strength (FAIL).</p>
+    <h4>Values look wrong after switching units</h4>
+    <p>Switch units once and verify inputs. If corrupted, click Reset and re-enter, or Import a known-good JSON.</p>
+    <h4>Old 9&nbsp;m defaults appear on open</h4>
+    <p>Browser localStorage may hold a previous session. Click Reset or clear site data for the file URL.</p>
+    <h4>Can I use this for official lift approval?</h4>
+    <p>No — only as a screening aid. Official approval requires qualified engineer review, operator procedures, and often independent inspection.</p>
+    <h4>Does it work offline?</h4>
+    <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
+
+    <footer>
+      Burner Boom Load Calculator User Manual v2.0 · Matches <code>Burner_boom_load_calculator.html</code> v2.0 · For preliminary engineering use only.
+    </footer>
+    </div>
+  </section>
+
   <p class="footnote">
     <b>Standards referenced (simplified screening only):</b> AISC ASD allowable stress (Fy/SF); API 5L / ASTM pipe grades;
     ASCE 7-16 velocity pressure q<sub>z</sub> = 0.613 K<sub>z</sub>K<sub>zt</sub>K<sub>d</sub>V² (implemented as ½ρV² with exposure factor);
@@ -759,14 +1007,18 @@
   }
 
   // ---------- tab switching ----------
+  function switchTab(tab){
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+    const btn = document.querySelector(`nav.tabs button[data-tab="${tab}"]`);
+    if(btn) btn.classList.add('active');
+    const panel = $('panel-'+tab);
+    if(panel) panel.classList.add('active');
+  }
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      $('panel-'+btn.dataset.tab).classList.add('active');
-    });
+    btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
   });
+  $('openManual').addEventListener('click', ()=> switchTab('manual'));
 
   // ---------- presets ----------
   $('matPreset').addEventListener('change', e=>{
