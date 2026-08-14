@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v5.3</title>
+<title>Burner Boom Load Analysis v5.4</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.3 · PDF calibration · governing member unity</p>
+          <p class="meta">v5.4 · hybrid Bm119 bending · project presets · PDF import</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -300,6 +300,12 @@
       <option value="custom">Custom</option>
     </select>
     <button type="button" class="action secondary" id="saveRigPreset">Save rig</button>
+    <label for="projectPreset">Project</label>
+    <select id="projectPreset" aria-label="Full job preset">
+      <option value="" selected>— current session —</option>
+    </select>
+    <button type="button" class="action secondary" id="saveProjectPreset">Save project</button>
+    <button type="button" class="action secondary" id="exportProjectPreset">Export project</button>
     <button type="button" class="action secondary" id="openManual">Manual</button>
     <span class="sep"></span>
     <button type="button" class="action secondary" id="exportJson">Export JSON</button>
@@ -308,6 +314,8 @@
     <button type="button" class="action secondary" id="importJson">Import JSON</button>
     <button type="button" class="action ghost" id="resetDefaults">Reset</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <input type="file" id="importProjectFile" accept="application/json,.json" hidden>
+    <input type="file" id="importPdfBenchmarkFile" accept="application/json,.json" hidden>
   </div>
 
   <div class="disclaimer">
@@ -574,6 +582,9 @@
       <p class="hint" style="margin-top:-6px;">Compare governing stress utilization across 1D screening, 2D frame, and 3D space frame solvers.</p>
       <div class="btnrow no-print" style="margin-bottom:10px;">
         <button type="button" class="action secondary" id="runModeCompare">Compare modes</button>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+          <input type="checkbox" id="autoModeCompare"> Auto-compare on recalc
+        </label>
       </div>
       <div style="overflow-x:auto;"><table class="matrix-table" id="modeCompareTable"><tbody><tr><td class="hint">Click <strong>Compare modes</strong> to run all solvers.</td></tr></tbody></table></div>
     </div>
@@ -581,12 +592,17 @@
     <div class="card" id="pdfBenchmarkCard" style="display:none;">
       <h2>PDF calibration benchmark <span class="badge-sm" id="pdfCalibStatus">—</span></h2>
       <p class="hint" style="margin-top:-6px;">Compares 3D model output to CT-12-4536 / SESAM 60&nbsp;ft screening reference bands (default inputs). For engineering traceability — not certified PDF extraction.</p>
+      <div class="btnrow no-print" style="margin-bottom:10px;">
+        <button type="button" class="action secondary" id="importPdfBenchmarks">Import PDF refs</button>
+        <button type="button" class="action secondary" id="exportPdfBenchmarks">Export PDF refs</button>
+        <button type="button" class="action ghost" id="resetPdfBenchmarks">Reset to defaults</button>
+      </div>
       <div style="overflow-x:auto;"><table class="matrix-table" id="pdfBenchmarkTable"></table></div>
     </div>
 
     <div class="card" id="memberResultsCard" style="display:none;">
       <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · bracing</span></h2>
-      <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Rope axial from 3D solve; Bm119 bending from 3D base-moment tributary (1.27× frame SW).</p>
+      <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Rope axial from 3D solve; Bm119 bending uses hybrid tributary + solved local moment when plausible (1.27× frame SW).</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="memberTable"></table></div>
     </div>
 
@@ -735,6 +751,7 @@
         <li><a href="#manual-frame">Frame solver (v4)</a></li>
         <li><a href="#manual-space3d">3D space frame (v5)</a></li>
         <li><a href="#manual-pdf-cal">PDF calibration (v5.3)</a></li>
+        <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -802,7 +819,8 @@
         <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
-        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions.</td></tr>
+        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions only.</td></tr>
+        <tr><td><strong>Project preset</strong></td><td>Full job bundles — all tabs, analysis mode, cert fields. <strong>Save project</strong> / dropdown reload; <strong>Export project</strong> downloads a named bundle JSON.</td></tr>
         <tr><td><strong>90 ft reference</strong></td><td>Loads the 90&nbsp;ft rig preset and PDF comparison loads.</td></tr>
         <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
         <tr><td><strong>Members CSV</strong></td><td>Exports governing-combination member unity table (Bm119 + ropes) for spreadsheets.</td></tr>
@@ -862,6 +880,14 @@
       <li><strong>Governing member</strong> — highest unity among Bm119 chord, ropes, and bracing (v5.3+)</li>
     </ul>
     <p>Tab 5 certificate includes a <strong>PDF screening calibration</strong> appendix when 3D mode is active. CI runs <code>node tools/pdf_benchmarks.js</code> on each PR.</p>
+
+    <h2 id="manual-v54">7c. Sprint E — v5.4 workflow</h2>
+    <ul>
+      <li><strong>Hybrid Bm119 bending</strong> — chord unity uses tributary base moment refined by solved local moment when plausible (member table still shows top utilizations)</li>
+      <li><strong>Auto-compare on recalc</strong> — Tab 4 checkbox runs all four solvers whenever inputs change (disable for faster recalc on slow machines)</li>
+      <li><strong>Project presets</strong> — toolbar <em>Project</em> dropdown saves/loads full job bundles (inputs, mode, cert fields) to browser storage; <em>Export project</em> downloads a shareable JSON bundle</li>
+      <li><strong>PDF benchmark import</strong> — Tab 4 <em>Import PDF refs</em> merges custom reference values from JSON into localStorage; <em>Reset to defaults</em> restores built-in CT-12-4536 bands</li>
+    </ul>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -975,10 +1001,11 @@
       <thead><tr><th>Method</th><th>When to use</th></tr></thead>
       <tbody>
         <tr><td>Automatic (localStorage)</td><td>Same browser — resumes on reopen.</td></tr>
-        <tr><td>Export JSON</td><td>Backup, email to colleague, archive with project number.</td></tr>
+        <tr><td>Project preset</td><td>Named full-job bundles in browser storage; export for vessel-specific archives.</td></tr>
+        <tr><td>Export JSON</td><td>Backup current session (same as auto-save snapshot).</td></tr>
         <tr><td>Members CSV</td><td>Governing 3D member unity table for Excel / QA sign-off.</td></tr>
         <tr><td>Analysis report</td><td>Structured JSON with matrix envelope and top members for digital records.</td></tr>
-        <tr><td>Import JSON</td><td>Restore backup or open someone else's job file.</td></tr>
+        <tr><td>Import JSON</td><td>Restore backup, project bundle (<code>burnerBoomProject</code>), or open someone else's job file.</td></tr>
         <tr><td>Reset</td><td>Return to 60&nbsp;ft default case; clears certificate text fields.</td></tr>
       </tbody>
     </table>
@@ -1023,7 +1050,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.3 · Matches <code>Burner_boom_load_calculator.html</code> v5.3 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.4 · Matches <code>Burner_boom_load_calculator.html</code> v5.4 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -1042,7 +1069,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.3.0';
+  const APP_VERSION = '5.4.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1070,10 +1097,12 @@
     swl_kg: 110, testFactor: 1.5, permSetPct: 10,
     kingpostPos_m: 6.19, kingpostRated_kN: 80, windStayPos_m: 5.18, windStayRated_kN: 25,
     boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50,
-    accidentalHeel_deg: 5, rigPreset: '60ft_default'
+    accidentalHeel_deg: 5, rigPreset: '60ft_default', autoModeCompare: false, projectPreset: ''
   };
 
   const RIG_PRESET_KEY = 'burnerBoomRigPresets_v1';
+  const PROJECT_PRESET_KEY = 'burnerBoomProjectPresets_v1';
+  const PDF_BENCHMARK_OVERRIDE_KEY = 'burnerBoomPdfBenchmarks_v1';
   const BUILTIN_RIG_PRESETS = {
     '60ft_default': { name: '60 ft default', L_m: 18.288, kingpostPos_m: 6.19, windStayPos_m: 5.18, boomRestPos_m: 5.46, guyAttachPos_m: 6.19 },
     '90ft_reference': { name: '90 ft reference', L_m: 27.432, kingpostPos_m: 9.28, windStayPos_m: 7.77, boomRestPos_m: 8.19, guyAttachPos_m: 9.28 }
@@ -1175,6 +1204,7 @@
     if($('windStayEnabled')) $('windStayEnabled').checked = true;
     if($('boomRestEnabled')) $('boomRestEnabled').checked = true;
     if($('guysEnabled')) $('guysEnabled').checked = true;
+    if($('autoModeCompare')) $('autoModeCompare').checked = false;
     $('visualOk').checked = false;
     ['assetId','rigLoc','testDate','testedBy','witnessedBy'].forEach(id=>{ if($(id)) $(id).value=''; });
     suppressSave = false;
@@ -1337,6 +1367,128 @@
     $(fid)?.addEventListener('input', markRigCustom);
   }
 
+  function captureSessionState(){
+    const data = { version: APP_VERSION, unitSystem, theme: document.querySelector('.viz-root')?.dataset.theme || 'dark' };
+    document.querySelectorAll('input, select, textarea').forEach(el=>{
+      if(!el.id) return;
+      if(el.type === 'checkbox') data[el.id] = el.checked;
+      else if(el.type === 'file') return;
+      else data[el.id] = el.value;
+    });
+    return data;
+  }
+
+  function applySessionState(data){
+    if(!data || typeof data !== 'object') return false;
+    suppressSave = true;
+    if(data.unitSystem) unitSystem = data.unitSystem;
+    if(data.theme != null && document.querySelector('.viz-root')) document.querySelector('.viz-root').dataset.theme = data.theme === 'light' ? 'light' : '';
+    Object.entries(data).forEach(([k,v])=>{
+      const el = $(k);
+      if(!el) return;
+      if(el.type === 'checkbox') el.checked = !!v;
+      else if(k !== 'version' && k !== 'unitSystem' && k !== 'theme') el.value = v;
+    });
+    if($('unitSystem')) $('unitSystem').value = unitSystem;
+    suppressSave = false;
+    return true;
+  }
+
+  function loadCustomProjectPresets(){
+    try { return JSON.parse(localStorage.getItem(PROJECT_PRESET_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function refreshProjectPresetSelect(selectedId){
+    const sel = $('projectPreset');
+    if(!sel) return;
+    const custom = loadCustomProjectPresets();
+    sel.innerHTML = '<option value="">— current session —</option>';
+    for(const [id, p] of Object.entries(custom)){
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = p.name || id;
+      sel.appendChild(opt);
+    }
+    if(selectedId && [...sel.options].some(o => o.value === selectedId)) sel.value = selectedId;
+  }
+
+  function saveCurrentProjectPreset(name){
+    const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || ('project_' + Date.now());
+    const custom = loadCustomProjectPresets();
+    custom[id] = {
+      name: name.trim(),
+      savedAt: new Date().toISOString(),
+      version: APP_VERSION,
+      state: captureSessionState(),
+    };
+    localStorage.setItem(PROJECT_PRESET_KEY, JSON.stringify(custom));
+    refreshProjectPresetSelect(id);
+    if($('projectPreset')) $('projectPreset').value = id;
+    saveState();
+    return id;
+  }
+
+  function applyProjectPreset(id){
+    if(!id) return;
+    const preset = loadCustomProjectPresets()[id];
+    if(!preset?.state) return;
+    applySessionState(preset.state);
+    if($('projectPreset')) $('projectPreset').value = id;
+    refreshRigPresetSelect($('rigPreset')?.value || '60ft_default');
+    recalc();
+    saveState();
+  }
+
+  function exportProjectBundle(id){
+    const custom = loadCustomProjectPresets();
+    const preset = id ? custom[id] : null;
+    const bundle = preset ? { kind: 'burnerBoomProject', ...preset } : {
+      kind: 'burnerBoomProject',
+      name: 'Current session',
+      savedAt: new Date().toISOString(),
+      version: APP_VERSION,
+      state: captureSessionState(),
+    };
+    downloadBlob('burner-boom-project-' + (bundle.name || 'export').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.json', 'application/json', JSON.stringify(bundle, null, 2));
+  }
+
+  $('projectPreset')?.addEventListener('change', e => {
+    if(e.target.value) applyProjectPreset(e.target.value);
+  });
+  $('saveProjectPreset')?.addEventListener('click', ()=>{
+    const name = prompt('Name for this project preset (job / vessel / revision):');
+    if(!name || !name.trim()) return;
+    saveCurrentProjectPreset(name.trim());
+  });
+  $('exportProjectPreset')?.addEventListener('click', ()=>{
+    const id = $('projectPreset')?.value;
+    exportProjectBundle(id || null);
+  });
+  $('importProjectFile')?.addEventListener('change', e=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try {
+        const data = JSON.parse(reader.result);
+        const state = data.kind === 'burnerBoomProject' ? data.state : data;
+        if(!state || typeof state !== 'object') throw new Error('missing state');
+        if(data.kind === 'burnerBoomProject' && data.name){
+          const id = saveCurrentProjectPreset(data.name);
+          applyProjectPreset(id);
+        } else {
+          applySessionState(state);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          recalc();
+          saveState();
+        }
+      } catch(err){ alert('Invalid project JSON file'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
   $('unitSystem').addEventListener('change', e=>{
     const nextUs = e.target.value === 'us';
     convertAllUnits(nextUs);
@@ -1444,6 +1596,14 @@
     reader.onload = ()=>{
       try {
         const data = JSON.parse(reader.result);
+        if(data.kind === 'burnerBoomProject' && data.state){
+          if(data.name) saveCurrentProjectPreset(data.name);
+          applySessionState(data.state);
+          refreshRigPresetSelect($('rigPreset')?.value || '60ft_default');
+          recalc();
+          saveState();
+          return;
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         loadState();
         recalc();
@@ -1925,6 +2085,16 @@ function pickGoverningUnity(unity){
   return g;
 }
 
+/** Hybrid Bm119 bending: tributary from base moment, refined by solved local moment when plausible. */
+function bm119BendingMoment(m, Mbase, si){
+  const frac=(si+0.5)/PDF_N_BAYS;
+  const Mtrib=Mbase*frac*frac;
+  const Msolved=Math.max(Math.abs(m.My||0), Math.abs(m.Mz||0));
+  const cap=Mbase*Math.min(0.55, frac*frac*1.35);
+  if(!Msolved || Msolved>Mbase*0.95 || Msolved>Mtrib*8) return { Mmem: Mtrib, source: 'tributary' };
+  return { Mmem: Math.max(Mtrib, Math.min(Msolved, cap)), source: 'hybrid' };
+}
+
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
   let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
@@ -1943,8 +2113,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     let Mmem=0;
     if(m.id.startsWith('Bm119')){
       const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
-      const frac=(si+0.5)/PDF_N_BAYS;
-      Mmem=Mbase*frac*frac;
+      const bend=bm119BendingMoment(m, Mbase, si);
+      Mmem=bend.Mmem;
+      var bendingFrom=bend.source;
     } else if(m.id.startsWith('V')){
       Nmem=Math.abs(m.N);
       Mmem=0;
@@ -1960,8 +2131,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
     if(cat==='brace' && util>worstBrace.util) worstBrace={util,id:m.id,sn:m.sn,sigma,allow};
+    const bendTag=m.id.startsWith('Bm119') ? (bendingFrom || 'tributary') : (m.id.startsWith('V') ? 'axial' : 'solved cap');
     return {...m,cat,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
-      axialFrom:'3D solved',bendingFrom:m.id.startsWith('Bm119')?'3D base tributary':'solved cap'};
+      axialFrom:'3D solved',bendingFrom:bendTag};
   });
   return {rows,worst,worstBrace};
 }
@@ -2083,7 +2255,7 @@ function computeSpaceFrameCore(inp, combo){
     el.innerHTML = html;
   }
 
-  const PDF_BENCHMARKS = {
+  const PDF_BENCHMARKS_DEFAULT = {
     doc: 'CT-12-4536 / SESAM 90 ft — 60 ft screening calibration',
     cases: [
       { id: 'op_res', label: 'Operating · Heave+Resultant', metrics: [
@@ -2109,6 +2281,79 @@ function computeSpaceFrameCore(inp, combo){
       ]},
     ]
   };
+
+  function loadPdfBenchmarkOverride(){
+    try {
+      const raw = localStorage.getItem(PDF_BENCHMARK_OVERRIDE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function mergePdfBenchmarkCases(baseCases, overrideCases){
+    if(!overrideCases?.length) return baseCases;
+    const byId = Object.fromEntries(baseCases.map(c => [c.id, c]));
+    for(const oc of overrideCases){
+      if(!oc?.id || !byId[oc.id]) continue;
+      byId[oc.id] = {
+        ...byId[oc.id],
+        ...oc,
+        metrics: byId[oc.id].metrics.map(m => {
+          const om = oc.metrics?.find(x => x.key === m.key);
+          return om ? { ...m, ...om } : m;
+        }),
+      };
+    }
+    return baseCases.map(c => byId[c.id]);
+  }
+
+  function getPdfBenchmarks(){
+    const override = loadPdfBenchmarkOverride();
+    if(!override) return PDF_BENCHMARKS_DEFAULT;
+    return {
+      doc: override.doc || PDF_BENCHMARKS_DEFAULT.doc,
+      cases: mergePdfBenchmarkCases(JSON.parse(JSON.stringify(PDF_BENCHMARKS_DEFAULT.cases)), override.cases),
+    };
+  }
+
+  function savePdfBenchmarkOverride(override){
+    if(!override) localStorage.removeItem(PDF_BENCHMARK_OVERRIDE_KEY);
+    else localStorage.setItem(PDF_BENCHMARK_OVERRIDE_KEY, JSON.stringify(override));
+  }
+
+  function exportPdfBenchmarkRefs(){
+    const override = loadPdfBenchmarkOverride();
+    const payload = override || { doc: PDF_BENCHMARKS_DEFAULT.doc, cases: PDF_BENCHMARKS_DEFAULT.cases };
+    downloadBlob('burner-boom-pdf-benchmarks.json', 'application/json', JSON.stringify({ kind: 'burnerBoomPdfBenchmarks', ...payload }, null, 2));
+  }
+
+  function importPdfBenchmarkRefs(data){
+    if(!data || typeof data !== 'object') throw new Error('invalid');
+    const cases = data.cases;
+    if(!Array.isArray(cases)) throw new Error('missing cases');
+    savePdfBenchmarkOverride({ doc: data.doc, cases });
+  }
+
+  $('importPdfBenchmarks')?.addEventListener('click', ()=> $('importPdfBenchmarkFile').click());
+  $('importPdfBenchmarkFile')?.addEventListener('change', e=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try {
+        importPdfBenchmarkRefs(JSON.parse(reader.result));
+        recalc();
+      } catch(err){ alert('Invalid PDF benchmark JSON — expected { cases: [...] }'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('exportPdfBenchmarks')?.addEventListener('click', exportPdfBenchmarkRefs);
+  $('resetPdfBenchmarks')?.addEventListener('click', ()=>{
+    if(confirm('Reset PDF calibration references to built-in defaults?')){
+      savePdfBenchmarkOverride(null);
+      recalc();
+    }
+  });
 
   function pdfMetricFromRow(key, r){
     const guy56 = r.memberRows?.find(m => m.id === 'Guy56');
@@ -2138,6 +2383,7 @@ function computeSpaceFrameCore(inp, combo){
 
   function buildPdfBenchmarkReport(envelope){
     if(!envelope) return null;
+    const PDF_BENCHMARKS = getPdfBenchmarks();
     const rows = [];
     let allPass = true;
     for(const bc of PDF_BENCHMARKS.cases){
@@ -2163,7 +2409,8 @@ function computeSpaceFrameCore(inp, combo){
       return;
     }
     card.style.display = '';
-    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">${report.doc} · ${report.allPass ? 'Within calibration bands' : 'Drift detected — review inputs'}</caption>`;
+    const overrideNote = loadPdfBenchmarkOverride() ? ' · custom refs' : '';
+    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">${report.doc}${overrideNote} · ${report.allPass ? 'Within calibration bands' : 'Drift detected — review inputs'}</caption>`;
     html += '<thead><tr><th>Case / metric</th><th>Model</th><th>Reference</th><th>Δ%</th><th>Status</th></tr></thead><tbody>';
     for(const c of report.rows){
       html += `<tr class="${c.pass ? '' : 'fail'}"><td colspan="5" style="font-weight:600;background:var(--accent-dim);">${c.label}</td></tr>`;
@@ -2991,7 +3238,12 @@ function computeSpaceFrameCore(inp, combo){
       if($('pdfBenchmarkCard')) $('pdfBenchmarkCard').style.display = 'none';
       renderCertPdfCalibration(null);
     }
-    if(lastModeComparison) renderModeComparison(lastModeComparison, inp.analysisMode);
+    if($('autoModeCompare')?.checked){
+      lastModeComparison = computeModeComparison(inp);
+      renderModeComparison(lastModeComparison, inp.analysisMode);
+    } else if(lastModeComparison){
+      renderModeComparison(lastModeComparison, inp.analysisMode);
+    }
 
     // results tiles
     const tiles = $('tiles'); tiles.innerHTML='';
@@ -3089,6 +3341,7 @@ function computeSpaceFrameCore(inp, combo){
 
   if(!loadState()) applyDefaults();
   refreshRigPresetSelect($('rigPreset')?.value || '60ft_default');
+  refreshProjectPresetSelect($('projectPreset')?.value || '');
   if(isUs()) convertAllUnits(true);
   recalc();
   saveState();

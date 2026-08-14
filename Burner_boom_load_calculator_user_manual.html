@@ -41,6 +41,8 @@
         <li><a href="#manual-matrix">Matrix envelope mode (v3)</a></li>
         <li><a href="#manual-frame">Frame solver (v4)</a></li>
         <li><a href="#manual-space3d">3D space frame (v5)</a></li>
+        <li><a href="#manual-pdf-cal">PDF calibration (v5.3)</a></li>
+        <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -108,7 +110,8 @@
         <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
-        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions.</td></tr>
+        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions only.</td></tr>
+        <tr><td><strong>Project preset</strong></td><td>Full job bundles — all tabs, analysis mode, cert fields. <strong>Save project</strong> / dropdown reload; <strong>Export project</strong> downloads a named bundle JSON.</td></tr>
         <tr><td><strong>90 ft reference</strong></td><td>Loads the 90&nbsp;ft rig preset and PDF comparison loads.</td></tr>
         <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
         <tr><td><strong>Members CSV</strong></td><td>Exports governing-combination member unity table (Bm119 + ropes) for spreadsheets.</td></tr>
@@ -168,6 +171,14 @@
       <li><strong>Governing member</strong> — highest unity among Bm119 chord, ropes, and bracing (v5.3+)</li>
     </ul>
     <p>Tab 5 certificate includes a <strong>PDF screening calibration</strong> appendix when 3D mode is active. CI runs <code>node tools/pdf_benchmarks.js</code> on each PR.</p>
+
+    <h2 id="manual-v54">7c. Sprint E — v5.4 workflow</h2>
+    <ul>
+      <li><strong>Hybrid Bm119 bending</strong> — chord unity uses tributary base moment refined by solved local moment when plausible (member table still shows top utilizations)</li>
+      <li><strong>Auto-compare on recalc</strong> — Tab 4 checkbox runs all four solvers whenever inputs change (disable for faster recalc on slow machines)</li>
+      <li><strong>Project presets</strong> — toolbar <em>Project</em> dropdown saves/loads full job bundles (inputs, mode, cert fields) to browser storage; <em>Export project</em> downloads a shareable JSON bundle</li>
+      <li><strong>PDF benchmark import</strong> — Tab 4 <em>Import PDF refs</em> merges custom reference values from JSON into localStorage; <em>Reset to defaults</em> restores built-in CT-12-4536 bands</li>
+    </ul>
 
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
@@ -281,10 +292,11 @@
       <thead><tr><th>Method</th><th>When to use</th></tr></thead>
       <tbody>
         <tr><td>Automatic (localStorage)</td><td>Same browser — resumes on reopen.</td></tr>
-        <tr><td>Export JSON</td><td>Backup, email to colleague, archive with project number.</td></tr>
+        <tr><td>Project preset</td><td>Named full-job bundles in browser storage; export for vessel-specific archives.</td></tr>
+        <tr><td>Export JSON</td><td>Backup current session (same as auto-save snapshot).</td></tr>
         <tr><td>Members CSV</td><td>Governing 3D member unity table for Excel / QA sign-off.</td></tr>
         <tr><td>Analysis report</td><td>Structured JSON with matrix envelope and top members for digital records.</td></tr>
-        <tr><td>Import JSON</td><td>Restore backup or open someone else's job file.</td></tr>
+        <tr><td>Import JSON</td><td>Restore backup, project bundle (<code>burnerBoomProject</code>), or open someone else's job file.</td></tr>
         <tr><td>Reset</td><td>Return to 60&nbsp;ft default case; clears certificate text fields.</td></tr>
       </tbody>
     </table>
@@ -329,7 +341,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.3 · Matches <code>Burner_boom_load_calculator.html</code> v5.3 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.4 · Matches <code>Burner_boom_load_calculator.html</code> v5.4 · For preliminary engineering use only.
     </footer>
     
 </div>
