@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burner Boom Load Analysis &amp; Rig-Up Calculator</title>
+<style>
+  :root.viz-root, .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6; /* blue - primary series */
+    --series-2:       #eb6834; /* orange - secondary series */
+    --good:           #0ca30c;
+    --warning:        #fab219;
+    --serious:        #ec835a;
+    --critical:       #d03b3b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+
+  header.app { margin-bottom: 16px; }
+  header.app h1 { font-size: 20px; margin: 0 0 4px; }
+  header.app p.sub { color: var(--text-secondary); margin: 0; font-size: 13px; }
+
+  .disclaimer {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #fff8e6; border: 1px solid var(--warning);
+    border-left: 4px solid var(--warning);
+    border-radius: 8px; padding: 12px 14px; margin: 16px 0 20px;
+    font-size: 12.5px; color: var(--text-primary); line-height: 1.5;
+  }
+  .disclaimer .ic { font-size: 18px; line-height: 1; flex: none; }
+  .disclaimer b { color: #7a5200; }
+
+  nav.tabs {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  nav.tabs button {
+    appearance: none; border: none; background: transparent;
+    padding: 10px 14px; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); cursor: pointer; border-radius: 6px 6px 0 0;
+    border-bottom: 2px solid transparent;
+  }
+  nav.tabs button.active {
+    color: var(--series-1); border-bottom: 2px solid var(--series-1);
+    background: rgba(42,120,214,0.06);
+  }
+  nav.tabs button:hover:not(.active) { background: rgba(11,11,11,0.04); }
+
+  section.panel { display: none; }
+  section.panel.active { display: block; }
+
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-primary); }
+  .card h3 { font-size: 12.5px; margin: 18px 0 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .field .hint { font-size: 11px; color: var(--text-muted); }
+  .field input, .field select {
+    font-family: inherit; font-size: 13px; padding: 7px 9px;
+    border: 1px solid var(--baseline); border-radius: 6px; background: #fff; color: var(--text-primary);
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--series-1); outline-offset: 1px; border-color: var(--series-1); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 6px; }
+  .tile {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    background: var(--surface-1);
+  }
+  .tile .lbl { font-size: 11.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px; }
+  .tile .val { font-size: 21px; font-weight: 700; }
+  .tile .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .tile.status-good  { border-left: 4px solid var(--good); }
+  .tile.status-warn  { border-left: 4px solid var(--warning); }
+  .tile.status-bad   { border-left: 4px solid var(--critical); }
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-top: 6px;
+  }
+  .tag.good { background: rgba(12,163,12,0.12); color: #0a7f0a; }
+  .tag.bad  { background: rgba(208,59,59,0.12); color: #b32e2e; }
+  .tag.warn { background: rgba(250,178,25,0.18); color: #8a5a00; }
+
+  table.report { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+  table.report th, table.report td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gridline); }
+  table.report th { color: var(--text-secondary); font-weight: 600; width: 46%; }
+  table.report td.v { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .chartbox { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface-1); }
+  .chartbox h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--text-secondary); }
+  svg.linechart { width: 100%; height: 190px; display: block; }
+  .axis-label { font-size: 10px; fill: var(--text-muted); }
+  .legend-row { display: flex; gap: 16px; font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+  .legend-row .sw { display: inline-block; width: 12px; height: 2px; margin-right: 5px; vertical-align: middle; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+  .btnrow { display: flex; gap: 10px; margin-top: 8px; }
+  button.action {
+    appearance: none; border: 1px solid var(--series-1); background: var(--series-1);
+    color: #fff; padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  button.action.secondary { background: #fff; color: var(--series-1); }
+
+  .sig-line { border-top: 1px solid var(--text-primary); margin-top: 34px; padding-top: 4px; font-size: 11px; color: var(--text-secondary); }
+  .cert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; margin-top: 10px; }
+
+  @media print {
+    nav.tabs, .no-print { display: none !important; }
+    section.panel { display: block !important; margin-bottom: 24px; }
+    body { background: #fff; }
+    .card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap">
+
+  <header class="app">
+    <h1>Burner Boom Load Analysis &amp; Rig-Up Calculator</h1>
+    <p class="sub">Cantilever boom structural check for well-test burner/flare booms rigged to a rig structure or turntable — bending, wind, base reactions, and proof-load sign-off.</p>
+  </header>
+
+  <div class="disclaimer">
+    <span class="ic">⚠️</span>
+    <div>
+      <b>Engineering basis &amp; limitations.</b> This tool uses simplified cantilever beam theory (API/ASME-style allowable-stress approach) for a preliminary, first-pass structural check only. It does not replace a full FEA (ANSYS/Abaqus/SACS/etc.), does not account for local stress concentrations, fatigue, corrosion allowance, or non-uniform/tapered sections, and the bolt-group and turntable checks use a simplified rigid-flange approximation. Any burner boom load test, rig-up on a live rig structure, or personnel-safety-critical lift <b>must be reviewed and stamped by a qualified/chartered structural engineer</b> and follow your company's and the rig owner's HSE and lifting procedures before use.
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="section" class="active">1 · Boom &amp; Section</button>
+    <button data-tab="loads">2 · Loads &amp; Wind</button>
+    <button data-tab="interface">3 · Rig / Turntable Interface</button>
+    <button data-tab="results">4 · Results</button>
+    <button data-tab="test">5 · Load Test Sign-off</button>
+  </nav>
+
+  <!-- ===================== PANEL 1: SECTION ===================== -->
+  <section class="panel active" id="panel-section">
+    <div class="card">
+      <h2>Boom geometry</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Boom length, L</label>
+          <input type="number" id="L_m" value="9" step="0.1" min="0.1">
+          <span class="hint">meters, base/pivot to tip</span>
+        </div>
+        <div class="field">
+          <label>Boom angle from horizontal, θ</label>
+          <input type="number" id="angle_deg" value="0" step="1" min="0" max="90">
+          <span class="hint">0° = horizontal (operating); higher during erection</span>
+        </div>
+        <div class="field">
+          <label>Outside diameter, OD</label>
+          <input type="number" id="OD_mm" value="219.1" step="0.1" min="1">
+          <span class="hint">mm (e.g. 219.1 mm = 8" pipe)</span>
+        </div>
+        <div class="field">
+          <label>Wall thickness, t</label>
+          <input type="number" id="t_mm" value="8.18" step="0.01" min="0.1">
+          <span class="hint">mm</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Material</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Material grade</label>
+          <select id="matPreset">
+            <option value="241">API 5L Gr B / ASTM A106 Gr B (Fy = 241 MPa)</option>
+            <option value="250">ASTM A36 (Fy = 250 MPa)</option>
+            <option value="290">API 5L X42 (Fy = 290 MPa)</option>
+            <option value="358">API 5L X52 (Fy = 358 MPa)</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Yield strength, Fy</label>
+          <input type="number" id="Fy_MPa" value="241" step="1" min="1">
+          <span class="hint">MPa</span>
+        </div>
+        <div class="field">
+          <label>Elastic modulus, E</label>
+          <input type="number" id="E_MPa" value="200000" step="1000" min="1000">
+          <span class="hint">MPa (steel default 200,000)</span>
+        </div>
+        <div class="field">
+          <label>Target safety factor basis</label>
+          <select id="sfPreset">
+            <option value="1.5">1.5 — typical rigged/lifted equipment</option>
+            <option value="1.67" selected>1.67 — AISC ASD (≈0.6 Fy)</option>
+            <option value="2.0">2.0 — conservative / critical lift</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Safety factor, SF</label>
+          <input type="number" id="SF" value="1.67" step="0.01" min="1">
+          <span class="hint">Allowable stress = Fy / SF</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Derived section properties</h2>
+      <table class="report" id="sectionPropsTable"></table>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 2: LOADS ===================== -->
+  <section class="panel" id="panel-loads">
+    <div class="card">
+      <h2>Self-weight &amp; applied weights</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Added distributed weight</label>
+          <input type="number" id="addedW_kgpm" value="15" step="0.5" min="0">
+          <span class="hint">kg/m — coating, guides, small piping, cable tray etc. (steel self-weight is auto-computed from OD/t)</span>
+        </div>
+        <div class="field">
+          <label>Tip point weight</label>
+          <input type="number" id="tipLoad_kg" value="80" step="1" min="0">
+          <span class="hint">kg — igniter/pilot head, nozzle assembly at boom tip (x = L)</span>
+        </div>
+        <div class="field">
+          <label>Secondary point weight</label>
+          <input type="number" id="extraLoad_kg" value="30" step="1" min="0">
+          <span class="hint">kg — e.g. ladder/cage, valve, junction box</span>
+        </div>
+        <div class="field">
+          <label>Secondary weight position</label>
+          <input type="number" id="extraPos_m" value="4.5" step="0.1" min="0">
+          <span class="hint">meters from base/pivot</span>
+        </div>
+        <div class="field">
+          <label>Dynamic amplification factor, DAF</label>
+          <input type="number" id="DAF" value="1.15" step="0.01" min="1">
+          <span class="hint">Rig motion / raising-lowering / vibration — 1.10–1.30 typical</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Wind loading</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Design wind speed</label>
+          <input type="number" id="windSpeed_ms" value="40" step="1" min="0">
+          <span class="hint">m/s (40 m/s ≈ 90 mph / 144 km/h)</span>
+        </div>
+        <div class="field">
+          <label>Shape (drag) coefficient, Cd</label>
+          <select id="Cd">
+            <option value="1.2">1.2 — subcritical smooth cylinder (default, conservative)</option>
+            <option value="0.7">0.7 — supercritical Reynolds / rough cylinder</option>
+            <option value="1.0">1.0 — mixed / unknown</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Air density</label>
+          <input type="number" id="rhoAir" value="1.225" step="0.001" min="0.5">
+          <span class="hint">kg/m³ (sea level default)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Deflection limit</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Limit basis</label>
+          <select id="defLimitPreset">
+            <option value="200" selected>L / 200 — typical boom/cantilever limit</option>
+            <option value="180">L / 180</option>
+            <option value="240">L / 240 — stiffer criterion</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Deflection limit denominator</label>
+          <input type="number" id="defLimitDenom" value="200" step="1" min="1">
+          <span class="hint">Limit = L / this value</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 3: INTERFACE ===================== -->
+  <section class="panel" id="panel-interface">
+    <div class="card">
+      <h2>Rig structure / turntable rated capacity</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Turntable / mount rated moment</label>
+          <input type="number" id="ratedMoment_kNm" value="60" step="1" min="0">
+          <span class="hint">kN·m — from equipment/rig documentation</span>
+        </div>
+        <div class="field">
+          <label>Turntable / mount rated reaction load</label>
+          <input type="number" id="ratedLoad_kN" value="30" step="1" min="0">
+          <span class="hint">kN — combined shear/axial rating</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Base flange / bolt (or pin) group — simplified check</h2>
+      <p class="hint" style="margin-top:-6px;">Rigid-flange approximation: assumes a bolt/pin circle evenly loaded in a linear stress distribution under the base moment, plus an even share of the axial load. Use as a first pass only.</p>
+      <div class="grid">
+        <div class="field">
+          <label>Bolt circle diameter, BCD</label>
+          <input type="number" id="bcd_mm" value="400" step="1" min="1">
+          <span class="hint">mm</span>
+        </div>
+        <div class="field">
+          <label>Number of bolts / pins, N</label>
+          <input type="number" id="nBolts" value="12" step="1" min="2">
+        </div>
+        <div class="field">
+          <label>Allowable tensile load per bolt/pin</label>
+          <input type="number" id="boltAllow_kN" value="45" step="1" min="0">
+          <span class="hint">kN — from bolt grade/size spec sheet</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Base reaction summary</h2>
+      <table class="report" id="reactionTable"></table>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 4: RESULTS ===================== -->
+  <section class="panel" id="panel-results">
+    <div class="card">
+      <h2>Structural check summary</h2>
+      <div class="tiles" id="tiles"></div>
+    </div>
+
+    <div class="card">
+      <div class="two-col">
+        <div class="chartbox">
+          <h3>Bending moment along boom (base → tip)</h3>
+          <svg class="linechart" id="chartMoment" viewBox="0 0 480 190" preserveAspectRatio="none"></svg>
+          <div class="legend-row">
+            <span><span class="sw" style="background:var(--series-1)"></span>Gravity (DAF-applied)</span>
+            <span><span class="sw" style="background:var(--series-2)"></span>Wind</span>
+          </div>
+        </div>
+        <div class="chartbox">
+          <h3>Deflection along boom (base → tip)</h3>
+          <svg class="linechart" id="chartDeflection" viewBox="0 0 480 190" preserveAspectRatio="none"></svg>
+          <div class="legend-row">
+            <span><span class="sw" style="background:var(--series-1)"></span>Resultant deflection</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Full calculation report</h2>
+      <table class="report" id="fullReport"></table>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 5: LOAD TEST ===================== -->
+  <section class="panel" id="panel-test">
+    <div class="card">
+      <h2>Proof / load test parameters</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Safe Working Load (SWL) reference</label>
+          <input type="number" id="swl_kg" value="110" step="1" min="0">
+          <span class="hint">kg — total rigged payload (tip + secondary weight above), editable</span>
+        </div>
+        <div class="field">
+          <label>Test load factor</label>
+          <select id="testFactorPreset">
+            <option value="1.5" selected>1.5× SWL — common structural/lifting practice</option>
+            <option value="1.25">1.25× SWL</option>
+            <option value="2.0">2.0× SWL</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Test load factor (value)</label>
+          <input type="number" id="testFactor" value="1.5" step="0.01" min="1">
+        </div>
+        <div class="field">
+          <label>Permanent-set acceptance limit</label>
+          <input type="number" id="permSetPct" value="10" step="1" min="0">
+          <span class="hint">% of measured deflection under test load</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Test results (field entry)</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Measured deflection under test load</label>
+          <input type="number" id="measDefl_mm" step="0.1" min="0" placeholder="mm">
+        </div>
+        <div class="field">
+          <label>Measured permanent set (after unload)</label>
+          <input type="number" id="measSet_mm" step="0.1" min="0" placeholder="mm">
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="visualOk" style="width:auto; margin-right:6px;">No visible cracking, weld defect or permanent distortion observed</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Test evaluation</h2>
+      <div class="tiles" id="testTiles"></div>
+    </div>
+
+    <div class="card">
+      <h2>Load Test Certificate</h2>
+      <div class="grid">
+        <div class="field"><label>Boom / Asset ID</label><input type="text" id="assetId" placeholder="e.g. BB-01"></div>
+        <div class="field"><label>Rig / Location</label><input type="text" id="rigLoc" placeholder="Rig name / location"></div>
+        <div class="field"><label>Test date</label><input type="date" id="testDate"></div>
+        <div class="field"><label>Tested by</label><input type="text" id="testedBy"></div>
+        <div class="field"><label>Witnessed by</label><input type="text" id="witnessedBy"></div>
+      </div>
+      <table class="report" id="certTable" style="margin-top:14px;"></table>
+      <div class="cert-grid no-print" style="display:none;"></div>
+      <div class="cert-grid" style="margin-top:20px;">
+        <div class="sig-line">Tested by — signature &amp; date</div>
+        <div class="sig-line">Witnessed by — signature &amp; date</div>
+        <div class="sig-line">Reviewing/Certifying Engineer — signature, stamp &amp; date</div>
+        <div class="sig-line">Rig / Client representative — signature &amp; date</div>
+      </div>
+      <div class="btnrow no-print">
+        <button class="action" onclick="window.print()">Print / Save Certificate as PDF</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  // ---------- tab switching ----------
+  document.querySelectorAll('nav.tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $('panel-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- presets ----------
+  $('matPreset').addEventListener('change', e=>{
+    if(e.target.value!=='custom'){ $('Fy_MPa').value = e.target.value; recalc(); }
+  });
+  $('sfPreset').addEventListener('change', e=>{
+    if(e.target.value!=='custom'){ $('SF').value = e.target.value; recalc(); }
+  });
+  $('defLimitPreset').addEventListener('change', e=>{
+    if(e.target.value!=='custom'){ $('defLimitDenom').value = e.target.value; recalc(); }
+  });
+  $('testFactorPreset').addEventListener('change', e=>{
+    if(e.target.value!=='custom'){ $('testFactor').value = e.target.value; recalc(); }
+  });
+
+  // recalc on any input change
+  document.querySelectorAll('input, select').forEach(el=>{
+    el.addEventListener('input', recalc);
+  });
+
+  const fmt = (n, d=2) => Number.isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d}) : '—';
+
+  function getInputs(){
+    return {
+      L_m: parseFloat($('L_m').value)||0,
+      angle_deg: parseFloat($('angle_deg').value)||0,
+      OD_mm: parseFloat($('OD_mm').value)||0,
+      t_mm: parseFloat($('t_mm').value)||0,
+      Fy_MPa: parseFloat($('Fy_MPa').value)||1,
+      E_MPa: parseFloat($('E_MPa').value)||200000,
+      SF: parseFloat($('SF').value)||1.67,
+      addedW_kgpm: parseFloat($('addedW_kgpm').value)||0,
+      tipLoad_kg: parseFloat($('tipLoad_kg').value)||0,
+      extraLoad_kg: parseFloat($('extraLoad_kg').value)||0,
+      extraPos_m: parseFloat($('extraPos_m').value)||0,
+      DAF: parseFloat($('DAF').value)||1,
+      windSpeed_ms: parseFloat($('windSpeed_ms').value)||0,
+      Cd: parseFloat($('Cd').value)||1.2,
+      rhoAir: parseFloat($('rhoAir').value)||1.225,
+      defLimitDenom: parseFloat($('defLimitDenom').value)||200,
+      ratedMoment_kNm: parseFloat($('ratedMoment_kNm').value)||0,
+      ratedLoad_kN: parseFloat($('ratedLoad_kN').value)||0,
+      bcd_mm: parseFloat($('bcd_mm').value)||1,
+      nBolts: parseFloat($('nBolts').value)||1,
+      boltAllow_kN: parseFloat($('boltAllow_kN').value)||0,
+      swl_kg: parseFloat($('swl_kg').value)||0,
+      testFactor: parseFloat($('testFactor').value)||1.5,
+      permSetPct: parseFloat($('permSetPct').value)||10,
+      measDefl_mm: parseFloat($('measDefl_mm').value),
+      measSet_mm: parseFloat($('measSet_mm').value),
+    };
+  }
+
+  function compute(inp){
+    const g = 9.81;
+    const rhoSteel = 7.85e-6; // kg/mm^3
+    const E = inp.E_MPa;
+    const L = inp.L_m*1000; // mm
+    const OD = inp.OD_mm, t = Math.min(inp.t_mm, inp.OD_mm/2 - 0.01);
+    const ID = OD - 2*t;
+    const A = Math.PI/4*(OD*OD - ID*ID); // mm^2
+    const I = Math.PI/64*(Math.pow(OD,4)-Math.pow(ID,4)); // mm^4
+    const Z = I/(OD/2); // mm^3
+    const theta = inp.angle_deg*Math.PI/180;
+
+    const wSelf = A*rhoSteel*g; // N/mm
+    const wAdded = (inp.addedW_kgpm*g)/1000; // N/mm
+    const wGravity = wSelf + wAdded; // N/mm
+
+    const Ptip = inp.tipLoad_kg*g;
+    const Pextra = inp.extraLoad_kg*g;
+    const xp = Math.min(inp.extraPos_m*1000, L);
+
+    const wPerp = wGravity*Math.cos(theta);
+    const PtipPerp = Ptip*Math.cos(theta);
+    const PextraPerp = Pextra*Math.cos(theta);
+
+    const Mgrav = wPerp*L*L/2 + PtipPerp*L + PextraPerp*xp; // N.mm
+    const Vgrav = wPerp*L + PtipPerp + PextraPerp; // N
+    const Naxial = (wGravity*L + Ptip + Pextra)*Math.sin(theta); // N
+
+    const Mgrav_d = Mgrav*inp.DAF;
+    const Vgrav_d = Vgrav*inp.DAF;
+    const N_d = Naxial*inp.DAF;
+
+    const q_Pa = 0.5*inp.rhoAir*inp.windSpeed_ms*inp.windSpeed_ms; // N/m^2
+    const wWind_Npm = q_Pa*inp.Cd*(OD/1000); // N/m
+    const wWind = wWind_Npm/1000; // N/mm
+    const Mwind = wWind*L*L/2;
+    const Vwind = wWind*L;
+
+    const Mres = Math.sqrt(Mgrav_d*Mgrav_d + Mwind*Mwind);
+    const Vres = Math.sqrt(Vgrav_d*Vgrav_d + Vwind*Vwind);
+
+    const sigmaBend = Z>0 ? Mres/Z : 0;
+    const sigmaAxial = A>0 ? N_d/A : 0;
+    const sigmaCombined = sigmaBend + sigmaAxial;
+    const tau = A>0 ? 2*Vres/A : 0;
+    const sigmaEq = Math.sqrt(sigmaCombined*sigmaCombined + 3*tau*tau);
+
+    const allow = inp.Fy_MPa/inp.SF;
+    const actualSF = sigmaEq>0 ? inp.Fy_MPa/sigmaEq : Infinity;
+
+    const dUdl = I>0 ? wPerp*inp.DAF*Math.pow(L,4)/(8*E*I) : 0;
+    const dTip = I>0 ? PtipPerp*inp.DAF*Math.pow(L,3)/(3*E*I) : 0;
+    const dExtra = (I>0 && inp.extraLoad_kg>0) ? PextraPerp*inp.DAF*xp*xp*(3*L-xp)/(6*E*I) : 0;
+    const dVert = dUdl+dTip+dExtra;
+    const dWind = I>0 ? wWind*Math.pow(L,4)/(8*E*I) : 0;
+    const dRes = Math.sqrt(dVert*dVert + dWind*dWind);
+    const defLimit = L/inp.defLimitDenom;
+
+    // bolt group
+    const R = inp.bcd_mm/2;
+    const boltTension = inp.nBolts>0 ? (2*Mres/(inp.nBolts*R)) + (N_d/inp.nBolts) : 0; // N
+    const boltTension_kN = boltTension/1000;
+    const boltUtil = inp.boltAllow_kN>0 ? boltTension_kN/inp.boltAllow_kN*100 : 0;
+
+    // curves (21 points)
+    const n = 21;
+    const xs=[], Mg=[], Mw=[], Mr=[], defl=[];
+    for(let i=0;i<n;i++){
+      const x = L*i/(n-1);
+      const rem = L-x;
+      const mg = (wPerp*rem*rem/2 + PtipPerp*rem + (x<=xp?PextraPerp*(xp-x):0))*inp.DAF;
+      const mw = wWind*rem*rem/2;
+      xs.push(x); Mg.push(mg); Mw.push(mw); Mr.push(Math.sqrt(mg*mg+mw*mw));
+      let dv = I>0 ? (wPerp*inp.DAF)*(Math.pow(x,4)-4*L*Math.pow(x,3)+6*L*L*x*x)/(24*E*I) : 0;
+      dv += I>0 ? (PtipPerp*inp.DAF)*( x<=L ? (x*x*(3*L-x))/(6*E*I) : 0) : 0;
+      if(inp.extraLoad_kg>0 && I>0){
+        if(x<=xp) dv += (PextraPerp*inp.DAF)*x*x*(3*xp-x)/(6*E*I);
+        else dv += (PextraPerp*inp.DAF)*xp*xp*(3*x-xp)/(6*E*I);
+      }
+      const dw = I>0 ? wWind*(Math.pow(x,4)-4*L*Math.pow(x,3)+6*L*L*x*x)/(24*E*I) : 0;
+      defl.push(Math.sqrt(dv*dv+dw*dw));
+    }
+
+    // test load calc (static, gravity only, using test factor instead of DAF)
+    const testLoadFactor = inp.testFactor;
+    const scale = (inp.swl_kg>0 && (Ptip+Pextra)>0) ? 1 : 1; // deflection scales linearly with load magnitude
+    // Recompute deflection at test load: scale gravity loads by testLoadFactor instead of DAF, no wind
+    const dUdl_t = I>0 ? wPerp*testLoadFactor*Math.pow(L,4)/(8*E*I) : 0;
+    const dTip_t = I>0 ? PtipPerp*testLoadFactor*Math.pow(L,3)/(3*E*I) : 0;
+    const dExtra_t = (I>0 && inp.extraLoad_kg>0) ? PextraPerp*testLoadFactor*xp*xp*(3*L-xp)/(6*E*I) : 0;
+    const predictedTestDefl = dUdl_t+dTip_t+dExtra_t;
+    const testLoad_kg = inp.swl_kg*testLoadFactor;
+
+    return {A,I,Z,OD,ID,L,theta,wSelf,wAdded,wGravity,Ptip,Pextra,xp,
+      Mgrav_d,Vgrav_d,N_d,Mwind,Vwind,Mres,Vres,sigmaBend,sigmaAxial,sigmaCombined,tau,sigmaEq,
+      allow,actualSF,dVert,dWind,dRes,defLimit, boltTension_kN, boltUtil, R,
+      xs,Mg,Mw,Mr,defl, predictedTestDefl, testLoad_kg};
+  }
+
+  function statTile(container, label, value, sub, status){
+    const d = document.createElement('div');
+    d.className = 'tile' + (status? ' status-'+status : '');
+    d.innerHTML = `<div class="lbl">${label}</div><div class="val">${value}</div><div class="sub">${sub||''}</div>`;
+    container.appendChild(d);
+  }
+
+  function drawChart(svgEl, series, xs, opts){
+    const W=480,H=190, padL=44,padR=10,padT=10,padB=22;
+    const maxY = Math.max(1e-9, ...series.flatMap(s=>s.data));
+    const maxX = Math.max(...xs);
+    const X = x => padL + (x/maxX)*(W-padL-padR);
+    const Y = y => (H-padB) - (y/maxY)*(H-padT-padB);
+    let svg = `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--surface-1)"/>`;
+    // gridlines
+    for(let i=0;i<=4;i++){
+      const gy = padT + i*(H-padT-padB)/4;
+      const val = maxY - i*maxY/4;
+      svg += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="var(--gridline)" stroke-width="1"/>`;
+      svg += `<text class="axis-label" x="${padL-6}" y="${gy+3}" text-anchor="end">${val>=1000?(val/1000).toFixed(1)+'k':val.toFixed(0)}</text>`;
+    }
+    svg += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="var(--baseline)" stroke-width="1"/>`;
+    svg += `<text class="axis-label" x="${padL}" y="${H-4}">base (0)</text>`;
+    svg += `<text class="axis-label" x="${W-padR}" y="${H-4}" text-anchor="end">tip (L)</text>`;
+    series.forEach(s=>{
+      const pts = xs.map((x,i)=> `${X(x)},${Y(s.data[i])}`).join(' ');
+      svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    });
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.innerHTML = svg;
+  }
+
+  function statusFor(ratio){ // ratio = actual/allowable (or actual/limit); <1 good margin, near 1 warn, >1 bad
+    if(ratio>1) return 'bad';
+    if(ratio>0.9) return 'warn';
+    return 'good';
+  }
+
+  function recalc(){
+    const inp = getInputs();
+    const r = compute(inp);
+
+    // section properties table
+    $('sectionPropsTable').innerHTML = `
+      <tr><th>Inside diameter, ID</th><td class="v">${fmt(r.ID,1)} mm</td></tr>
+      <tr><th>Cross-section area, A</th><td class="v">${fmt(r.A,0)} mm²</td></tr>
+      <tr><th>Moment of inertia, I</th><td class="v">${fmt(r.I/1e6,2)} ×10⁶ mm⁴</td></tr>
+      <tr><th>Section modulus, Z</th><td class="v">${fmt(r.Z/1e3,2)} ×10³ mm³</td></tr>
+      <tr><th>Self-weight (steel only)</th><td class="v">${fmt(r.wSelf*1000/9.81,2)} kg/m</td></tr>
+      <tr><th>Total distributed gravity load</th><td class="v">${fmt(r.wGravity*1000/9.81,2)} kg/m</td></tr>
+    `;
+
+    // reaction table
+    $('reactionTable').innerHTML = `
+      <tr><th>Base bending moment (resultant, gravity+wind)</th><td class="v">${fmt(r.Mres/1e6,2)} kN·m</td></tr>
+      <tr><th>Base shear (resultant)</th><td class="v">${fmt(r.Vres/1000,2)} kN</td></tr>
+      <tr><th>Base axial force</th><td class="v">${fmt(r.N_d/1000,2)} kN</td></tr>
+      <tr><th>Turntable rated moment</th><td class="v">${fmt(inp.ratedMoment_kNm,2)} kN·m — ${(r.Mres/1e6)<=inp.ratedMoment_kNm?'OK':'EXCEEDED'}</td></tr>
+      <tr><th>Turntable rated load</th><td class="v">${fmt(inp.ratedLoad_kN,2)} kN — ${(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000)<=inp.ratedLoad_kN?'OK':'EXCEEDED'}</td></tr>
+      <tr><th>Max bolt/pin tension (simplified)</th><td class="v">${fmt(r.boltTension_kN,2)} kN</td></tr>
+      <tr><th>Bolt utilization</th><td class="v">${fmt(r.boltUtil,1)}% of allowable ${inp.boltAllow_kN} kN</td></tr>
+    `;
+
+    // results tiles
+    const tiles = $('tiles'); tiles.innerHTML='';
+    const sfStatus = r.actualSF < inp.SF ? 'bad' : (r.actualSF < inp.SF*1.1 ? 'warn':'good');
+    statTile(tiles,'Equivalent stress (σ_eq)', fmt(r.sigmaEq,1)+' MPa', 'von Mises-style, bending+axial+shear', statusFor(r.sigmaEq/r.allow));
+    statTile(tiles,'Allowable stress', fmt(r.allow,1)+' MPa', `Fy ${inp.Fy_MPa} MPa / SF ${inp.SF}`, null);
+    statTile(tiles,'Actual safety factor', fmt(r.actualSF,2), `vs target ${inp.SF}`, sfStatus);
+    statTile(tiles,'Bending stress', fmt(r.sigmaBend,1)+' MPa', 'from resultant moment', null);
+    statTile(tiles,'Axial stress', fmt(r.sigmaAxial,1)+' MPa', 'from boom angle component', null);
+    statTile(tiles,'Base moment', fmt(r.Mres/1e6,2)+' kN·m', 'at rig/turntable connection', null);
+    statTile(tiles,'Tip / resultant deflection', fmt(r.dRes,1)+' mm', `limit L/${inp.defLimitDenom} = ${fmt(r.defLimit,1)} mm`, statusFor(r.dRes/r.defLimit));
+    statTile(tiles,'Base reaction (shear+axial)', fmt(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000,2)+' kN', `rated ${inp.ratedLoad_kN} kN`, statusFor(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000/Math.max(inp.ratedLoad_kN,1e-9)));
+    statTile(tiles,'Bolt/pin utilization', fmt(r.boltUtil,0)+'%', `${inp.nBolts} bolts, ${inp.boltAllow_kN} kN allow. ea.`, statusFor(r.boltUtil/100));
+
+    const overallBad = (r.actualSF < inp.SF) || (r.dRes>r.defLimit) || ((r.Mres/1e6)>inp.ratedMoment_kNm) || (r.boltUtil>100) || ((Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000)>inp.ratedLoad_kN);
+    const banner = document.createElement('div');
+    banner.style.gridColumn='1/-1';
+    banner.innerHTML = `<span class="tag ${overallBad?'bad':'good'}">${overallBad? '✕ One or more checks exceed allowable / rated limits' : '✓ All checks within stated allowable limits'}</span>`;
+    tiles.appendChild(banner);
+
+    // charts
+    drawChart($('chartMoment'), [
+      {data:r.Mg.map(v=>v/1e6), color:'var(--series-1)'},
+      {data:r.Mw.map(v=>v/1e6), color:'var(--series-2)'}
+    ], r.xs.map(x=>x/1000));
+    drawChart($('chartDeflection'), [
+      {data:r.defl, color:'var(--series-1)'}
+    ], r.xs.map(x=>x/1000));
+
+    // full report
+    $('fullReport').innerHTML = `
+      <tr><th>Boom length / angle</th><td class="v">${inp.L_m} m / ${inp.angle_deg}°</td></tr>
+      <tr><th>Section (OD × t)</th><td class="v">${inp.OD_mm} × ${inp.t_mm} mm</td></tr>
+      <tr><th>Material Fy</th><td class="v">${inp.Fy_MPa} MPa</td></tr>
+      <tr><th>Dynamic amplification factor</th><td class="v">${inp.DAF}</td></tr>
+      <tr><th>Design wind speed / Cd</th><td class="v">${inp.windSpeed_ms} m/s / ${inp.Cd}</td></tr>
+      <tr><th>Resultant base moment</th><td class="v">${fmt(r.Mres/1e6,2)} kN·m</td></tr>
+      <tr><th>Resultant base shear</th><td class="v">${fmt(r.Vres/1000,2)} kN</td></tr>
+      <tr><th>Base axial force</th><td class="v">${fmt(r.N_d/1000,2)} kN</td></tr>
+      <tr><th>Bending stress</th><td class="v">${fmt(r.sigmaBend,1)} MPa</td></tr>
+      <tr><th>Axial stress</th><td class="v">${fmt(r.sigmaAxial,1)} MPa</td></tr>
+      <tr><th>Shear stress (2V/A approx.)</th><td class="v">${fmt(r.tau,1)} MPa</td></tr>
+      <tr><th>Equivalent (von Mises-style) stress</th><td class="v">${fmt(r.sigmaEq,1)} MPa</td></tr>
+      <tr><th>Allowable stress (Fy/SF)</th><td class="v">${fmt(r.allow,1)} MPa</td></tr>
+      <tr><th>Actual safety factor</th><td class="v">${fmt(r.actualSF,2)}</td></tr>
+      <tr><th>Tip / resultant deflection</th><td class="v">${fmt(r.dRes,1)} mm (limit ${fmt(r.defLimit,1)} mm)</td></tr>
+    `;
+
+    // ---- load test tab ----
+    const tt = $('testTiles'); tt.innerHTML='';
+    const predicted = r.predictedTestDefl;
+    const meas = inp.measDefl_mm;
+    const set = inp.measSet_mm;
+    const setLimit = Number.isFinite(meas) ? meas*(inp.permSetPct/100) : NaN;
+    const setPass = Number.isFinite(set) && Number.isFinite(setLimit) ? set<=setLimit : null;
+    const deflWithinBand = Number.isFinite(meas) ? Math.abs(meas-predicted)<=predicted*0.35 : null; // ±35% informational band
+    statTile(tt,'Test load', fmt(r.testLoad_kg,1)+' kg', `SWL ${inp.swl_kg} kg × ${inp.testFactor}`, null);
+    statTile(tt,'Predicted deflection at test load', fmt(predicted,1)+' mm', 'from beam theory, static, no DAF/wind', null);
+    statTile(tt,'Measured deflection', Number.isFinite(meas)?fmt(meas,1)+' mm':'—', deflWithinBand===null?'awaiting field data':(deflWithinBand?'within informational ±35% band':'outside informational band — investigate'), deflWithinBand===null?null:(deflWithinBand?'good':'warn'));
+    statTile(tt,'Permanent set / limit', Number.isFinite(set)?fmt(set,1)+' mm':'—', Number.isFinite(setLimit)?`limit ${fmt(setLimit,1)} mm (${inp.permSetPct}% of measured deflection)`:'awaiting field data', setPass===null?null:(setPass?'good':'bad'));
+    const visualOk = $('visualOk').checked;
+    const overallTestPass = setPass===true && visualOk && Number.isFinite(meas);
+    const testBanner = document.createElement('div');
+    testBanner.style.gridColumn='1/-1';
+    let tagClass='warn', tagText='Awaiting complete field data / visual inspection sign-off';
+    if(Number.isFinite(meas) && setPass!==null && visualOk){ tagClass = overallTestPass?'good':'bad'; tagText = overallTestPass? '✓ PASS — meets permanent-set and visual inspection criteria' : '✕ FAIL — does not meet acceptance criteria'; }
+    testBanner.innerHTML = `<span class="tag ${tagClass}">${tagText}</span>`;
+    tt.appendChild(testBanner);
+
+    $('certTable').innerHTML = `
+      <tr><th>Asset / Boom ID</th><td class="v">${$('assetId').value||'—'}</td></tr>
+      <tr><th>Rig / Location</th><td class="v">${$('rigLoc').value||'—'}</td></tr>
+      <tr><th>Test date</th><td class="v">${$('testDate').value||'—'}</td></tr>
+      <tr><th>SWL</th><td class="v">${inp.swl_kg} kg</td></tr>
+      <tr><th>Test load applied</th><td class="v">${fmt(r.testLoad_kg,1)} kg (${inp.testFactor}× SWL)</td></tr>
+      <tr><th>Predicted deflection</th><td class="v">${fmt(predicted,1)} mm</td></tr>
+      <tr><th>Measured deflection</th><td class="v">${Number.isFinite(meas)?fmt(meas,1)+' mm':'—'}</td></tr>
+      <tr><th>Measured permanent set</th><td class="v">${Number.isFinite(set)?fmt(set,1)+' mm':'—'}</td></tr>
+      <tr><th>Visual inspection</th><td class="v">${visualOk?'No defects observed':'Not confirmed'}</td></tr>
+      <tr><th>Result</th><td class="v">${tagText}</td></tr>
+      <tr><th>Tested by</th><td class="v">${$('testedBy').value||'—'}</td></tr>
+      <tr><th>Witnessed by</th><td class="v">${$('witnessedBy').value||'—'}</td></tr>
+    `;
+  }
+
+  recalc();
+})();
+</script>
+</body>
+</html>
