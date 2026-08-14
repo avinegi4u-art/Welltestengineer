@@ -561,7 +561,7 @@
 
     <div class="card" id="memberResultsCard" style="display:none;">
       <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · PDF sections</span></h2>
-      <p class="hint" style="margin-top:-6px;">Top 20 members by utilization. Bm119 chord segments use tributary bending from 3D base reactions; rope/truss axial from solved 3D model.</p>
+      <p class="hint" style="margin-top:-6px;">Top 20 members by utilization. Rope axial from 3D solve; Bm119 axial from 3D solve + bending from 3D base-moment tributary (1.27× frame self-weight per PDF).</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="memberTable"></table></div>
     </div>
 
@@ -813,7 +813,7 @@
       <li><strong>Bracing:</strong> vertical box_75, diagonal L75x75x8, cross L_200x100x10</li>
       <li><strong>Rope trusses:</strong> Rope_pipe effective areas (PDF Appendix B) for kingpost guys, lateral guy, wind stay</li>
       <li><strong>Supports:</strong> turntable base fixity, Sp4 kingpost (~6.19&nbsp;m on 60&nbsp;ft), Sp8 lateral guy, Sp3 wind stay — positions scale with boom length from the 90&nbsp;ft PDF geometry</li>
-      <li><strong>Member table:</strong> Bm119 + rope unity; truss axial from 3D stiffness solution; chord bending from tributary of solved base reactions</li>
+      <li><strong>Member table:</strong> rope axial from 3D solve; Bm119 axial from 3D solve; chord bending from solved base-moment tributary; frame dead load × 1.27 (PDF)</li>
     </ul>
     <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
 

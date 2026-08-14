@@ -8,6 +8,7 @@ const PDF_N_BAYS = 18;
 const PDF_DY_M = PDF_L_DESIGN_M / PDF_N_BAYS;
 const PDF_L_REF_M = PDF_L_DESIGN_M; // alias for embed scripts
 const PDF_E = 200000, PDF_G = PDF_E / 2.6, PDF_E_ROPE = 150000;
+const PDF_SW_FACTOR = 1.27; // SESAM structural dead-load multiplier on frame self-weight
 
 function pdfGeomScale(Lm){ return Lm / PDF_L_PDF90_M; }
 
@@ -142,7 +143,7 @@ function solve3d(model, loads, supports){
     else kG=transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
     const map=[6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
     for(let r=0;r<12;r++) for(let c=0;c<12;c++) K[map[r]*ndof+map[c]]+=kG[r*12+c];
-    meta.push({el,Lmm,R,map});
+    meta.push({el,Lmm,R,map,kG});
   }
   for(const ld of loads){ F[6*ld.node+0]+=ld.fx||0; F[6*ld.node+1]+=ld.fy||0; F[6*ld.node+2]+=ld.fz||0; }
   const fixed=new Set();
@@ -185,11 +186,9 @@ function buildSupports3d(model, combo, inp){
 
 function computeSpaceFrameLoads(inp, combo, model){
   const g=9.81, rhoSteel=7.85e-6;
+  const swFactor=inp.structuralSwFactor!=null?inp.structuralSwFactor:PDF_SW_FACTOR;
   const OD=inp.OD_mm, t=Math.min(inp.t_mm, inp.OD_mm/2-0.01);
-  const A=Math.PI/4*(OD*OD-(OD-2*t)*(OD-2*t));
-  const wSelf=A*rhoSteel*g;
   const wAdded=(inp.addedW_kgpm*g)/1000;
-  const wGravity=wSelf+wAdded;
   const useCombo=!!combo;
   const lf=useCombo?(combo.condition==='lifting'?inp.liftingLoadFactor:combo.loadFactor):1;
   let wMult=lf;
@@ -200,50 +199,92 @@ function computeSpaceFrameLoads(inp, combo, model){
   if(useCombo && combo.condition==='survival') windSpeed*=1.15;
   if(useCombo && combo.condition==='lifting') windSpeed=0;
   const theta=inp.angle_deg*Math.PI/180, cosT=Math.cos(theta), sinT=Math.sin(theta);
-  const wZ=wGravity*cosT*wMult*daf*sfZ;
-  const Ptip=inp.tipLoad_kg*g*cosT*wMult*daf*sfZ;
-  const Pextra=inp.extraLoad_kg*g*cosT*wMult*daf*sfZ;
+  const deadMult=cosT*wMult*daf*sfZ;
+  const liveMult=deadMult;
   const q=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
   const wWind=q*inp.Cd*(OD/1000)/1000;
-  const loads=[];
-  const wBay=-wZ*model.dy*1000;
-  const fxDyn=useCombo?(wZ*inp.L_m*1000*sfX/Math.max(sfZ,1e-9))/inp.L_m:0;
+  const nodal=new Map();
+  const addLoad=(node,fx,fy,fz)=>{
+    let ld=nodal.get(node);
+    if(!ld){ ld={fx:0,fy:0,fz:0}; nodal.set(node,ld); }
+    ld.fx+=fx; ld.fy+=fy; ld.fz+=fz;
+  };
+  let frameWeightN=0;
+  for(const el of model.elements){
+    if(el.tr||el.sec.truss) continue;
+    const a=model.nodes[el.i], b=model.nodes[el.j];
+    const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+    const W=rhoSteel*el.sec.A*Lmm*g*swFactor*deadMult;
+    frameWeightN+=W;
+    addLoad(el.i,0,0,-W/2);
+    addLoad(el.j,0,0,-W/2);
+  }
+  const wAddedLine=wAdded*swFactor*deadMult;
   for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*model.dy*1000/4});
+    addLoad(model.nk(si,c),0,0,-wAddedLine*model.dy/4);
   }
-  loads.push({node:model.nk(PDF_N_BAYS,2), fz:-Ptip});
+  const Ptip=inp.tipLoad_kg*g*liveMult;
+  const Pextra=inp.extraLoad_kg*g*liveMult;
+  const refVertical=frameWeightN+wAddedLine*inp.L_m;
+  const fxDyn=useCombo?refVertical*sfX/Math.max(sfZ,1e-9)/inp.L_m:0;
+  for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
+    addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
+  }
+  addLoad(model.nk(PDF_N_BAYS,2),0,0,-Ptip);
   if(inp.extraLoad_kg>0){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/model.dy)));
-    loads.push({node:model.nk(si,2), fz:-Pextra});
+    const si=Math.min(PDF_N_BAYS,Math.max(0,Math.round(inp.extraPos_m/model.dy)));
+    addLoad(model.nk(si,2),0,0,-Pextra);
   }
-  if(useCombo && windMultY>0) loads.push({node:model.nk(PDF_N_BAYS,2), fy:wWind*inp.L_m*1000*windMultY*sinT, fz:-wWind*inp.L_m*1000*windMultY*cosT});
-  const Fz_total=wZ*inp.L_m*1000 + Ptip + Pextra;
-  return {loads, wZ, wWind, windMultX, Ptip, Pextra, sfZ, sfX, sfY, wMult, daf, Fz_total};
+  if(useCombo && windMultY>0){
+    const wy=wWind*inp.L_m*windMultY;
+    addLoad(model.nk(PDF_N_BAYS,2),0,wy*sinT,-wy*cosT);
+  }
+  const loads=[];
+  for(const [node,ld] of nodal) loads.push({node,...ld});
+  const wZ=refVertical/inp.L_m/1000;
+  const Fz_total=refVertical+Ptip+Pextra;
+  return {loads,wZ,wWind,windMultX,Ptip,Pextra,sfZ,sfX,sfY,wMult,daf,Fz_total,frameWeightN,swFactor};
 }
 
 function memberEndForces(meta, u){
   const members=[];
   for(const m of meta){
-    const ul=new Float64Array(12);
-    for(let k=0;k<12;k++) ul[k]=u[m.map[k]];
+    const ug=new Float64Array(12);
+    for(let k=0;k<12;k++) ug[k]=u[m.map[k]];
     const sec=m.el.sec, R=m.R;
     if(m.el.tr||sec.truss){
-      const du=(ul[6]-ul[0])*R[0]+(ul[7]-ul[1])*R[1]+(ul[8]-ul[2])*R[2];
+      const du=(ug[6]-ug[0])*R[0]+(ug[7]-ug[1])*R[1]+(ug[8]-ug[2])*R[2];
       const N=sec.E*sec.A/m.Lmm*du;
-      members.push({id:m.el.id, sn:m.el.sn, N, My:0, Mz:0, V:0, truss:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,My:0,Mz:0,V:0,truss:true});
     } else {
-      const ug=new Float64Array(12);
+      const fg=new Float64Array(12);
+      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=m.kG[i*12+k]*ug[k]; fg[i]=s; }
+      const lx=R[0], mx=R[1], nx=R[2];
+      const Ni=fg[0]*lx+fg[1]*mx+fg[2]*nx;
+      const Nj=fg[6]*lx+fg[7]*mx+fg[8]*nx;
+      const N=Math.max(Math.abs(Ni),Math.abs(Nj));
+      const ul=new Float64Array(12);
       for(let block=0;block<4;block++){
         for(let i=0;i<3;i++){
           let s=0;
-          for(let j=0;j<3;j++) s+=R[i*3+j]*ul[block*3+j];
-          ug[block*3+i]=s;
+          for(let j=0;j<3;j++) s+=R[i*3+j]*ug[block*3+j];
+          ul[block*3+i]=s;
         }
       }
       const kL=beam3dLocalK(sec.E,PDF_G,sec.A,sec.Iy,sec.Iz,sec.J,m.Lmm);
       const fl=new Float64Array(12);
-      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=kL[i*12+k]*ug[k]; fl[i]=s; }
-      members.push({id:m.el.id, sn:m.el.sn, N:Math.abs(fl[0]), My:Math.max(Math.abs(fl[4]),Math.abs(fl[10]))/2, Mz:Math.max(Math.abs(fl[5]),Math.abs(fl[11]))/2, V:Math.hypot(fl[1],fl[2]), truss:false});
+      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=kL[i*12+k]*ul[k]; fl[i]=s; }
+      const MyA=Math.max(Math.abs(fl[4]),Math.abs(fl[10]));
+      const MzA=Math.max(Math.abs(fl[5]),Math.abs(fl[11]));
+      let My,Mz;
+      if(Math.abs(R[1])>0.85){
+        const Mb=MzA>0?Math.min(MyA,MzA):MyA;
+        My=Mb; Mz=0;
+      } else {
+        My=MyA; Mz=MzA;
+      }
+      const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
+      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,truss:false,solved:true});
     }
   }
   return members;
@@ -251,31 +292,34 @@ function memberEndForces(meta, u){
 
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
-  let worst={util:0,id:'Bm119',sn:'box_90x90x8',sigma:0,allow};
+  let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
   const rows=members.map(m=>{
     const sec=PDF_SECTIONS[m.sn]||{};
     if(m.truss){
       const tAllow=(sec.allow||120)*1000;
-      const util=Math.max(0,m.N)/tAllow;
-      return {...m, util, pass:util<=1};
+      const util=Math.max(0,Math.abs(m.N))/tAllow;
+      return {...m,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
     }
-    let si=0;
-    const m119=m.id.match(/^Bm119_(\d+)/);
-    if(m119) si=parseInt(m119[1],10);
-    else if(m.id.match(/^Bm(\d+)/)) si=parseInt(m.id.match(/^Bm(\d+)/)[1],10)%100;
-    const frac=(si+0.5)/PDF_N_BAYS;
-    const Mmem=Mbase*frac*frac;
-    const Nmem=Math.abs(Nax)/(4*Math.max(PDF_N_BAYS,1));
     const A=sec.A||2624;
-    const Zy=sec.Zy||66000;
+    const Zy=sec.Zy||66000, Zz=sec.Zz||Zy;
+    let Nmem=Math.abs(m.N);
+    let Mmem=0;
+    if(m.id.startsWith('Bm119')){
+      const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
+      const frac=(si+0.5)/PDF_N_BAYS;
+      Mmem=Mbase*frac*frac;
+    } else if(m.solved){
+      Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)),Mbase*0.5);
+    }
     const sa=Nmem/A;
-    const sb=Mmem/(Zy||1);
+    const sb=Mmem/Zy+(m.id.startsWith('Bm119')?0:Math.abs(m.Mz)/Zz);
     const sigma=sa+sb;
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
-    return {...m, N:Nmem, My:Mmem, Mz:0, util, pass:util<=1, tributary:true};
+    return {...m,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
+      axialFrom:'3D solved',bendingFrom:m.id.startsWith('Bm119')?'3D base tributary':'solved cap'};
   });
-  return {rows, worst};
+  return {rows,worst};
 }
 
 function computeSpaceFrameCore(inp, combo){
@@ -315,17 +359,17 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, PDF_SECTIONS, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, PDF_SECTIONS, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {
     L_m: PDF_L_DESIGN_M, OD_mm: 219.1, t_mm: 8.18, Fy_MPa: 241, SF: 1.67,
-    angle_deg: 15, addedW_kgpm: 0, tipLoad_kg: 0, extraLoad_kg: 0, extraPos_m: 0,
-    windSpeed_ms: 25, rhoAir: 1.225, windExposure: 1, Cd: 1.2, DAF: 1,
-    accidentalDryFactor: 1, liftingLoadFactor: 1.15,
+    angle_deg: 0, addedW_kgpm: 15, tipLoad_kg: 80, extraLoad_kg: 30, extraPos_m: 9.144,
+    windSpeed_ms: 40, rhoAir: 1.225, windExposure: 1, Cd: 1.2, DAF: 1.15,
+    accidentalDryFactor: 1, liftingLoadFactor: 2,
     boomRestEnabled: true, guysEnabled: true, windStayEnabled: true,
-    boomRestPos_m: 8.19, kingpostRated_kN: 500, windStayRated_kN: 180,
-    guyAllow_kN: 250, nGuysEffective: 2, ratedMoment_kNm: 500, ratedLoad_kN: 200,
+    boomRestPos_m: 5.46, kingpostRated_kN: 80, windStayRated_kN: 25,
+    guyAllow_kN: 50, nGuysEffective: 1, ratedMoment_kNm: 60, ratedLoad_kN: 30,
   };
   const combo = {
     label: 'Operating · Heave+Resultant', condition: 'operating', loadFactor: 1,
