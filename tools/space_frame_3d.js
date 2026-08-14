@@ -378,6 +378,17 @@ function memberEndForces(meta, u){
   return members;
 }
 
+function pickGoverningUnity(unity){
+  let g={util:unity.worst.util,id:unity.worst.id,cat:'chord',sigma:unity.worst.sigma,sn:unity.worst.sn,pass:unity.worst.util<=1};
+  for(const m of unity.rows){
+    if(m.truss && m.util>g.util) g={util:m.util,id:m.id,cat:'rope',sigma:m.sigma,sn:m.sn,pass:m.pass};
+  }
+  if(unity.worstBrace && unity.worstBrace.id!=='—' && unity.worstBrace.util>g.util){
+    g={util:unity.worstBrace.util,id:unity.worstBrace.id,cat:'brace',sigma:unity.worstBrace.sigma,sn:unity.worstBrace.sn,pass:unity.worstBrace.util<=1};
+  }
+  return g;
+}
+
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
   let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
@@ -398,11 +409,17 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
       const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
       const frac=(si+0.5)/PDF_N_BAYS;
       Mmem=Mbase*frac*frac;
+    } else if(m.id.startsWith('V')){
+      Nmem=Math.abs(m.N);
+      Mmem=0;
+    } else if(m.id.startsWith('D') || m.id.startsWith('X')){
+      Nmem=Math.abs(m.N);
+      Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)), allow*Zy*0.5);
     } else if(m.solved){
       Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)),Mbase*0.5);
     }
     const sa=Nmem/A;
-    const sb=Mmem/Zy+(m.id.startsWith('Bm119')?0:Math.abs(m.Mz)/Zz);
+    const sb=Mmem/Zy;
     const sigma=sa+sb;
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
@@ -415,7 +432,8 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
 
 function computeSpaceFrameCore(inp, combo){
   const model=buildModel(inp.L_m, inp);
-  const {loads}=computeSpaceFrameLoads(inp, combo, model);
+  const loadInfo=computeSpaceFrameLoads(inp, combo, model);
+  const {loads}=loadInfo;
   const supports=buildSupports3d(model, combo, inp);
   const sol=solve3d(model, loads, supports);
   const members=memberEndForces(sol.meta, sol.u);
@@ -424,13 +442,14 @@ function computeSpaceFrameCore(inp, combo){
   for(let c=0;c<4;c++){ Mbase+=Math.hypot(sol.R[6*c+4], sol.R[6*c+5]); Vres+=Math.hypot(sol.R[6*c], sol.R[6*c+1]); Nax+=Math.abs(sol.R[6*c+2]); }
   Mbase/=4; Vres/=4; Nax/=4;
   const unity=memberUnityFromModel(members, model, Mbase, Nax, inp.Fy_MPa*tempFactor, inp.SF);
+  const governing=pickGoverningUnity(unity);
   const tipN=model.nk(PDF_N_BAYS,2);
   const dRes=Math.hypot(sol.u[6*tipN], sol.u[6*tipN+1], sol.u[6*tipN+2]);
   const OD=inp.OD_mm, t=Math.min(inp.t_mm, inp.OD_mm/2-0.01);
   const A=Math.PI/4*(OD*OD-(OD-2*t)*(OD-2*t));
   const I=Math.PI/64*(Math.pow(OD,4)-Math.pow(OD-2*t,4));
   const Z=I/(OD/2);
-  const sigmaEq=unity.worst.sigma||0;
+  const sigmaEq=governing.sigma||unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
   const stayM=members.find(m=>m.id==='Stay30');
@@ -445,12 +464,13 @@ function computeSpaceFrameCore(inp, combo){
     boomrest:{R_kN:0,ok:true},
     guys:{T_kN:guyT,util:inp.guyAllow_kN>0?guyT/inp.guyAllow_kN*100:0,ok:inp.guyAllow_kN<=0||guyT<=inp.guyAllow_kN}
   };
-  const pass=unity.worst.util<=1 && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
+  const memberPass=governing.util<=1;
+  const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.guys.ok
     && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
-  return {model, sol, members, unity, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN};
+  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {

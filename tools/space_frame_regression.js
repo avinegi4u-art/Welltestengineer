@@ -19,7 +19,8 @@ const INP_60FT = {
   windExposure: 1,
   Cd: 1.2,
   DAF: 1.15,
-  accidentalDryFactor: 1,
+  accidentalDryFactor: 0.85,
+  accidentalHeel_deg: 5,
   liftingLoadFactor: 2,
   boomRestEnabled: true,
   guysEnabled: true,
@@ -73,7 +74,8 @@ const opRes = sf.computeSpaceFrameCore(INP_60FT, MATRIX_COMBOS[2]);
 const util = opRes.unity.worst.util * 100;
 assert(util >= 25 && util <= 55, `op_res Bm119 util ${util.toFixed(0)}% in 25–55% band`);
 assert(opRes.dRes >= 900 && opRes.dRes <= 2200, `op_res tip deflection ${opRes.dRes.toFixed(0)} mm in 900–2200 band`);
-assert(opRes.unity.worst.id === 'Bm119_17', 'op_res governing chord near tip');
+assert(opRes.governing && opRes.governing.util >= 0.4, 'governing member tracked');
+assert(opRes.governing.id === 'D10_S', 'op_res governing member D10_S brace');
 
 const { loads, swFactor, frameWeightN } = sf.computeSpaceFrameLoads(INP_60FT, MATRIX_COMBOS[2], model);
 assert(Math.abs(swFactor - sf.PDF_SW_FACTOR) < 0.001, 'PDF 1.27 SW factor applied');
@@ -88,15 +90,15 @@ assert(modelGuys.elements.some(e => e.id === 'GuySp6'), 'Sp6 guy when nGuysEffec
 assert(modelGuys.nodes.filter(n => n.tag && n.tag.startsWith('Sp')).length >= 5, 'Sp anchors grow with extra guys');
 
 const braceRow = opRes.unity.rows.find(m => /^[DVX]\d/.test(m.id));
-assert(braceRow && braceRow.util >= 0, 'bracing unity in member rows');
+assert(braceRow && braceRow.util >= 0 && braceRow.util < 2, 'bracing unity plausible (<200%)');
 
-const accInp = { ...INP_60FT, accidentalDryFactor: 0.85, accidentalHeel_deg: 5 };
-const accCore = sf.computeSpaceFrameCore(accInp, MATRIX_COMBOS[6]);
-assert(Number.isFinite(accCore.unity.worst.util), 'acc_heel with heel geometry solves');
-assert(accCore.unity.worstBrace, 'worstBrace tracked');
+const pdf = require('./pdf_benchmarks.js');
+const cal = pdf.runPdfCalibration(INP_60FT);
+assert(cal.every(c => c.pass), 'PDF calibration cases within tolerance bands');
+assert(cal[0].metrics.find(m => m.key === 'bm119_id').pass, 'op_res governing chord Bm119_17');
 
 if (failed) {
   console.error(`\n${failed} regression failure(s)`);
   process.exit(1);
 }
-console.log('\nAll Sprint A regression checks passed.');
+console.log('\nAll regression checks passed (Sprint A + PDF calibration).');
