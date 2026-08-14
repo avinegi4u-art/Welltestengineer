@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.0 · 60 ft 3D space frame · Bm119 + ropes · matrix envelope</p>
+          <p class="meta">v5.1 · 60 ft 3D space frame · exports · mode compare</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -296,6 +296,8 @@
     <button type="button" class="action secondary" id="openManual">Manual</button>
     <span class="sep"></span>
     <button type="button" class="action secondary" id="exportJson">Export JSON</button>
+    <button type="button" class="action secondary" id="exportMembersCsv">Members CSV</button>
+    <button type="button" class="action secondary" id="exportReportJson">Analysis report</button>
     <button type="button" class="action secondary" id="importJson">Import JSON</button>
     <button type="button" class="action ghost" id="resetDefaults">Reset</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -559,6 +561,15 @@
       <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design (18.288&nbsp;m) · 18 bays @ 1.016&nbsp;m · braced box frame (+X ⊥ boom, +Y along boom, +Z up) · Bm119 chords · Rope_pipe effective areas · topology scaled from CT-12-4536 (90&nbsp;ft PDF).</p>
     </div>
 
+    <div class="card" id="modeCompareCard">
+      <h2>Analysis mode comparison <span class="badge-sm">same inputs</span></h2>
+      <p class="hint" style="margin-top:-6px;">Compare governing stress utilization across 1D screening, 2D frame, and 3D space frame solvers.</p>
+      <div class="btnrow no-print" style="margin-bottom:10px;">
+        <button type="button" class="action secondary" id="runModeCompare">Compare modes</button>
+      </div>
+      <div style="overflow-x:auto;"><table class="matrix-table" id="modeCompareTable"><tbody><tr><td class="hint">Click <strong>Compare modes</strong> to run all solvers.</td></tr></tbody></table></div>
+    </div>
+
     <div class="card" id="memberResultsCard" style="display:none;">
       <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · PDF sections</span></h2>
       <p class="hint" style="margin-top:-6px;">Top 20 members by utilization. Rope axial from 3D solve; Bm119 axial from 3D solve + bending from 3D base-moment tributary (1.27× frame self-weight per PDF).</p>
@@ -578,8 +589,12 @@
     <div class="card">
       <div class="two-col">
         <div class="chartbox">
-          <h3>Boom schematic (not to scale)</h3>
+          <h3>Boom schematic (pipe elevation)</h3>
           <svg class="schematic" id="schematic" viewBox="0 0 480 220" role="img" aria-label="Boom load schematic"></svg>
+          <div id="bracedSchematicBox" style="display:none;margin-top:14px;">
+            <h3 style="font-size:0.95rem;margin-bottom:8px;">Braced frame elevation (3D model)</h3>
+            <svg class="schematic" id="bracedSchematic" viewBox="0 0 480 200" role="img" aria-label="Braced space frame schematic"></svg>
+          </div>
         </div>
         <div class="chartbox">
           <h3>Key reactions &amp; limits</h3>
@@ -675,6 +690,7 @@
         <div class="field"><label>Witnessed by</label><input type="text" id="witnessedBy"></div>
       </div>
       <table class="report" id="certTable" style="margin-top:14px;"></table>
+      <table class="report" id="certAnalysisTable" style="margin-top:14px;display:none;"></table>
       <div class="cert-grid no-print" style="display:none;"></div>
       <div class="cert-grid" style="margin-top:20px;">
         <div class="sig-line">Tested by — signature &amp; date</div>
@@ -772,6 +788,8 @@
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
         <tr><td><strong>90 ft reference</strong></td><td>Loads a 27.432&nbsp;m (90&nbsp;ft) reference case with mid-span secondary load — for comparison with the project PDF.</td></tr>
         <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
+        <tr><td><strong>Members CSV</strong></td><td>Exports governing-combination member unity table (Bm119 + ropes) for spreadsheets.</td></tr>
+        <tr><td><strong>Analysis report</strong></td><td>JSON bundle: inputs, matrix summary, top members, optional mode comparison.</td></tr>
         <tr><td><strong>Import JSON</strong></td><td>Restores a previously exported job file.</td></tr>
         <tr><td><strong>Reset</strong></td><td>Restores factory defaults (60&nbsp;ft boom, 8″ Sch 40, operating case).</td></tr>
         <tr><td><strong>Theme</strong> (header)</td><td>Toggles dark / light appearance.</td></tr>
@@ -930,6 +948,8 @@
       <tbody>
         <tr><td>Automatic (localStorage)</td><td>Same browser — resumes on reopen.</td></tr>
         <tr><td>Export JSON</td><td>Backup, email to colleague, archive with project number.</td></tr>
+        <tr><td>Members CSV</td><td>Governing 3D member unity table for Excel / QA sign-off.</td></tr>
+        <tr><td>Analysis report</td><td>Structured JSON with matrix envelope and top members for digital records.</td></tr>
         <tr><td>Import JSON</td><td>Restore backup or open someone else's job file.</td></tr>
         <tr><td>Reset</td><td>Return to 60&nbsp;ft default case; clears certificate text fields.</td></tr>
       </tbody>
@@ -940,8 +960,9 @@
 
     <h2 id="manual-print">13. Printing &amp; certificates</h2>
     <ul>
-      <li><strong>Load test certificate</strong> — use the button on Tab 5; hides toolbar and tabs in print view.</li>
-      <li><strong>Full record</strong> — browser Print on Results tab after scrolling; print CSS expands all tabs for a multi-section report (toolbar hidden).</li>
+      <li><strong>Load test certificate</strong> — Tab 5 includes proof-load fields <em>and</em> a structural screening appendix (matrix + top members when using frame/3D modes).</li>
+      <li><strong>Full record</strong> — browser Print on Results tab; print CSS hides toolbar/tabs.</li>
+      <li><strong>Members CSV / Analysis report</strong> — toolbar exports for spreadsheets and QA records.</li>
       <li>Use <em>Save as PDF</em> in the print dialog for electronic records.</li>
     </ul>
 
@@ -955,12 +976,13 @@
       <li>Euler column buckling (K = 2 cantilever)</li>
       <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> 3D space-frame FEA, member-by-member unity checks, local stress concentrations, fatigue, corrosion allowance, tapered sections, temperature derating, full guyline truss geometry, dynamic wind gust time history, or lift-plan rigging angles. Matrix mode is still a 1D cantilever with combination envelopes — add a frame solver for full SESAM equivalence.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — chord bending uses tributary distribution from solved base reactions; axial and rope forces use the stiffness solution.</p>
+    <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
     <h2 id="manual-faq">15. FAQ &amp; troubleshooting</h2>
-    <h4>Simple vs matrix mode?</h4>
-    <p>Use <strong>Simple cantilever</strong> for quick single-case checks with Operating/Erection/Storm presets. Use <strong>Matrix envelope</strong> (default) when comparing against SESAM-style reports or checking kingpost, boom rest, wind stay, and guyline capacities across operating/survival/accidental/lifting cases.</p>
+    <h4>Simple vs matrix vs 3D?</h4>
+    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with member table. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
     <h4>Why does status show MARGINAL but stress passes?</h4>
     <p>Long pipe cantilevers often exceed L/200 deflection under self-weight while stress remains acceptable. The tool separates serviceability (MARGINAL) from strength (FAIL).</p>
     <h4>Values look wrong after switching units</h4>
@@ -973,7 +995,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.0 · Matches <code>Burner_boom_load_calculator.html</code> v5.0 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.1 · Matches <code>Burner_boom_load_calculator.html</code> v5.1 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -992,7 +1014,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.0.0';
+  const APP_VERSION = '5.1.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1053,6 +1075,9 @@
 
   let unitSystem = 'metric';
   let suppressSave = false;
+  let lastEnvelope = null;
+  let lastModeComparison = null;
+  let lastInp = null;
 
   function isUs(){ return unitSystem === 'us'; }
 
@@ -1225,6 +1250,80 @@
     a.download = 'burner-boom-calc-' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
+  });
+
+  function downloadBlob(filename, mime, text){
+    const blob = new Blob([text], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function csvEscape(v){
+    const s = String(v == null ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function exportMembersCsv(){
+    if(!lastEnvelope?.governing?.r?.memberRows?.length){
+      alert('Run 3D space frame analysis first — no member unity data.');
+      return;
+    }
+    const gov = lastEnvelope.governing;
+    const rows = gov.r.memberRows
+      .filter(m => m.id.startsWith('Bm119') || m.truss)
+      .sort((a,b) => b.util - a.util);
+    const header = ['Member','Section','Util_pct','N_kN','My_kNm','Status','GoverningCase'];
+    const lines = [header.join(',')];
+    for(const m of rows){
+      lines.push([
+        csvEscape(m.id), csvEscape(m.sn || ''), csvEscape(fmt(m.util * 100, 1)),
+        csvEscape(fmt((m.N || 0) / 1000, 2)), csvEscape(fmt((m.My || 0) / 1e6, 2)),
+        csvEscape(m.pass ? 'OK' : 'FAIL'), csvEscape(gov.combo.label)
+      ].join(','));
+    }
+    downloadBlob('burner-boom-members-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv', lines.join('\n'));
+  }
+
+  function exportAnalysisReportJson(){
+    if(!lastInp){ alert('Run analysis first.'); return; }
+    const report = {
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      inputs: lastInp,
+      analysisMode: lastInp.analysisMode,
+      governing: lastEnvelope ? {
+        combo: lastEnvelope.governing.combo.label,
+        utilStress: lastEnvelope.governing.r.utilStress,
+        worstMember: lastEnvelope.governing.r.worstMember,
+        pass: lastEnvelope.governing.r.pass,
+        supports: lastEnvelope.governing.r.supports,
+        dRes_mm: lastEnvelope.governing.r.dRes
+      } : null,
+      matrix: lastEnvelope ? lastEnvelope.rows.map(({ combo, r }) => ({
+        id: combo.id, label: combo.label, utilPct: r.utilStress * 100,
+        actualSF: r.actualSF, Mbase_kNm: r.Mres / 1e6, pass: r.pass,
+        guyT_kN: r.supports?.guys?.T_kN || 0
+      })) : null,
+      topMembers: lastEnvelope?.governing?.r?.memberRows
+        ? lastEnvelope.governing.r.memberRows.filter(m => m.id.startsWith('Bm119') || m.truss)
+          .sort((a, b) => b.util - a.util).slice(0, 20)
+          .map(m => ({ id: m.id, section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass }))
+        : null,
+      modeComparison: lastModeComparison
+    };
+    downloadBlob('burner-boom-analysis-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', JSON.stringify(report, null, 2));
+  }
+
+  $('exportMembersCsv').addEventListener('click', exportMembersCsv);
+  $('exportReportJson').addEventListener('click', exportAnalysisReportJson);
+
+  $('runModeCompare').addEventListener('click', ()=>{
+    const inp = getInputs();
+    lastModeComparison = computeModeComparison(inp);
+    renderModeComparison(lastModeComparison, inp.analysisMode);
   });
 
   $('importJson').addEventListener('click', ()=> $('importFile').click());
@@ -2242,18 +2341,104 @@ function computeSpaceFrameCore(inp, combo){
     for(const {combo, r} of envelope.rows){
       const gov = combo.id === envelope.governing.combo.id;
       const cls = (gov?'gov ':'') + (r.pass?'':'fail');
-      html += `<tr class="${cls}"><td>${combo.label}${gov?' ★':''}</td><td class="n">${fmt(r.utilStress*100,0)}%</td><td class="n">${fmt(r.actualSF,2)}</td><td class="n">${fmt(r.Mres/1e6,1)}</td><td class="n">${r.supports.guys.T_kN>0?fmt(r.supports.guys.T_kN,1):'—'}</td><td>${r.pass?'OK':'FAIL'}</td></tr>`;
+      html += `<tr class="${cls}"><td>${combo.label}${gov?' ★':''}</td><td class="n">${fmt(r.utilStress*100,0)}%</td><td class="n">${fmt(r.actualSF,2)}</td><td class="n">${fmt(r.Mres/1e6,1)}</td><td class="n">${r.supports?.guys?.T_kN>0?fmt(r.supports.guys.T_kN,1):'—'}</td><td>${r.pass?'OK':'FAIL'}</td></tr>`;
     }
     html += '</tbody>';
     el.innerHTML = html;
   }
 
-    function renderQC(issues){
-    const box = $('qcList');
-    box.innerHTML = issues.map(q=>{
-      const icon = q.level==='ok'?'✓':q.level==='warn'?'!':'✕';
-      return `<div class="qc-item ${q.level}" role="listitem"><span class="qc-ic">${icon}</span><span>${q.text}</span></div>`;
-    }).join('');
+  function computeModeComparison(inp){
+    const simpleR = compute({ ...inp, analysisMode: 'simple' }, null);
+    const matrixEnv = computeEnvelope({ ...inp, analysisMode: 'matrix' });
+    const frameEnv = computeEnvelope({ ...inp, analysisMode: 'frame' });
+    const spaceEnv = computeEnvelope({ ...inp, analysisMode: 'space3d' });
+    return [
+      { mode: 'Simple cantilever', key: 'simple', util: simpleR.utilStress, combo: $('loadCase').selectedOptions[0].textContent, pass: simpleR.pass, d_mm: simpleR.dRes },
+      { mode: 'Matrix 1D screening', key: 'matrix', util: matrixEnv.governing.r.utilStress, combo: matrixEnv.governing.combo.label, pass: matrixEnv.governing.r.pass, d_mm: matrixEnv.governing.r.dRes },
+      { mode: '2D plane frame', key: 'frame', util: frameEnv.governing.r.utilStress, combo: frameEnv.governing.combo.label, pass: frameEnv.governing.r.pass, d_mm: frameEnv.governing.r.dRes },
+      { mode: '3D space frame', key: 'space3d', util: spaceEnv.governing.r.utilStress, combo: spaceEnv.governing.combo.label, pass: spaceEnv.governing.r.pass, d_mm: spaceEnv.governing.r.dRes, worstMember: spaceEnv.governing.r.worstMember?.id }
+    ];
+  }
+
+  function renderModeComparison(rows, activeMode){
+    const el = $('modeCompareTable');
+    if(!el) return;
+    let html = '<thead><tr><th>Solver</th><th>Governing case</th><th>σ util.</th><th>δ tip</th><th>Status</th></tr></thead><tbody>';
+    for(const row of rows){
+      const active = row.key === activeMode ? ' gov' : '';
+      html += `<tr class="${active}${row.pass ? '' : ' fail'}"><td>${row.mode}${row.key === activeMode ? ' ★' : ''}</td><td>${row.combo}${row.worstMember ? ' · ' + row.worstMember : ''}</td><td class="n">${fmt(row.util * 100, 0)}%</td><td class="n">${fmt(row.d_mm, 0)} mm</td><td>${row.pass ? 'OK' : 'FAIL'}</td></tr>`;
+    }
+    html += '</tbody>';
+    el.innerHTML = html;
+  }
+
+  function drawBracedSchematic(inp){
+    const box = $('bracedSchematicBox');
+    const el = $('bracedSchematic');
+    if(!box || !el) return;
+    if(inp.analysisMode !== 'space3d'){
+      box.style.display = 'none';
+      return;
+    }
+    box.style.display = '';
+    const W = 480, H = 200, bx = 36, by = 150, len = 400;
+    const col = 'var(--series-1)', col2 = 'var(--series-2)', muted = 'var(--text-muted)', warn = 'var(--warn)';
+    const kp = inp.L_m > 0 ? inp.kingpostPos_m / inp.L_m : 0.34;
+    const br = inp.L_m > 0 ? inp.boomRestPos_m / inp.L_m : 0.3;
+    const nBays = 18;
+    let s = `<rect width="${W}" height="${H}" fill="transparent"/>`;
+    s += `<rect x="${bx - 6}" y="${by + 8}" width="12" height="10" fill="${col}" opacity="0.35"/>`;
+    s += `<text x="${bx - 4}" y="${by + 28}" fill="${muted}" font-size="10">TT</text>`;
+    s += `<line x1="${bx}" y1="${by}" x2="${bx + len}" y2="${by}" stroke="${col}" stroke-width="4"/>`;
+    s += `<line x1="${bx}" y1="${by}" x2="${bx + len}" y2="${by - 28}" stroke="${col}" stroke-width="2" opacity="0.55"/>`;
+    for(let i = 1; i < nBays; i++){
+      const x = bx + len * i / nBays;
+      s += `<line x1="${x}" y1="${by}" x2="${x}" y2="${by - 28}" stroke="${col2}" stroke-width="1"/>`;
+      if(i % 3 === 0) s += `<line x1="${x}" y1="${by}" x2="${x + len / nBays}" y2="${by - 28}" stroke="${col2}" stroke-width="0.8" opacity="0.7"/>`;
+    }
+    const xKp = bx + len * kp;
+    s += `<line x1="${xKp}" y1="${by - 28}" x2="${xKp - 18}" y2="${by - 78}" stroke="${warn}" stroke-width="1.5"/>`;
+    s += `<circle cx="${xKp - 18}" cy="${by - 78}" r="5" fill="${warn}"/>`;
+    s += `<text x="${xKp - 34}" y="${by - 86}" fill="${warn}" font-size="10">KP / guys</text>`;
+    const xBr = bx + len * br;
+    s += `<line x1="${xBr}" y1="${by}" x2="${xBr}" y2="${by + 16}" stroke="${col2}" stroke-width="2"/>`;
+    s += `<text x="${xBr - 8}" y="${by + 30}" fill="${muted}" font-size="10">BR</text>`;
+    s += `<text x="${bx + len + 6}" y="${by + 4}" fill="${muted}" font-size="10">Tip ${uLen_m(inp.L_m)}</text>`;
+    s += `<text x="12" y="16" fill="${muted}" font-size="10">Side elevation · Bm119 top chord · 18 bays</text>`;
+    el.innerHTML = s;
+  }
+
+  function renderCertAnalysis(envelope, inp, r){
+    const el = $('certAnalysisTable');
+    if(!el) return;
+    if(!envelope || !['matrix', 'frame', 'space3d'].includes(inp.analysisMode)){
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    el.style.display = '';
+    const gov = envelope.governing;
+    let html = '<caption style="caption-side:top;text-align:left;font-weight:600;margin-bottom:6px;">Structural screening (governing combination)</caption>';
+    html += `<tr><th>Analysis mode</th><td class="v">${$('analysisMode').selectedOptions[0].textContent}</td></tr>`;
+    html += `<tr><th>Governing combination</th><td class="v">${gov.combo.label}</td></tr>`;
+    html += `<tr><th>Worst Bm119 / member util.</th><td class="v">${fmt(gov.r.utilStress * 100, 0)}%${gov.r.worstMember ? ' · ' + gov.r.worstMember.id : ''}</td></tr>`;
+    html += `<tr><th>Tip deflection</th><td class="v">${uLen_mm(gov.r.dRes)} (limit ${uLen_mm(gov.r.defLimit)})</td></tr>`;
+    if(gov.r.supports){
+      html += `<tr><th>Kingpost / wind stay / guy</th><td class="v">${uForce_kN(gov.r.supports.kingpost.R_kN)} / ${uForce_kN(gov.r.supports.windstay.R_kN)} / ${gov.r.supports.guys.T_kN > 0 ? uForce_kN(gov.r.supports.guys.T_kN) : '—'}</td></tr>`;
+    }
+    html += '<tr><th colspan="2" style="padding-top:8px;">Matrix summary</th></tr>';
+    for(const { combo, r: row } of envelope.rows.slice(0, 8)){
+      const mark = combo.id === gov.combo.id ? ' ★' : '';
+      html += `<tr><th>${combo.label}${mark}</th><td class="v">${fmt(row.utilStress * 100, 0)}% · ${row.pass ? 'OK' : 'FAIL'}</td></tr>`;
+    }
+    if(inp.analysisMode === 'space3d' && gov.r.memberRows){
+      html += '<tr><th colspan="2" style="padding-top:8px;">Top members (3D)</th></tr>';
+      const top = gov.r.memberRows.filter(m => m.id.startsWith('Bm119') || m.truss).sort((a, b) => b.util - a.util).slice(0, 5);
+      for(const m of top){
+        html += `<tr><th>${m.id}</th><td class="v">${fmt(m.util * 100, 0)}% · N ${uForce_kN((m.N || 0) / 1000)}</td></tr>`;
+      }
+    }
+    el.innerHTML = html;
   }
 
   function drawSchematic(inp, r){
@@ -2278,6 +2463,14 @@ function computeSpaceFrameCore(inp, combo){
     s += `<text x="${tx+8}" y="${ty-8}" fill="${muted}" font-size="11">Tip · ${uLen_m(inp.L_m)} · θ=${inp.angle_deg}°</text>`;
     s += `<text x="12" y="18" fill="${muted}" font-size="11">M=${uMoment(r.Mres/1e6)} · δ=${uLen_mm(r.dRes)}</text>`;
     $('schematic').innerHTML = s;
+  }
+
+  function renderQC(issues){
+    const box = $('qcList');
+    box.innerHTML = issues.map(q=>{
+      const icon = q.level==='ok'?'✓':q.level==='warn'?'!':'✕';
+      return `<div class="qc-item ${q.level}" role="listitem"><span class="qc-ic">${icon}</span><span>${q.text}</span></div>`;
+    }).join('');
   }
 
   function statTile(container, label, value, sub, status){
@@ -2320,12 +2513,14 @@ function computeSpaceFrameCore(inp, combo){
 
   function recalc(){
     const inp = getInputs();
+    lastInp = inp;
     const issues = validateInputs(inp);
     renderQC(issues);
     let envelope = null;
     let r;
     if(inp.analysisMode === 'matrix' || inp.analysisMode === 'frame' || inp.analysisMode === 'space3d'){
       envelope = computeEnvelope(inp);
+      lastEnvelope = envelope;
       r = envelope.governing.r;
       renderMatrixTable(envelope);
       $('matrixResultsCard').style.display = '';
@@ -2335,6 +2530,7 @@ function computeSpaceFrameCore(inp, combo){
       if(inp.analysisMode === 'space3d' && envelope) renderMemberTable(envelope);
     } else {
       r = compute(inp, null);
+      lastEnvelope = null;
       if($('matrixResultsCard')) $('matrixResultsCard').style.display = 'none';
     }
 
@@ -2392,6 +2588,9 @@ function computeSpaceFrameCore(inp, combo){
     `;
 
     drawSchematic(inp, r);
+    drawBracedSchematic(inp);
+    renderCertAnalysis(envelope, inp, r);
+    if(lastModeComparison) renderModeComparison(lastModeComparison, inp.analysisMode);
 
     // results tiles
     const tiles = $('tiles'); tiles.innerHTML='';
