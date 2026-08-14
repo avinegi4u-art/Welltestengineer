@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v3</title>
+<title>Burner Boom Load Analysis v4</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v3.0 · Matrix + cantilever structural check · AISC/API-style ASD · ASCE 7 wind</p>
+          <p class="meta">v4.0 · 2D frame FEA + matrix envelope · AISC/API-style ASD · ASCE 7 wind</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -271,7 +271,8 @@
     <label for="analysisMode">Analysis</label>
     <select id="analysisMode" aria-label="Analysis mode">
       <option value="simple">Simple cantilever</option>
-      <option value="matrix" selected>Matrix envelope (SESAM-style)</option>
+      <option value="matrix">Matrix envelope (1D screening)</option>
+      <option value="frame" selected>Frame solver + matrix (2D FEA)</option>
     </select>
     <span class="sep"></span>
     <label for="loadCase">Quick case</label>
@@ -512,8 +513,8 @@
     </div>
 
     <div class="card">
-      <h2>Multi-support boundary conditions <span class="badge-sm">Matrix mode</span></h2>
-      <p class="hint" style="margin-top:-6px;">Simplified static reactions — turntable (base), kingpost, wind stay, boom rest, crane lift. Inspired by 90 ft SESAM report; not a 3D frame solver.</p>
+      <h2>Multi-support boundary conditions <span class="badge-sm">Matrix / Frame</span></h2>
+      <p class="hint" style="margin-top:-6px;">Turntable (base), kingpost, wind stay, boom rest, crane lift. In <strong>Frame solver</strong> mode these are enforced as DOF constraints + truss links; in <strong>Matrix (1D)</strong> mode as static reaction screening.</p>
       <div class="grid">
         <div class="field"><label><input type="checkbox" id="kingpostEnabled" checked style="width:auto;margin-right:6px;">Kingpost vertical support (operating / accidental)</label></div>
         <div class="field"><label>Kingpost position from base</label><input type="number" id="kingpostPos_m" value="9.28" step="0.1" min="0"><span class="hint">m — PDF ref ≈ 9.28 m from deck</span></div>
@@ -552,6 +553,7 @@
     <div class="card" id="matrixResultsCard">
       <h2>Load combination matrix <span class="badge-sm">Operating · Survival · Accidental · Lifting</span></h2>
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
+      <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
     </div>
 
@@ -691,6 +693,7 @@
         <li><a href="#manual-workflow">Recommended workflow</a></li>
         <li><a href="#manual-toolbar">Toolbar &amp; global controls</a></li>
         <li><a href="#manual-matrix">Matrix envelope mode (v3)</a></li>
+        <li><a href="#manual-frame">Frame solver (v4)</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -755,7 +758,7 @@
       <thead><tr><th>Control</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values convert when you switch.</td></tr>
-        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> — single load case from Tab 2 + quick case preset. <strong>Matrix envelope (default)</strong> — runs 8 SESAM-style combinations; header status uses the governing (highest stress utilization) row.</td></tr>
+        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> — single case. <strong>Matrix envelope (1D)</strong> — 8 combinations, closed-form reactions. <strong>Frame solver + matrix (default)</strong> — same combinations via 2D direct stiffness FEA.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
         <tr><td><strong>90 ft reference</strong></td><td>Loads a 27.432&nbsp;m (90&nbsp;ft) reference case with mid-span secondary load — for comparison with the project PDF.</td></tr>
@@ -781,7 +784,18 @@
     <p>Each combination applies <strong>3-direction scale factors</strong> (X lateral ⊥ boom, Y axial ∥ boom, Z vertical) plus directional wind multipliers. This is a <strong>screening envelope</strong>, not a 3D space-frame FEA — member-by-member checks, temperature derating, and full guyline truss geometry are not modeled.</p>
     <p>The <strong>Load combination matrix</strong> table on Tab 4 lists all rows; the ★ governing row sets the header status pill and the detailed reaction block on Tab 3.</p>
 
-    <h2 id="manual-status">6. Understanding PASS / MARGINAL / FAIL</h2>
+    <h2 id="manual-frame">6. Frame solver (v4)</h2>
+    <p><strong>Frame solver + matrix (2D FEA)</strong> is the default analysis mode. It builds a 2D plane-frame model in the boom elevation plane:</p>
+    <ul>
+      <li><strong>12 Euler-Bernoulli beam segments</strong> along the boom chord (same pipe A, I, E as Tab 1)</li>
+      <li><strong>Truss links</strong> for wind stay and windward guylines to fixed deck anchors</li>
+      <li><strong>Support constraints</strong> — pinned turntable base; vertical restraints at kingpost / boom-rest nodes per combination</li>
+      <li><strong>Direct stiffness solution</strong> — Gaussian elimination on free DOFs; reactions and guy tensions from solved displacements</li>
+    </ul>
+    <p>The same 8 load combinations and 3-direction scale factors apply. Results feed the matrix table and PASS/FAIL checks. This is substantially closer to SESAM-style boundary conditions than 1D screening, but is still a <strong>lumped 2D model</strong> — not the full 3D braced space frame with box sections, fishplates, and member unity checks from the PDF.</p>
+    <p>Use <strong>Matrix envelope (1D screening)</strong> for fast hand-checks; use <strong>Frame solver</strong> when supports and guylines must interact through stiffness.</p>
+
+    <h2 id="manual-status">7. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
       <div class="warn"><strong>MARGINAL — deflection</strong><br>Strength is OK but tip deflection exceeds L/n serviceability criterion. Review with engineer; may still be acceptable per operator spec.</div>
@@ -937,7 +951,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v3.0 · Matches <code>Burner_boom_load_calculator.html</code> v3.0 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v4.0 · Matches <code>Burner_boom_load_calculator.html</code> v4.0 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -955,8 +969,8 @@
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const STORAGE_KEY = 'burnerBoomCalc_v3';
-  const APP_VERSION = '3.0.0';
+  const STORAGE_KEY = 'burnerBoomCalc_v4';
+  const APP_VERSION = '4.0.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1073,7 +1087,7 @@
     $('testFactorPreset').value = '1.5';
     $('pipePreset').value = '8sch40';
     $('loadCase').value = 'operating';
-    $('analysisMode').value = 'matrix';
+    $('analysisMode').value = 'frame';
     if($('kingpostEnabled')) $('kingpostEnabled').checked = true;
     if($('windStayEnabled')) $('windStayEnabled').checked = true;
     if($('boomRestEnabled')) $('boomRestEnabled').checked = true;
@@ -1284,6 +1298,321 @@
     return issues;
   }
 
+  // ---- 2D plane frame solver (direct stiffness, Euler-Bernoulli beams + truss links) ----
+  function _matZero(n){ return Array.from({length:n}, ()=>new Float64Array(n)); }
+  function _vecZero(n){ return new Float64Array(n); }
+  function _addK(K,i,j,v){ K[i][j]+=v; }
+
+  function _beamLocalK(E,A,I,L){
+    const EA=E*A, EI=E*I, L2=L*L, L3=L2*L;
+    return [
+      [EA/L,0,0,-EA/L,0,0],
+      [0,12*EI/L3,6*EI/L2,0,-12*EI/L3,6*EI/L2],
+      [0,6*EI/L2,4*EI/L,0,-6*EI/L2,2*EI/L],
+      [-EA/L,0,0,EA/L,0,0],
+      [0,-12*EI/L3,-6*EI/L2,0,12*EI/L3,-6*EI/L2],
+      [0,6*EI/L2,2*EI/L,0,-6*EI/L2,4*EI/L],
+    ];
+  }
+
+  function _transformBeamK(kL,c,s){
+    const T=[[c,s,0,0,0,0],[-s,c,0,0,0,0],[0,0,1,0,0,0],[0,0,0,c,s,0],[0,0,0,-s,c,0],[0,0,0,0,0,1]];
+    const TT=T[0].map((_,j)=>T.map(r=>r[j]));
+    const tmp=Array.from({length:6},()=>new Array(6).fill(0));
+    for(let i=0;i<6;i++) for(let j=0;j<6;j++) for(let k=0;k<6;k++) tmp[i][j]+=TT[i][k]*kL[k][j];
+    const kg=Array.from({length:6},()=>new Array(6).fill(0));
+    for(let i=0;i<6;i++) for(let j=0;j<6;j++) for(let k=0;k<6;k++) kg[i][j]+=tmp[i][k]*T[k][j];
+    return kg;
+  }
+
+  function _trussGlobalK(E,A,L,c,s){
+    const k=E*A/L, cx=c*c, cs=c*s, ss=s*s;
+    return [
+      [k*cx,k*cs,0,-k*cx,-k*cs,0],
+      [k*cs,k*ss,0,-k*cs,-k*ss,0],
+      [0,0,0,0,0,0],
+      [-k*cx,-k*cs,0,k*cx,k*cs,0],
+      [-k*cs,-k*ss,0,k*cs,k*ss,0],
+      [0,0,0,0,0,0],
+    ];
+  }
+
+  function _assembleBeam(K,F,n0,n1,E,A,I,x0,z0,x1,z1,qx,qz){
+    const dx=x1-x0, dz=z1-z0, L=Math.hypot(dx,dz);
+    if(L<1e-9) return;
+    const c=dx/L, s=dz/L;
+    const kG=_transformBeamK(_beamLocalK(E,A,I,L),c,s);
+    const map=[3*n0,3*n0+1,3*n0+2,3*n1,3*n1+1,3*n1+2];
+    for(let a=0;a<6;a++) for(let b=0;b<6;b++) _addK(K,map[a],map[b],kG[a][b]);
+    const qn=-qx*s+qz*c, qt=qx*c+qz*s;
+    const V0=qn*L/2, M0=qn*L*L/12, V1=qn*L/2, M1=-qn*L*L/12;
+    const feL=[qt*L/2,V0,M0,qt*L/2,V1,M1];
+    const T=[[c,s,0,0,0,0],[-s,c,0,0,0,0],[0,0,1,0,0,0],[0,0,0,c,s,0],[0,0,0,-s,c,0],[0,0,0,0,0,1]];
+    for(let a=0;a<6;a++){
+      let fg=0; for(let b=0;b<6;b++) fg+=T[a][b]*feL[b];
+      F[map[a]]+=fg;
+    }
+  }
+
+  function _assembleTruss(K,n0,n1,E,A,x0,z0,x1,z1){
+    const dx=x1-x0, dz=z1-z0, L=Math.hypot(dx,dz);
+    if(L<1e-9) return null;
+    const c=dx/L, s=dz/L;
+    const kG=_trussGlobalK(E,A,L,c,s);
+    const map=[3*n0,3*n0+1,3*n0+2,3*n1,3*n1+1,3*n1+2];
+    for(let a=0;a<6;a++) for(let b=0;b<6;b++) _addK(K,map[a],map[b],kG[a][b]);
+    return {L,c,s,E,A,i:n0,j:n1};
+  }
+
+  function _gaussSolve(A,b){
+    const n=b.length;
+    const M=A.map((row,i)=>[...row,b[i]]);
+    for(let col=0;col<n;col++){
+      let piv=col;
+      for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+      [M[col],M[piv]]=[M[piv],M[col]];
+      const d=M[col][col];
+      if(Math.abs(d)<1e-12) throw new Error('Singular frame stiffness — check support layout.');
+      for(let j=col;j<=n;j++) M[col][j]/=d;
+      for(let r=0;r<n;r++){
+        if(r===col) continue;
+        const f=M[r][col];
+        for(let j=col;j<=n;j++) M[r][j]-=f*M[col][j];
+      }
+    }
+    return M.map(row=>row[n]);
+  }
+
+  function _solveFrame2D(nodes, elements, supports, pointLoads){
+    const n=nodes.length, ndof=3*n;
+    const K=_matZero(ndof), F=_vecZero(ndof);
+    const trussMeta=[];
+    for(const pl of pointLoads){
+      F[3*pl.node+0]+=pl.fx||0;
+      F[3*pl.node+1]+=pl.fz||0;
+      F[3*pl.node+2]+=pl.my||0;
+    }
+    for(const el of elements){
+      const p0=nodes[el.i], p1=nodes[el.j];
+      if(el.type==='beam') _assembleBeam(K,F,el.i,el.j,el.E,el.A,el.I,p0.x,p0.z,p1.x,p1.z,el.qx||0,el.qz||0);
+      else {
+        const meta=_assembleTruss(K,el.i,el.j,el.E,el.A,p0.x,p0.z,p1.x,p1.z);
+        if(meta) trussMeta.push(meta);
+      }
+    }
+    const fixed=new Set();
+    for(const s of supports){
+      if(s.ux) fixed.add(3*s.node);
+      if(s.uz) fixed.add(3*s.node+1);
+      if(s.ry) fixed.add(3*s.node+2);
+    }
+    const free=[];
+    for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
+    const nf=free.length;
+    const Kff=_matZero(nf), Ff=_vecZero(nf);
+    for(let a=0;a<nf;a++){
+      Ff[a]=F[free[a]];
+      for(let b=0;b<nf;b++) Kff[a][b]=K[free[a]][free[b]];
+    }
+    const u=_vecZero(ndof);
+    const uf=_gaussSolve(Kff,Ff);
+    for(let a=0;a<nf;a++) u[free[a]]=uf[a];
+    const R=_vecZero(ndof);
+    for(let i=0;i<ndof;i++){
+      let sum=0; for(let j=0;j<ndof;j++) sum+=K[i][j]*u[j];
+      R[i]=sum-F[i];
+    }
+    const trussForces=trussMeta.map(t=>{
+      const ui=u[3*t.i], wi=u[3*t.i+1], uj=u[3*t.j], wj=u[3*t.j+1];
+      const dl=(uj-ui)*t.c+(wj-wi)*t.s;
+      return {T:t.E*t.A/t.L*dl, i:t.i, j:t.j};
+    });
+    return {u,R,trussForces};
+  }
+
+  function _nodeAlongBoom(i,nSeg,Lmm,theta){
+    const s=Lmm*i/nSeg;
+    return {x:s*Math.cos(theta), z:s*Math.sin(theta), s};
+  }
+
+  function _nodeIndexAt(dist_m, Lm, nSeg){
+    return Math.min(nSeg, Math.max(0, Math.round(dist_m/Lm*nSeg)));
+  }
+
+  function computeFrame(inp, combo){
+    const g=9.81, rhoSteel=7.85e-6;
+    const E=inp.E_MPa, Lmm=inp.L_m*1000, Lm=inp.L_m;
+    const OD=inp.OD_mm, t=Math.min(inp.t_mm, inp.OD_mm/2-0.01);
+    const ID=OD-2*t;
+    const A=Math.PI/4*(OD*OD-ID*ID);
+    const I=Math.PI/64*(Math.pow(OD,4)-Math.pow(ID,4));
+    const Z=I/(OD/2);
+    const theta=inp.angle_deg*Math.PI/180;
+    const cosT=Math.cos(theta), sinT=Math.sin(theta);
+    const wSelf=A*rhoSteel*g;
+    const wAdded=(inp.addedW_kgpm*g)/1000;
+    const wGravity=wSelf+wAdded;
+    const Ptip=inp.tipLoad_kg*g;
+    const Pextra=inp.extraLoad_kg*g;
+    const xp=Math.min(inp.extraPos_m*1000, Lmm);
+
+    const useCombo=!!combo;
+    const lf=useCombo?(combo.condition==='lifting'?inp.liftingLoadFactor:combo.loadFactor):1;
+    let wMult=lf;
+    if(useCombo && combo.condition==='accidental') wMult*=inp.accidentalDryFactor;
+    const sfZ=useCombo?combo.sfZ:1;
+    const sfY=useCombo?combo.sfY:1;
+    const sfX=useCombo?combo.sfX:1;
+    const windMultX=useCombo?combo.windX:1;
+    const windMultY=useCombo?combo.windY:1;
+    const daf=inp.DAF;
+    let windSpeed=inp.windSpeed_ms;
+    if(useCombo && combo.condition==='survival') windSpeed*=1.15;
+    if(useCombo && combo.condition==='lifting') windSpeed=0;
+
+    const wVert0=wGravity*cosT;
+    const wZ=wVert0*wMult*daf*sfZ;
+    const PtipZ=Ptip*cosT*wMult*daf*sfZ;
+    const PextraZ=Pextra*cosT*wMult*daf*sfZ;
+    const wAxExtra=wGravity*sinT*wMult*daf*sfY;
+
+    const q_Pa=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
+    const wWind=q_Pa*inp.Cd*(OD/1000)/1000;
+    const wxWind=wWind*windMultX;
+    const Fz_total=wZ*Lm + PtipZ + PextraZ;
+    const wxDyn=useCombo?(Fz_total*sfX/Math.max(sfZ,1e-9))/Lm:0;
+    let wx=wxWind+wxDyn;
+    let wz=-wZ;
+    if(wAxExtra>0){ wx+=wAxExtra*cosT; wz+=wAxExtra*sinT; }
+
+    const nSeg=12;
+    const nodes=[];
+    for(let i=0;i<=nSeg;i++) nodes.push(_nodeAlongBoom(i,nSeg,Lmm,theta));
+    const elements=[];
+    for(let i=0;i<nSeg;i++) elements.push({type:'beam',i,j:i+1,E,A,I,qx:wx,qz:wz});
+
+    const supports=[{node:0,ux:true,uz:true,ry:true}];
+    const active=s=>combo && combo.supports.includes(s);
+    let kpNode=-1, brNode=-1, wsNode=-1, guyNode=-1;
+    if(useCombo && active('kingpost') && inp.kingpostEnabled){
+      kpNode=_nodeIndexAt(inp.kingpostPos_m,Lm,nSeg);
+      supports.push({node:kpNode,uz:true});
+    }
+    if(useCombo && active('boomrest') && inp.boomRestEnabled){
+      brNode=_nodeIndexAt(inp.boomRestPos_m,Lm,nSeg);
+      supports.push({node:brNode,uz:true});
+    }
+    let nextNode=nSeg+1;
+    if(useCombo && active('windstay') && inp.windStayEnabled){
+      wsNode=_nodeIndexAt(inp.windStayPos_m,Lm,nSeg);
+      const bn=nodes[wsNode];
+      nodes.push({x:bn.x+3000, z:0, s:bn.s});
+      elements.push({type:'truss',i:wsNode,j:nextNode,E:120000,A:600});
+      supports.push({node:nextNode,ux:true,uz:true});
+      nextNode++;
+    }
+    if(useCombo && active('guys') && inp.guysEnabled && inp.nGuysEffective>0){
+      guyNode=_nodeIndexAt(inp.guyAttachPos_m,Lm,nSeg);
+      const gn=nodes[guyNode];
+      const ang=inp.guyAngle_deg*Math.PI/180;
+      const gL=inp.guyLength_m*1000;
+      nodes.push({x:gn.x-gL*Math.cos(ang), z:gn.z-gL*Math.sin(ang), s:gn.s});
+      elements.push({type:'truss',i:guyNode,j:nextNode,E:150000,A:Math.max(200,400*inp.nGuysEffective)});
+      supports.push({node:nextNode,ux:true,uz:true});
+      nextNode++;
+    }
+
+    const pointLoads=[{node:nSeg,fz:-PtipZ,fx:0}];
+    if(inp.extraLoad_kg>0) pointLoads.push({node:_nodeIndexAt(inp.extraPos_m,Lm,nSeg),fz:-PextraZ,fx:0});
+    if(useCombo && windMultY>0){
+      const Fy_w=wWind*Lm*windMultY;
+      pointLoads.push({node:nSeg,fx:Fy_w*sinT, fz:-Fy_w*cosT});
+    }
+
+    let sol;
+    try { sol=_solveFrame2D(nodes, elements, supports, pointLoads); }
+    catch(_e){ return compute({...inp, analysisMode:'matrix'}, combo); }
+
+    const {u,R,trussForces}=sol;
+    let Mres=Math.abs(R[2]);
+    const Vx=R[0], Vz=R[1];
+    const Vres=Math.hypot(Vx,Vz);
+    const N_d=Math.abs(Vx*cosT+Vz*sinT);
+    if(useCombo && active('lifting')) Mres*=0.85;
+
+    const tipUx=u[3*nSeg], tipUz=u[3*nSeg+1];
+    const dRes=Math.hypot(tipUx, tipUz);
+    const defLimit=Lmm/inp.defLimitDenom;
+
+    const sigmaBend=Z>0?Mres/Z:0;
+    const sigmaAxial=A>0?N_d/A:0;
+    const sigmaCombined=sigmaBend+sigmaAxial;
+    const tau=A>0?2*Vres/A:0;
+    const sigmaEq=Math.sqrt(sigmaCombined*sigmaCombined+3*tau*tau);
+    const allow=inp.Fy_MPa/inp.SF;
+    const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
+    const Dt=t>0?OD/t:0;
+    const Kbuck=2.0;
+    const Pcr=I>0&&Lmm>0?(Math.PI*Math.PI*E*I)/Math.pow(Kbuck*Lmm,2):0;
+    const bucklingSF=N_d>0?Pcr/N_d:Infinity;
+    const bucklingPass=N_d<=0||bucklingSF>=inp.SF;
+    const Rbolt=inp.bcd_mm/2;
+    const boltTension_kN=inp.nBolts>0?((2*Mres/(inp.nBolts*Rbolt))+(N_d/inp.nBolts))/1000:0;
+    const boltUtil=inp.boltAllow_kN>0?boltTension_kN/inp.boltAllow_kN*100:0;
+
+    const supportsOut={turntable:{M_kNm:Mres/1e6,V_kN:Vres/1000,N_kN:N_d/1000},kingpost:{R_kN:0,ok:true},windstay:{R_kN:0,ok:true},boomrest:{R_kN:0,ok:true},guys:{T_kN:0,util:0,ok:true}};
+    if(kpNode>=0){
+      supportsOut.kingpost.R_kN=Math.abs(R[3*kpNode+1])/1000;
+      supportsOut.kingpost.ok=supportsOut.kingpost.R_kN<=inp.kingpostRated_kN;
+    }
+    if(brNode>=0){
+      supportsOut.boomrest.R_kN=Math.abs(R[3*brNode+1])/1000;
+      supportsOut.boomrest.ok=supportsOut.boomrest.R_kN<=inp.boomRestRated_kN;
+    }
+    if(wsNode>=0){
+      const tf=trussForces.find(t=>t.i===wsNode);
+      supportsOut.windstay.R_kN=tf?Math.abs(tf.T)/1000:0;
+      supportsOut.windstay.ok=supportsOut.windstay.R_kN<=inp.windStayRated_kN;
+    }
+    if(guyNode>=0){
+      const tg=trussForces.find(t=>t.i===guyNode);
+      const T=tg?Math.max(0,tg.T)/1000/inp.nGuysEffective:0;
+      supportsOut.guys.T_kN=T;
+      supportsOut.guys.util=inp.guyAllow_kN>0?T/inp.guyAllow_kN*100:0;
+      supportsOut.guys.ok=supportsOut.guys.util<=100;
+    }
+
+    const utilStress=allow>0?sigmaEq/allow:0;
+    const pass=actualSF>=inp.SF && bucklingPass && boltUtil<=100
+      && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.boomrest.ok && supportsOut.guys.ok
+      && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm
+      && Math.sqrt(supportsOut.turntable.V_kN**2+supportsOut.turntable.N_kN**2)<=inp.ratedLoad_kN;
+
+    const n=21, xs=[], Mg=[], Mw=[], Mr=[], defl=[];
+    for(let i=0;i<n;i++){
+      const x=Lmm*i/(n-1);
+      xs.push(x);
+      const rem=Lmm-x;
+      const mg=wZ*rem*rem/2 + PtipZ*rem + (x<=xp?PextraZ*(xp-x):0);
+      const mw=wWind*windMultX*rem*rem/2;
+      Mg.push(mg); Mw.push(mw); Mr.push(Math.sqrt(mg*mg+mw*mw));
+      defl.push(dRes*(x/Lmm));
+    }
+
+    const testLoadFactor=inp.testFactor;
+    const dUdl_t=I>0?wVert0*testLoadFactor*Math.pow(Lmm,4)/(8*E*I):0;
+    const dTip_t=I>0?Ptip*cosT*testLoadFactor*Math.pow(Lmm,3)/(3*E*I):0;
+    const predictedTestDefl=dUdl_t+dTip_t;
+    const testLoad_kg=inp.swl_kg*testLoadFactor;
+
+    return {A,I,Z,OD,ID,L:Lmm,theta,wSelf,wAdded,wGravity,Ptip,Pextra,xp,
+      Mgrav_d:Mres,Vgrav_d:Vres,N_d,Mwind:Mw[0],Vwind:wxWind*Lm,Mres,Vres,sigmaBend,sigmaAxial,sigmaCombined,tau,sigmaEq,
+      allow,actualSF,dVert:dRes,dWind:0,dRes,defLimit, boltTension_kN, boltUtil, R:Rbolt,
+      xs,Mg,Mw,Mr,defl, predictedTestDefl, testLoad_kg, Dt, Pcr, bucklingSF, bucklingPass, t,
+      comboLabel:combo?combo.label:null, supports:supportsOut, utilStress, pass,
+      Fx_total:Vx, Fz_total, Fy_ax:N_d, frameSolver:true, frameNodes:nodes.length, frameElements:elements.length};
+  }
+
   const MATRIX_COMBOS = [
     { id:'op_roll', label:'Operating · Heave+Roll', condition:'operating', sfZ:2.40, sfY:0.18, sfX:0.04, windX:0.63, windY:0.08, loadFactor:1, supports:['turntable','kingpost','windstay','guys'] },
     { id:'op_pitch', label:'Operating · Heave+Pitch', condition:'operating', sfZ:2.10, sfY:0.22, sfX:0.05, windX:0.48, windY:0.10, loadFactor:1, supports:['turntable','kingpost','windstay','guys'] },
@@ -1474,8 +1803,11 @@
   }
 
   function computeEnvelope(inp){
+    const useFrame = inp.analysisMode === 'frame';
+    const fn = useFrame ? computeFrame : compute;
+    const mode = useFrame ? 'frame' : 'matrix';
     const rows = MATRIX_COMBOS.map(c=>{
-      const r = compute({...inp, analysisMode:'matrix'}, c);
+      const r = fn({...inp, analysisMode: mode}, c);
       return { combo:c, r };
     });
     let gov = rows[0];
@@ -1574,11 +1906,12 @@
     renderQC(issues);
     let envelope = null;
     let r;
-    if(inp.analysisMode === 'matrix'){
+    if(inp.analysisMode === 'matrix' || inp.analysisMode === 'frame'){
       envelope = computeEnvelope(inp);
       r = envelope.governing.r;
       renderMatrixTable(envelope);
       $('matrixResultsCard').style.display = '';
+      if($('frameInfo')) $('frameInfo').style.display = inp.analysisMode === 'frame' ? '' : 'none';
     } else {
       r = compute(inp, null);
       if($('matrixResultsCard')) $('matrixResultsCard').style.display = 'none';
@@ -1604,7 +1937,7 @@
     const stressOk = r.actualSF >= inp.SF;
     const deflOk = r.dRes <= r.defLimit;
     const boltOk = r.boltUtil <= 100;
-    const supportFail = inp.analysisMode==='matrix' && r.supports && (!r.supports.kingpost.ok || !r.supports.windstay.ok || !r.supports.boomrest.ok || !r.supports.guys.ok);
+    const supportFail = (inp.analysisMode==='matrix'||inp.analysisMode==='frame') && r.supports && (!r.supports.kingpost.ok || !r.supports.windstay.ok || !r.supports.boomrest.ok || !r.supports.guys.ok);
     const primaryFail = !stressOk || !momentOk || !boltOk || !loadOk || !r.bucklingPass || supportFail || issues.some(i=>i.level==='bad');
     const marginal = !primaryFail && !deflOk;
 
@@ -1618,7 +1951,7 @@
       <tr><th>Turntable rated load</th><td class="v">${uForce_kN(inp.ratedLoad_kN)} — ${loadOk?'OK':'EXCEEDED'}</td></tr>
       <tr><th>Max bolt/pin tension (simplified)</th><td class="v">${uForce_kN(r.boltTension_kN)}</td></tr>
       <tr><th>Bolt utilization</th><td class="v">${fmt(r.boltUtil,1)}% of allowable ${uForce_kN(inp.boltAllow_kN)}</td></tr>
-      ${inp.analysisMode==='matrix' && r.supports ? `
+      ${(inp.analysisMode==='matrix'||inp.analysisMode==='frame') && r.supports ? `
       <tr><th colspan="2" style="padding-top:10px;color:var(--series-1)">Multi-support reactions (${r.comboLabel||'governing'})</th></tr>
       <tr><th>Kingpost vertical</th><td class="v">${uForce_kN(r.supports.kingpost.R_kN)} ${r.supports.kingpost.ok?'OK':'EXCEEDED'}</td></tr>
       <tr><th>Wind-stay lateral</th><td class="v">${uForce_kN(r.supports.windstay.R_kN)} ${r.supports.windstay.ok?'OK':'EXCEEDED'}</td></tr>
