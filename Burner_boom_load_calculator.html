@@ -3,9 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis &amp; Rig-Up Calculator</title>
+<title>Burner Boom Load Analysis &amp; Rig-Up Calculator v2</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
+    color-scheme: dark;
+    --surface-1:      #121820;
+    --page:           #070b10;
+    --text-primary:   #eef2f7;
+    --text-secondary: #9fb0c4;
+    --text-muted:     #6b7d92;
+    --gridline:       #243041;
+    --baseline:       #334155;
+    --border:         rgba(255,255,255,0.08);
+    --series-1:       #00b4d8;
+    --series-2:       #ff6b35;
+    --good:           #10b981;
+    --warning:        #f59e0b;
+    --serious:        #fb923c;
+    --critical:       #ef4444;
+    --accent-dim:     rgba(0,180,216,0.12);
+  }
+  :root.viz-root[data-theme="light"], .viz-root[data-theme="light"] {
     color-scheme: light;
     --surface-1:      #fcfcfb;
     --page:           #f9f9f7;
@@ -15,23 +34,56 @@
     --gridline:       #e1e0d9;
     --baseline:       #c3c2b7;
     --border:         rgba(11,11,11,0.10);
-    --series-1:       #2a78d6; /* blue - primary series */
-    --series-2:       #eb6834; /* orange - secondary series */
+    --series-1:       #2a78d6;
+    --series-2:       #eb6834;
     --good:           #0ca30c;
     --warning:        #fab219;
     --serious:        #ec835a;
     --critical:       #d03b3b;
+    --accent-dim:     rgba(42,120,214,0.06);
   }
 
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: var(--page);
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(0,180,216,0.12), transparent),
+      var(--page);
     color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 14px;
+    line-height: 1.5;
   }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px 64px; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(7,11,16,0.88); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    margin: 0 -20px 18px; padding: 12px 20px;
+  }
+  .viz-root[data-theme="light"] .topbar { background: rgba(249,249,247,0.92); }
+  .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 1240px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(0,180,216,0.35); background: var(--accent-dim); display: grid; place-items: center; font-size: 18px; flex: none; }
+  .brand h1 { font-size: 16px; margin: 0; letter-spacing: -0.01em; }
+  .brand .meta { font-size: 11px; color: var(--text-muted); margin: 0; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .status-pill {
+    padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    border: 1px solid var(--border); background: var(--surface-1);
+  }
+  .status-pill.pass { color: var(--good); border-color: rgba(16,185,129,0.35); }
+  .status-pill.warn { color: var(--warning); border-color: rgba(245,158,11,0.35); }
+  .status-pill.fail { color: var(--critical); border-color: rgba(239,68,68,0.35); }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-bottom: 16px; padding: 10px 12px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .toolbar label { font-size: 11px; color: var(--text-secondary); font-weight: 600; margin-right: 4px; }
+  .toolbar select, .toolbar button.action { font-size: 12px; }
+  .toolbar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
 
   header.app { margin-bottom: 16px; }
   header.app h1 { font-size: 20px; margin: 0 0 4px; }
@@ -80,9 +132,12 @@
   .field .hint { font-size: 11px; color: var(--text-muted); }
   .field input, .field select {
     font-family: inherit; font-size: 13px; padding: 7px 9px;
-    border: 1px solid var(--baseline); border-radius: 6px; background: #fff; color: var(--text-primary);
+    border: 1px solid var(--baseline); border-radius: 6px; background: rgba(0,0,0,0.18); color: var(--text-primary);
   }
+  .viz-root[data-theme="light"] .field input,
+  .viz-root[data-theme="light"] .field select { background: #fff; }
   .field input:focus, .field select:focus { outline: 2px solid var(--series-1); outline-offset: 1px; border-color: var(--series-1); }
+  .field input.invalid { border-color: var(--critical); background: rgba(239,68,68,0.08); }
 
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 6px; }
   .tile {
@@ -123,26 +178,91 @@
     appearance: none; border: 1px solid var(--series-1); background: var(--series-1);
     color: #fff; padding: 8px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
-  button.action.secondary { background: #fff; color: var(--series-1); }
+  button.action.secondary { background: transparent; color: var(--series-1); border-color: var(--series-1); }
+  button.action.ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  button.action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .qc-list { display: grid; gap: 8px; margin-top: 8px; }
+  .qc-item {
+    display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px;
+    border-radius: 8px; border: 1px solid var(--border); font-size: 12px; line-height: 1.45;
+  }
+  .qc-item.ok { border-left: 3px solid var(--good); }
+  .qc-item.warn { border-left: 3px solid var(--warning); }
+  .qc-item.bad { border-left: 3px solid var(--critical); }
+  .qc-item .qc-ic { flex: none; font-weight: 700; width: 18px; text-align: center; }
+
+  .schematic { width: 100%; height: 220px; display: block; border-radius: 8px; background: rgba(0,0,0,0.15); }
+  .viz-root[data-theme="light"] .schematic { background: #f3f3f0; }
+  .footnote {
+    margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted); line-height: 1.6;
+  }
 
   .sig-line { border-top: 1px solid var(--text-primary); margin-top: 34px; padding-top: 4px; font-size: 11px; color: var(--text-secondary); }
   .cert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; margin-top: 10px; }
 
   @media print {
-    nav.tabs, .no-print { display: none !important; }
+    nav.tabs, .no-print, .topbar, .toolbar { display: none !important; }
     section.panel { display: block !important; margin-bottom: 24px; }
-    body { background: #fff; }
-    .card { break-inside: avoid; }
+    body, .viz-root { background: #fff; color: #000; }
+    .card { break-inside: avoid; border-color: #ccc; }
   }
 </style>
 </head>
 <body class="viz-root">
 <div class="wrap">
 
+  <div class="topbar no-print">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">🔥</div>
+        <div>
+          <h1>Burner Boom Load Analysis</h1>
+          <p class="meta">v2.0 · Cantilever structural check · AISC/API-style ASD · ASCE 7 wind</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="overallStatus" class="status-pill warn" role="status" aria-live="polite">Calculating…</span>
+        <button type="button" class="action ghost" id="themeToggle" title="Toggle light/dark theme">Theme</button>
+      </div>
+    </div>
+  </div>
+
   <header class="app">
-    <h1>Burner Boom Load Analysis &amp; Rig-Up Calculator</h1>
-    <p class="sub">Cantilever boom structural check for well-test burner/flare booms rigged to a rig structure or turntable — bending, wind, base reactions, and proof-load sign-off.</p>
+    <p class="sub">Cantilever boom structural check for well-test burner/flare booms rigged to a rig structure or turntable — bending, wind, base reactions, D/t &amp; buckling screening, and proof-load sign-off.</p>
   </header>
+
+  <div class="toolbar no-print" role="toolbar" aria-label="Calculator controls">
+    <label for="unitSystem">Units</label>
+    <select id="unitSystem" aria-label="Unit system">
+      <option value="metric" selected>Metric (SI)</option>
+      <option value="us">US Customary</option>
+    </select>
+    <span class="sep"></span>
+    <label for="loadCase">Load case</label>
+    <select id="loadCase" aria-label="Design load case">
+      <option value="custom">Custom</option>
+      <option value="operating" selected>Operating (horizontal)</option>
+      <option value="erection">Erection / raising</option>
+      <option value="storm">Storm / survival wind</option>
+    </select>
+    <span class="sep"></span>
+    <label for="pipePreset">Pipe section</label>
+    <select id="pipePreset" aria-label="Standard pipe preset">
+      <option value="custom">Custom OD / t</option>
+      <option value="6sch40">NPS 6" Sch 40</option>
+      <option value="8sch40" selected>NPS 8" Sch 40</option>
+      <option value="8sch80">NPS 8" Sch 80</option>
+      <option value="10sch40">NPS 10" Sch 40</option>
+    </select>
+    <button type="button" class="action secondary" id="preset90ft">90 ft reference</button>
+    <span class="sep"></span>
+    <button type="button" class="action secondary" id="exportJson">Export JSON</button>
+    <button type="button" class="action secondary" id="importJson">Import JSON</button>
+    <button type="button" class="action ghost" id="resetDefaults">Reset</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </div>
 
   <div class="disclaimer">
     <span class="ic">⚠️</span>
@@ -287,6 +407,11 @@
           <input type="number" id="rhoAir" value="1.225" step="0.001" min="0.5">
           <span class="hint">kg/m³ (sea level default)</span>
         </div>
+        <div class="field">
+          <label>Wind exposure factor, Kz·G</label>
+          <input type="number" id="windExposure" value="1.0" step="0.05" min="0.5" max="2">
+          <span class="hint">ASCE 7 / EN 1991-1-4 combined height &amp; gust (1.0 = basic)</span>
+        </div>
       </div>
     </div>
 
@@ -359,8 +484,26 @@
   <!-- ===================== PANEL 4: RESULTS ===================== -->
   <section class="panel" id="panel-results">
     <div class="card">
+      <h2>Quality checks</h2>
+      <div class="qc-list" id="qcList" role="list"></div>
+    </div>
+
+    <div class="card">
       <h2>Structural check summary</h2>
       <div class="tiles" id="tiles"></div>
+    </div>
+
+    <div class="card">
+      <div class="two-col">
+        <div class="chartbox">
+          <h3>Boom schematic (not to scale)</h3>
+          <svg class="schematic" id="schematic" viewBox="0 0 480 220" role="img" aria-label="Boom load schematic"></svg>
+        </div>
+        <div class="chartbox">
+          <h3>Key reactions &amp; limits</h3>
+          <table class="report" id="summaryTable"></table>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -388,8 +531,6 @@
       <table class="report" id="fullReport"></table>
     </div>
   </section>
-
-  <!-- ===================== PANEL 5: LOAD TEST ===================== -->
   <section class="panel" id="panel-test">
     <div class="card">
       <h2>Proof / load test parameters</h2>
@@ -465,11 +606,151 @@
     </div>
   </section>
 
+  <p class="footnote">
+    <b>Standards referenced (simplified screening only):</b> AISC ASD allowable stress (Fy/SF); API 5L / ASTM pipe grades;
+    ASCE 7-16 velocity pressure q<sub>z</sub> = 0.613 K<sub>z</sub>K<sub>zt</sub>K<sub>d</sub>V² (implemented as ½ρV² with exposure factor);
+    EN 1991-1-4 wind on cylinders (Cd); Euler column buckling screening (K=2 cantilever).
+    Does <b>not</b> replace certified structural analysis, FEA, or rig-owner approval.
+    Companion reference: <i>Structural Analysis of 90 Ft Burner Boom</i> (project PDF).
+  </p>
+
 </div>
 
 <script>
 (function(){
   const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'burnerBoomCalc_v2';
+  const APP_VERSION = '2.0.0';
+
+  const CONV = {
+    m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
+    mpa_ksi: 0.1450377377, knm_kipft: 0.737562149, kn_kip: 0.224808943, mm_in_len: 0.0393700787
+  };
+
+  const PIPE_PRESETS = {
+    '6sch40': { OD_mm: 168.3, t_mm: 7.11 },
+    '8sch40': { OD_mm: 219.1, t_mm: 8.18 },
+    '8sch80': { OD_mm: 219.1, t_mm: 12.7 },
+    '10sch40': { OD_mm: 273.1, t_mm: 9.27 }
+  };
+
+  const LOAD_CASES = {
+    operating: { angle_deg: 0, DAF: 1.15, windSpeed_ms: 40, label: 'Operating' },
+    erection: { angle_deg: 30, DAF: 1.25, windSpeed_ms: 25, label: 'Erection' },
+    storm: { angle_deg: 0, DAF: 1.0, windSpeed_ms: 51, windExposure: 1.15, label: 'Storm' }
+  };
+
+  const DEFAULTS = {
+    L_m: 9, angle_deg: 0, OD_mm: 219.1, t_mm: 8.18, Fy_MPa: 241, E_MPa: 200000, SF: 1.67,
+    addedW_kgpm: 15, tipLoad_kg: 80, extraLoad_kg: 30, extraPos_m: 4.5, DAF: 1.15,
+    windSpeed_ms: 40, Cd: 1.2, rhoAir: 1.225, windExposure: 1.0, defLimitDenom: 200,
+    ratedMoment_kNm: 60, ratedLoad_kN: 30, bcd_mm: 400, nBolts: 12, boltAllow_kN: 45,
+    swl_kg: 110, testFactor: 1.5, permSetPct: 10
+  };
+
+  const UNIT_FIELDS = [
+    { id: 'L_m', metric: 'm', us: 'ft', toUs: v => v * CONV.m_ft, toMetric: v => v / CONV.m_ft },
+    { id: 'OD_mm', metric: 'mm', us: 'in', toUs: v => v * CONV.mm_in, toMetric: v => v / CONV.mm_in },
+    { id: 't_mm', metric: 'mm', us: 'in', toUs: v => v * CONV.mm_in, toMetric: v => v / CONV.mm_in },
+    { id: 'Fy_MPa', metric: 'MPa', us: 'ksi', toUs: v => v * CONV.mpa_ksi, toMetric: v => v / CONV.mpa_ksi },
+    { id: 'E_MPa', metric: 'MPa', us: 'ksi', toUs: v => v * CONV.mpa_ksi, toMetric: v => v / CONV.mpa_ksi },
+    { id: 'addedW_kgpm', metric: 'kg/m', us: 'lb/ft', toUs: v => v * CONV.kg_lb / CONV.m_ft, toMetric: v => v / CONV.kg_lb * CONV.m_ft },
+    { id: 'tipLoad_kg', metric: 'kg', us: 'lb', toUs: v => v * CONV.kg_lb, toMetric: v => v / CONV.kg_lb },
+    { id: 'extraLoad_kg', metric: 'kg', us: 'lb', toUs: v => v * CONV.kg_lb, toMetric: v => v / CONV.kg_lb },
+    { id: 'extraPos_m', metric: 'm', us: 'ft', toUs: v => v * CONV.m_ft, toMetric: v => v / CONV.m_ft },
+    { id: 'windSpeed_ms', metric: 'm/s', us: 'mph', toUs: v => v * CONV.ms_mph, toMetric: v => v / CONV.ms_mph },
+    { id: 'ratedMoment_kNm', metric: 'kN·m', us: 'kip·ft', toUs: v => v * CONV.knm_kipft, toMetric: v => v / CONV.knm_kipft },
+    { id: 'ratedLoad_kN', metric: 'kN', us: 'kip', toUs: v => v * CONV.kn_kip, toMetric: v => v / CONV.kn_kip },
+    { id: 'bcd_mm', metric: 'mm', us: 'in', toUs: v => v * CONV.mm_in, toMetric: v => v / CONV.mm_in },
+    { id: 'boltAllow_kN', metric: 'kN', us: 'kip', toUs: v => v * CONV.kn_kip, toMetric: v => v / CONV.kn_kip },
+    { id: 'swl_kg', metric: 'kg', us: 'lb', toUs: v => v * CONV.kg_lb, toMetric: v => v / CONV.kg_lb },
+    { id: 'measDefl_mm', metric: 'mm', us: 'in', toUs: v => v * CONV.mm_in, toMetric: v => v / CONV.mm_in },
+    { id: 'measSet_mm', metric: 'mm', us: 'in', toUs: v => v * CONV.mm_in, toMetric: v => v / CONV.mm_in }
+  ];
+
+  let unitSystem = 'metric';
+  let suppressSave = false;
+
+  function isUs(){ return unitSystem === 'us'; }
+
+  function fmt(n, d=2){
+    return Number.isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d}) : '—';
+  }
+
+  function uLen_m(v){ return isUs() ? fmt(v * CONV.m_ft, 2) + ' ft' : fmt(v, 2) + ' m'; }
+  function uLen_mm(v){ return isUs() ? fmt(v * CONV.mm_in, 2) + ' in' : fmt(v, 1) + ' mm'; }
+  function uStress(v){ return isUs() ? fmt(v * CONV.mpa_ksi, 2) + ' ksi' : fmt(v, 1) + ' MPa'; }
+  function uForce_kN(v){ return isUs() ? fmt(v * CONV.kn_kip, 2) + ' kip' : fmt(v, 2) + ' kN'; }
+  function uMoment(v_kNm){ return isUs() ? fmt(v_kNm * CONV.knm_kipft, 2) + ' kip·ft' : fmt(v_kNm, 2) + ' kN·m'; }
+  function uMass(v_kg){ return isUs() ? fmt(v_kg * CONV.kg_lb, 1) + ' lb' : fmt(v_kg, 1) + ' kg'; }
+  function uWind(v){ return isUs() ? fmt(v * CONV.ms_mph, 1) + ' mph' : fmt(v, 1) + ' m/s'; }
+
+  function saveState(){
+    if(suppressSave) return;
+    const data = { version: APP_VERSION, unitSystem, theme: document.body.classList.contains('viz-root') ? document.querySelector('.viz-root').dataset.theme || 'dark' : 'dark' };
+    document.querySelectorAll('input, select, textarea').forEach(el=>{
+      if(!el.id) return;
+      if(el.type === 'checkbox') data[el.id] = el.checked;
+      else if(el.type === 'file') return;
+      else data[el.id] = el.value;
+    });
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+  }
+
+  function loadState(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return false;
+      const data = JSON.parse(raw);
+      suppressSave = true;
+      if(data.unitSystem) unitSystem = data.unitSystem;
+      if(data.theme) document.querySelector('.viz-root').dataset.theme = data.theme === 'light' ? 'light' : '';
+      Object.entries(data).forEach(([k,v])=>{
+        const el = $(k);
+        if(!el) return;
+        if(el.type === 'checkbox') el.checked = !!v;
+        else if(k !== 'version' && k !== 'unitSystem' && k !== 'theme') el.value = v;
+      });
+      $('unitSystem').value = unitSystem;
+      suppressSave = false;
+      return true;
+    } catch(e){ suppressSave = false; return false; }
+  }
+
+  function applyDefaults(){
+    suppressSave = true;
+    Object.entries(DEFAULTS).forEach(([k,v])=>{ if($(k)) $(k).value = v; });
+    $('matPreset').value = '241';
+    $('sfPreset').value = '1.67';
+    $('defLimitPreset').value = '200';
+    $('testFactorPreset').value = '1.5';
+    $('pipePreset').value = '8sch40';
+    $('loadCase').value = 'operating';
+    $('visualOk').checked = false;
+    ['assetId','rigLoc','testDate','testedBy','witnessedBy'].forEach(id=>{ if($(id)) $(id).value=''; });
+    suppressSave = false;
+  }
+
+  function convertAllUnits(toUs){
+    UNIT_FIELDS.forEach(f=>{
+      const el = $(f.id);
+      if(!el || el.value === '') return;
+      const v = parseFloat(el.value);
+      if(!Number.isFinite(v)) return;
+      el.value = Number((toUs ? f.toUs(v) : f.toMetric(v)).toPrecision(8));
+    });
+  }
+
+  function updateUnitHints(){
+    UNIT_FIELDS.forEach(f=>{
+      const el = $(f.id);
+      if(!el) return;
+      const hint = el.closest('.field')?.querySelector('.hint');
+      if(hint && hint.dataset.base){
+        hint.textContent = hint.dataset.base.replace(/\([^)]+\)/, '(' + (isUs() ? f.us : f.metric) + ')');
+      }
+    });
+  }
 
   // ---------- tab switching ----------
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -495,42 +776,138 @@
     if(e.target.value!=='custom'){ $('testFactor').value = e.target.value; recalc(); }
   });
 
-  // recalc on any input change
-  document.querySelectorAll('input, select').forEach(el=>{
-    el.addEventListener('input', recalc);
+  $('pipePreset').addEventListener('change', e=>{
+    const p = PIPE_PRESETS[e.target.value];
+    if(p){ $('OD_mm').value = p.OD_mm; $('t_mm').value = p.t_mm; if(isUs()) convertAllUnits(true); recalc(); }
   });
 
-  const fmt = (n, d=2) => Number.isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d}) : '—';
+  $('loadCase').addEventListener('change', e=>{
+    const lc = LOAD_CASES[e.target.value];
+    if(!lc) return;
+    $('angle_deg').value = lc.angle_deg;
+    $('DAF').value = lc.DAF;
+    $('windSpeed_ms').value = lc.windSpeed_ms;
+    if(lc.windExposure) $('windExposure').value = lc.windExposure;
+    if(isUs()) convertAllUnits(true);
+    recalc();
+  });
+
+  $('preset90ft').addEventListener('click', ()=>{
+    applyDefaults();
+    $('L_m').value = isUs() ? (27.432 * CONV.m_ft).toFixed(2) : 27.432;
+    $('pipePreset').value = '8sch40';
+    $('OD_mm').value = isUs() ? (219.1 * CONV.mm_in).toFixed(3) : 219.1;
+    $('t_mm').value = isUs() ? (8.18 * CONV.mm_in).toFixed(3) : 8.18;
+    $('loadCase').value = 'operating';
+    $('angle_deg').value = 0;
+    $('tipLoad_kg').value = isUs() ? (80 * CONV.kg_lb).toFixed(1) : 80;
+    $('extraLoad_kg').value = isUs() ? (30 * CONV.kg_lb).toFixed(1) : 30;
+    $('extraPos_m').value = isUs() ? (13.716 * CONV.m_ft).toFixed(2) : 13.716;
+    $('swl_kg').value = isUs() ? (110 * CONV.kg_lb).toFixed(1) : 110;
+    recalc();
+  });
+
+  $('unitSystem').addEventListener('change', e=>{
+    const nextUs = e.target.value === 'us';
+    convertAllUnits(nextUs);
+    unitSystem = e.target.value;
+    recalc();
+  });
+
+  $('themeToggle').addEventListener('click', ()=>{
+    const root = document.querySelector('.viz-root');
+    root.dataset.theme = root.dataset.theme === 'light' ? '' : 'light';
+    saveState();
+  });
+
+  $('exportJson').addEventListener('click', ()=>{
+    saveState();
+    const blob = new Blob([localStorage.getItem(STORAGE_KEY) || '{}'], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'burner-boom-calc-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('importJson').addEventListener('click', ()=> $('importFile').click());
+  $('importFile').addEventListener('change', e=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try {
+        const data = JSON.parse(reader.result);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        loadState();
+        recalc();
+      } catch(err){ alert('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  $('resetDefaults').addEventListener('click', ()=>{
+    if(confirm('Reset all inputs to defaults?')){ applyDefaults(); if(isUs()) convertAllUnits(true); recalc(); }
+  });
+
+  // recalc on any input change
+  document.querySelectorAll('input, select').forEach(el=>{
+    el.addEventListener('input', ()=>{ recalc(); saveState(); });
+    el.addEventListener('change', ()=>{ recalc(); saveState(); });
+  });
+
+  function valMetric(id, toMetric){
+    const v = parseFloat($(id).value);
+    if(!Number.isFinite(v)) return NaN;
+    return isUs() ? toMetric(v) : v;
+  }
 
   function getInputs(){
+    const f = id => UNIT_FIELDS.find(x => x.id === id);
     return {
-      L_m: parseFloat($('L_m').value)||0,
+      L_m: valMetric('L_m', v => v / CONV.m_ft) || 0,
       angle_deg: parseFloat($('angle_deg').value)||0,
-      OD_mm: parseFloat($('OD_mm').value)||0,
-      t_mm: parseFloat($('t_mm').value)||0,
-      Fy_MPa: parseFloat($('Fy_MPa').value)||1,
-      E_MPa: parseFloat($('E_MPa').value)||200000,
+      OD_mm: valMetric('OD_mm', v => v / CONV.mm_in) || 0,
+      t_mm: valMetric('t_mm', v => v / CONV.mm_in) || 0,
+      Fy_MPa: valMetric('Fy_MPa', v => v / CONV.mpa_ksi) || 1,
+      E_MPa: valMetric('E_MPa', v => v / CONV.mpa_ksi) || 200000,
       SF: parseFloat($('SF').value)||1.67,
-      addedW_kgpm: parseFloat($('addedW_kgpm').value)||0,
-      tipLoad_kg: parseFloat($('tipLoad_kg').value)||0,
-      extraLoad_kg: parseFloat($('extraLoad_kg').value)||0,
-      extraPos_m: parseFloat($('extraPos_m').value)||0,
+      addedW_kgpm: valMetric('addedW_kgpm', v => v / CONV.kg_lb * CONV.m_ft) || 0,
+      tipLoad_kg: valMetric('tipLoad_kg', v => v / CONV.kg_lb) || 0,
+      extraLoad_kg: valMetric('extraLoad_kg', v => v / CONV.kg_lb) || 0,
+      extraPos_m: valMetric('extraPos_m', v => v / CONV.m_ft) || 0,
       DAF: parseFloat($('DAF').value)||1,
-      windSpeed_ms: parseFloat($('windSpeed_ms').value)||0,
+      windSpeed_ms: valMetric('windSpeed_ms', v => v / CONV.ms_mph) || 0,
       Cd: parseFloat($('Cd').value)||1.2,
       rhoAir: parseFloat($('rhoAir').value)||1.225,
+      windExposure: parseFloat($('windExposure').value)||1.0,
       defLimitDenom: parseFloat($('defLimitDenom').value)||200,
-      ratedMoment_kNm: parseFloat($('ratedMoment_kNm').value)||0,
-      ratedLoad_kN: parseFloat($('ratedLoad_kN').value)||0,
-      bcd_mm: parseFloat($('bcd_mm').value)||1,
+      ratedMoment_kNm: valMetric('ratedMoment_kNm', v => v / CONV.knm_kipft) || 0,
+      ratedLoad_kN: valMetric('ratedLoad_kN', v => v / CONV.kn_kip) || 0,
+      bcd_mm: valMetric('bcd_mm', v => v / CONV.mm_in) || 1,
       nBolts: parseFloat($('nBolts').value)||1,
-      boltAllow_kN: parseFloat($('boltAllow_kN').value)||0,
-      swl_kg: parseFloat($('swl_kg').value)||0,
+      boltAllow_kN: valMetric('boltAllow_kN', v => v / CONV.kn_kip) || 0,
+      swl_kg: valMetric('swl_kg', v => v / CONV.kg_lb) || 0,
       testFactor: parseFloat($('testFactor').value)||1.5,
       permSetPct: parseFloat($('permSetPct').value)||10,
-      measDefl_mm: parseFloat($('measDefl_mm').value),
-      measSet_mm: parseFloat($('measSet_mm').value),
+      measDefl_mm: valMetric('measDefl_mm', v => v / CONV.mm_in),
+      measSet_mm: valMetric('measSet_mm', v => v / CONV.mm_in),
     };
+  }
+
+  function validateInputs(inp){
+    const issues = [];
+    if(inp.L_m <= 0) issues.push({ level:'bad', text:'Boom length must be greater than zero.' });
+    if(inp.OD_mm <= 0 || inp.t_mm <= 0) issues.push({ level:'bad', text:'Pipe OD and wall thickness must be positive.' });
+    if(inp.t_mm >= inp.OD_mm/2) issues.push({ level:'bad', text:'Wall thickness exceeds half the OD — invalid hollow section.' });
+    if(inp.extraPos_m > inp.L_m) issues.push({ level:'warn', text:'Secondary load position is beyond boom tip — clamped to tip in analysis.' });
+    if(inp.angle_deg < 0 || inp.angle_deg > 90) issues.push({ level:'warn', text:'Boom angle should be between 0° and 90°.' });
+    const Dt = inp.t_mm > 0 ? inp.OD_mm / inp.t_mm : 0;
+    if(Dt > 120) issues.push({ level:'warn', text:`D/t = ${fmt(Dt,0)} exceeds 120 — thin-wall / local buckling risk; verify with detailed analysis.` });
+    if(inp.SF < 1.25) issues.push({ level:'warn', text:'Safety factor below 1.25 is unusually low for rig equipment.' });
+    if(issues.length === 0) issues.push({ level:'ok', text:'Input geometry and limits are internally consistent.' });
+    return issues;
   }
 
   function compute(inp){
@@ -565,7 +942,7 @@
     const Vgrav_d = Vgrav*inp.DAF;
     const N_d = Naxial*inp.DAF;
 
-    const q_Pa = 0.5*inp.rhoAir*inp.windSpeed_ms*inp.windSpeed_ms; // N/m^2
+    const q_Pa = 0.5*inp.rhoAir*inp.windSpeed_ms*inp.windSpeed_ms*inp.windExposure; // N/m^2 with exposure/gust
     const wWind_Npm = q_Pa*inp.Cd*(OD/1000); // N/m
     const wWind = wWind_Npm/1000; // N/mm
     const Mwind = wWind*L*L/2;
@@ -590,6 +967,12 @@
     const dWind = I>0 ? wWind*Math.pow(L,4)/(8*E*I) : 0;
     const dRes = Math.sqrt(dVert*dVert + dWind*dWind);
     const defLimit = L/inp.defLimitDenom;
+
+    const Dt = t > 0 ? OD/t : 0;
+    const Kbuck = 2.0;
+    const Pcr = I>0 && L>0 ? (Math.PI*Math.PI*E*I)/Math.pow(Kbuck*L,2) : 0;
+    const bucklingSF = N_d>0 ? Pcr/N_d : Infinity;
+    const bucklingPass = N_d <= 0 || bucklingSF >= inp.SF;
 
     // bolt group
     const R = inp.bcd_mm/2;
@@ -629,7 +1012,39 @@
     return {A,I,Z,OD,ID,L,theta,wSelf,wAdded,wGravity,Ptip,Pextra,xp,
       Mgrav_d,Vgrav_d,N_d,Mwind,Vwind,Mres,Vres,sigmaBend,sigmaAxial,sigmaCombined,tau,sigmaEq,
       allow,actualSF,dVert,dWind,dRes,defLimit, boltTension_kN, boltUtil, R,
-      xs,Mg,Mw,Mr,defl, predictedTestDefl, testLoad_kg};
+      xs,Mg,Mw,Mr,defl, predictedTestDefl, testLoad_kg, Dt, Pcr, bucklingSF, bucklingPass, t};
+  }
+
+  function renderQC(issues){
+    const box = $('qcList');
+    box.innerHTML = issues.map(q=>{
+      const icon = q.level==='ok'?'✓':q.level==='warn'?'!':'✕';
+      return `<div class="qc-item ${q.level}" role="listitem"><span class="qc-ic">${icon}</span><span>${q.text}</span></div>`;
+    }).join('');
+  }
+
+  function drawSchematic(inp, r){
+    const W=480,H=220, bx=70, by=170, len=300;
+    const ang = -inp.angle_deg * Math.PI/180;
+    const tx = bx + len*Math.cos(ang), ty = by + len*Math.sin(ang);
+    const xpFrac = inp.L_m>0 ? Math.min(inp.extraPos_m/inp.L_m,1) : 0.5;
+    const px = bx + len*xpFrac*Math.cos(ang), py = by + len*xpFrac*Math.sin(ang);
+    const col = 'var(--series-1)', col2='var(--series-2)', muted='var(--text-muted)';
+    let s = `<rect width="${W}" height="${H}" fill="transparent"/>`;
+    s += `<rect x="${bx-8}" y="${by-4}" width="16" height="8" fill="${col}" opacity="0.35"/>`;
+    s += `<line x1="${bx}" y1="${by}" x2="${tx}" y2="${ty}" stroke="${col}" stroke-width="5" stroke-linecap="round"/>`;
+    for(let i=1;i<8;i++){
+      const t=i/8, x=bx+len*t*Math.cos(ang), y=by+len*t*Math.sin(ang);
+      const nx=-Math.sin(ang)*12, ny=Math.cos(ang)*12;
+      s += `<line x1="${x}" y1="${y}" x2="${x+nx}" y2="${y+ny}" stroke="${col2}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+    }
+    s += `<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${col2}"/></marker></defs>`;
+    s += `<circle cx="${px}" cy="${py}" r="7" fill="${col2}"/>`;
+    s += `<circle cx="${tx}" cy="${ty}" r="8" fill="${col}"/>`;
+    s += `<text x="${bx}" y="${by+24}" fill="${muted}" font-size="11">Base / pivot</text>`;
+    s += `<text x="${tx+8}" y="${ty-8}" fill="${muted}" font-size="11">Tip · ${uLen_m(inp.L_m)} · θ=${inp.angle_deg}°</text>`;
+    s += `<text x="12" y="18" fill="${muted}" font-size="11">M=${uMoment(r.Mres/1e6)} · δ=${uLen_mm(r.dRes)}</text>`;
+    $('schematic').innerHTML = s;
   }
 
   function statTile(container, label, value, sub, status){
@@ -672,47 +1087,83 @@
 
   function recalc(){
     const inp = getInputs();
+    const issues = validateInputs(inp);
+    renderQC(issues);
     const r = compute(inp);
+
+    $('t_mm').classList.toggle('invalid', inp.t_mm >= inp.OD_mm/2);
+    $('OD_mm').classList.toggle('invalid', inp.OD_mm <= 0);
 
     // section properties table
     $('sectionPropsTable').innerHTML = `
-      <tr><th>Inside diameter, ID</th><td class="v">${fmt(r.ID,1)} mm</td></tr>
-      <tr><th>Cross-section area, A</th><td class="v">${fmt(r.A,0)} mm²</td></tr>
-      <tr><th>Moment of inertia, I</th><td class="v">${fmt(r.I/1e6,2)} ×10⁶ mm⁴</td></tr>
-      <tr><th>Section modulus, Z</th><td class="v">${fmt(r.Z/1e3,2)} ×10³ mm³</td></tr>
-      <tr><th>Self-weight (steel only)</th><td class="v">${fmt(r.wSelf*1000/9.81,2)} kg/m</td></tr>
-      <tr><th>Total distributed gravity load</th><td class="v">${fmt(r.wGravity*1000/9.81,2)} kg/m</td></tr>
+      <tr><th>Inside diameter, ID</th><td class="v">${uLen_mm(r.ID)}</td></tr>
+      <tr><th>Cross-section area, A</th><td class="v">${isUs()?fmt(r.A*0.0015500031,3)+' in²':fmt(r.A,0)+' mm²'}</td></tr>
+      <tr><th>Moment of inertia, I</th><td class="v">${isUs()?fmt(r.I*Math.pow(CONV.mm_in,4),0)+' in⁴':fmt(r.I/1e6,2)+' ×10⁶ mm⁴'}</td></tr>
+      <tr><th>Section modulus, Z</th><td class="v">${isUs()?fmt(r.Z*Math.pow(CONV.mm_in,3),1)+' in³':fmt(r.Z/1e3,2)+' ×10³ mm³'}</td></tr>
+      <tr><th>D/t slenderness</th><td class="v">${fmt(r.Dt,1)} ${r.Dt>120?'— review thin wall':''}</td></tr>
+      <tr><th>Self-weight (steel only)</th><td class="v">${isUs()?fmt(r.wSelf*1000/9.81*CONV.kg_lb/CONV.m_ft,2)+' lb/ft':fmt(r.wSelf*1000/9.81,2)+' kg/m'}</td></tr>
+      <tr><th>Total distributed gravity load</th><td class="v">${isUs()?fmt(r.wGravity*1000/9.81*CONV.kg_lb/CONV.m_ft,2)+' lb/ft':fmt(r.wGravity*1000/9.81,2)+' kg/m'}</td></tr>
     `;
+
+    const baseReaction = Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000;
+    const momentOk = (r.Mres/1e6) <= inp.ratedMoment_kNm;
+    const loadOk = baseReaction <= inp.ratedLoad_kN;
+    const stressOk = r.actualSF >= inp.SF;
+    const deflOk = r.dRes <= r.defLimit;
+    const boltOk = r.boltUtil <= 100;
+    const primaryFail = !stressOk || !momentOk || !boltOk || !loadOk || !r.bucklingPass || issues.some(i=>i.level==='bad');
+    const marginal = !primaryFail && !deflOk;
 
     // reaction table
     $('reactionTable').innerHTML = `
-      <tr><th>Base bending moment (resultant, gravity+wind)</th><td class="v">${fmt(r.Mres/1e6,2)} kN·m</td></tr>
-      <tr><th>Base shear (resultant)</th><td class="v">${fmt(r.Vres/1000,2)} kN</td></tr>
-      <tr><th>Base axial force</th><td class="v">${fmt(r.N_d/1000,2)} kN</td></tr>
-      <tr><th>Turntable rated moment</th><td class="v">${fmt(inp.ratedMoment_kNm,2)} kN·m — ${(r.Mres/1e6)<=inp.ratedMoment_kNm?'OK':'EXCEEDED'}</td></tr>
-      <tr><th>Turntable rated load</th><td class="v">${fmt(inp.ratedLoad_kN,2)} kN — ${(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000)<=inp.ratedLoad_kN?'OK':'EXCEEDED'}</td></tr>
-      <tr><th>Max bolt/pin tension (simplified)</th><td class="v">${fmt(r.boltTension_kN,2)} kN</td></tr>
-      <tr><th>Bolt utilization</th><td class="v">${fmt(r.boltUtil,1)}% of allowable ${inp.boltAllow_kN} kN</td></tr>
+      <tr><th>Base bending moment (resultant, gravity+wind)</th><td class="v">${uMoment(r.Mres/1e6)}</td></tr>
+      <tr><th>Base shear (resultant)</th><td class="v">${uForce_kN(r.Vres/1000)}</td></tr>
+      <tr><th>Base axial force</th><td class="v">${uForce_kN(r.N_d/1000)}</td></tr>
+      <tr><th>Euler buckling (K=2 cantilever)</th><td class="v">Pcr ${uForce_kN(r.Pcr/1000)} · SF ${fmt(r.bucklingSF,2)} ${r.bucklingPass?'OK':'FAIL'}</td></tr>
+      <tr><th>Turntable rated moment</th><td class="v">${uMoment(inp.ratedMoment_kNm)} — ${momentOk?'OK':'EXCEEDED'}</td></tr>
+      <tr><th>Turntable rated load</th><td class="v">${uForce_kN(inp.ratedLoad_kN)} — ${loadOk?'OK':'EXCEEDED'}</td></tr>
+      <tr><th>Max bolt/pin tension (simplified)</th><td class="v">${uForce_kN(r.boltTension_kN)}</td></tr>
+      <tr><th>Bolt utilization</th><td class="v">${fmt(r.boltUtil,1)}% of allowable ${uForce_kN(inp.boltAllow_kN)}</td></tr>
     `;
+
+    $('summaryTable').innerHTML = `
+      <tr><th>Design wind</th><td class="v">${uWind(inp.windSpeed_ms)} · Cd ${inp.Cd} · exp ${inp.windExposure}</td></tr>
+      <tr><th>Allowable stress</th><td class="v">${uStress(r.allow)} (Fy/${inp.SF})</td></tr>
+      <tr><th>Equivalent stress</th><td class="v">${uStress(r.sigmaEq)}</td></tr>
+      <tr><th>Deflection limit</th><td class="v">${uLen_mm(r.defLimit)} (L/${inp.defLimitDenom})</td></tr>
+      <tr><th>Resultant deflection</th><td class="v">${uLen_mm(r.dRes)}</td></tr>
+      <tr><th>Load case</th><td class="v">${$('loadCase').selectedOptions[0].textContent}</td></tr>
+    `;
+
+    drawSchematic(inp, r);
 
     // results tiles
     const tiles = $('tiles'); tiles.innerHTML='';
     const sfStatus = r.actualSF < inp.SF ? 'bad' : (r.actualSF < inp.SF*1.1 ? 'warn':'good');
-    statTile(tiles,'Equivalent stress (σ_eq)', fmt(r.sigmaEq,1)+' MPa', 'von Mises-style, bending+axial+shear', statusFor(r.sigmaEq/r.allow));
-    statTile(tiles,'Allowable stress', fmt(r.allow,1)+' MPa', `Fy ${inp.Fy_MPa} MPa / SF ${inp.SF}`, null);
+    statTile(tiles,'Equivalent stress (σ_eq)', uStress(r.sigmaEq), 'von Mises-style, bending+axial+shear', statusFor(r.sigmaEq/r.allow));
+    statTile(tiles,'Allowable stress', uStress(r.allow), `Fy ${uStress(inp.Fy_MPa)} / SF ${inp.SF}`, null);
     statTile(tiles,'Actual safety factor', fmt(r.actualSF,2), `vs target ${inp.SF}`, sfStatus);
-    statTile(tiles,'Bending stress', fmt(r.sigmaBend,1)+' MPa', 'from resultant moment', null);
-    statTile(tiles,'Axial stress', fmt(r.sigmaAxial,1)+' MPa', 'from boom angle component', null);
-    statTile(tiles,'Base moment', fmt(r.Mres/1e6,2)+' kN·m', 'at rig/turntable connection', null);
-    statTile(tiles,'Tip / resultant deflection', fmt(r.dRes,1)+' mm', `limit L/${inp.defLimitDenom} = ${fmt(r.defLimit,1)} mm`, statusFor(r.dRes/r.defLimit));
-    statTile(tiles,'Base reaction (shear+axial)', fmt(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000,2)+' kN', `rated ${inp.ratedLoad_kN} kN`, statusFor(Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000/Math.max(inp.ratedLoad_kN,1e-9)));
-    statTile(tiles,'Bolt/pin utilization', fmt(r.boltUtil,0)+'%', `${inp.nBolts} bolts, ${inp.boltAllow_kN} kN allow. ea.`, statusFor(r.boltUtil/100));
+    statTile(tiles,'Buckling SF (axial)', fmt(r.bucklingSF,2), `Pcr ${uForce_kN(r.Pcr/1000)}`, r.bucklingPass?'good':'bad');
+    statTile(tiles,'Bending stress', uStress(r.sigmaBend), 'from resultant moment', null);
+    statTile(tiles,'Axial stress', uStress(r.sigmaAxial), 'from boom angle component', null);
+    statTile(tiles,'Base moment', uMoment(r.Mres/1e6), 'at rig/turntable connection', null);
+    statTile(tiles,'Tip / resultant deflection', uLen_mm(r.dRes), `limit L/${inp.defLimitDenom} = ${uLen_mm(r.defLimit)}`, statusFor(r.dRes/r.defLimit));
+    statTile(tiles,'Base reaction (shear+axial)', uForce_kN(baseReaction), `rated ${uForce_kN(inp.ratedLoad_kN)}`, statusFor(baseReaction/Math.max(inp.ratedLoad_kN,1e-9)));
+    statTile(tiles,'Bolt/pin utilization', fmt(r.boltUtil,0)+'%', `${inp.nBolts} bolts, ${uForce_kN(inp.boltAllow_kN)} allow. ea.`, statusFor(r.boltUtil/100));
 
-    const overallBad = (r.actualSF < inp.SF) || (r.dRes>r.defLimit) || ((r.Mres/1e6)>inp.ratedMoment_kNm) || (r.boltUtil>100) || ((Math.sqrt(r.Vres*r.Vres+r.N_d*r.N_d)/1000)>inp.ratedLoad_kN);
+    const overallBad = primaryFail;
     const banner = document.createElement('div');
     banner.style.gridColumn='1/-1';
-    banner.innerHTML = `<span class="tag ${overallBad?'bad':'good'}">${overallBad? '✕ One or more checks exceed allowable / rated limits' : '✓ All checks within stated allowable limits'}</span>`;
+    let bannerText = '✓ Primary strength & connection checks within allowable limits';
+    let bannerClass = 'good';
+    if(primaryFail) { bannerText = '✕ One or more strength / capacity checks exceed allowable limits'; bannerClass = 'bad'; }
+    else if(marginal) { bannerText = '⚠ Stress OK — deflection exceeds L/'+inp.defLimitDenom+' criterion (serviceability)'; bannerClass = 'warn'; }
+    banner.innerHTML = `<span class="tag ${bannerClass}">${bannerText}</span>`;
     tiles.appendChild(banner);
+
+    const statusEl = $('overallStatus');
+    statusEl.className = 'status-pill ' + (primaryFail ? 'fail' : (marginal || r.actualSF < inp.SF*1.15 ? 'warn' : 'pass'));
+    statusEl.textContent = primaryFail ? 'FAIL — strength/capacity' : (marginal ? 'MARGINAL — deflection' : 'PASS — primary checks OK');
 
     // charts
     drawChart($('chartMoment'), [
@@ -725,21 +1176,22 @@
 
     // full report
     $('fullReport').innerHTML = `
-      <tr><th>Boom length / angle</th><td class="v">${inp.L_m} m / ${inp.angle_deg}°</td></tr>
-      <tr><th>Section (OD × t)</th><td class="v">${inp.OD_mm} × ${inp.t_mm} mm</td></tr>
-      <tr><th>Material Fy</th><td class="v">${inp.Fy_MPa} MPa</td></tr>
+      <tr><th>Boom length / angle</th><td class="v">${uLen_m(inp.L_m)} / ${inp.angle_deg}°</td></tr>
+      <tr><th>Section (OD × t)</th><td class="v">${uLen_mm(inp.OD_mm)} × ${uLen_mm(inp.t_mm)}</td></tr>
+      <tr><th>Material Fy</th><td class="v">${uStress(inp.Fy_MPa)}</td></tr>
       <tr><th>Dynamic amplification factor</th><td class="v">${inp.DAF}</td></tr>
-      <tr><th>Design wind speed / Cd</th><td class="v">${inp.windSpeed_ms} m/s / ${inp.Cd}</td></tr>
-      <tr><th>Resultant base moment</th><td class="v">${fmt(r.Mres/1e6,2)} kN·m</td></tr>
-      <tr><th>Resultant base shear</th><td class="v">${fmt(r.Vres/1000,2)} kN</td></tr>
-      <tr><th>Base axial force</th><td class="v">${fmt(r.N_d/1000,2)} kN</td></tr>
-      <tr><th>Bending stress</th><td class="v">${fmt(r.sigmaBend,1)} MPa</td></tr>
-      <tr><th>Axial stress</th><td class="v">${fmt(r.sigmaAxial,1)} MPa</td></tr>
-      <tr><th>Shear stress (2V/A approx.)</th><td class="v">${fmt(r.tau,1)} MPa</td></tr>
-      <tr><th>Equivalent (von Mises-style) stress</th><td class="v">${fmt(r.sigmaEq,1)} MPa</td></tr>
-      <tr><th>Allowable stress (Fy/SF)</th><td class="v">${fmt(r.allow,1)} MPa</td></tr>
+      <tr><th>Design wind speed / Cd / exposure</th><td class="v">${uWind(inp.windSpeed_ms)} / ${inp.Cd} / ${inp.windExposure}</td></tr>
+      <tr><th>Resultant base moment</th><td class="v">${uMoment(r.Mres/1e6)}</td></tr>
+      <tr><th>Resultant base shear</th><td class="v">${uForce_kN(r.Vres/1000)}</td></tr>
+      <tr><th>Base axial force</th><td class="v">${uForce_kN(r.N_d/1000)}</td></tr>
+      <tr><th>Buckling capacity / SF</th><td class="v">${uForce_kN(r.Pcr/1000)} / ${fmt(r.bucklingSF,2)}</td></tr>
+      <tr><th>Bending stress</th><td class="v">${uStress(r.sigmaBend)}</td></tr>
+      <tr><th>Axial stress</th><td class="v">${uStress(r.sigmaAxial)}</td></tr>
+      <tr><th>Shear stress (2V/A approx.)</th><td class="v">${uStress(r.tau)}</td></tr>
+      <tr><th>Equivalent (von Mises-style) stress</th><td class="v">${uStress(r.sigmaEq)}</td></tr>
+      <tr><th>Allowable stress (Fy/SF)</th><td class="v">${uStress(r.allow)}</td></tr>
       <tr><th>Actual safety factor</th><td class="v">${fmt(r.actualSF,2)}</td></tr>
-      <tr><th>Tip / resultant deflection</th><td class="v">${fmt(r.dRes,1)} mm (limit ${fmt(r.defLimit,1)} mm)</td></tr>
+      <tr><th>Tip / resultant deflection</th><td class="v">${uLen_mm(r.dRes)} (limit ${uLen_mm(r.defLimit)})</td></tr>
     `;
 
     // ---- load test tab ----
@@ -750,10 +1202,10 @@
     const setLimit = Number.isFinite(meas) ? meas*(inp.permSetPct/100) : NaN;
     const setPass = Number.isFinite(set) && Number.isFinite(setLimit) ? set<=setLimit : null;
     const deflWithinBand = Number.isFinite(meas) ? Math.abs(meas-predicted)<=predicted*0.35 : null; // ±35% informational band
-    statTile(tt,'Test load', fmt(r.testLoad_kg,1)+' kg', `SWL ${inp.swl_kg} kg × ${inp.testFactor}`, null);
-    statTile(tt,'Predicted deflection at test load', fmt(predicted,1)+' mm', 'from beam theory, static, no DAF/wind', null);
-    statTile(tt,'Measured deflection', Number.isFinite(meas)?fmt(meas,1)+' mm':'—', deflWithinBand===null?'awaiting field data':(deflWithinBand?'within informational ±35% band':'outside informational band — investigate'), deflWithinBand===null?null:(deflWithinBand?'good':'warn'));
-    statTile(tt,'Permanent set / limit', Number.isFinite(set)?fmt(set,1)+' mm':'—', Number.isFinite(setLimit)?`limit ${fmt(setLimit,1)} mm (${inp.permSetPct}% of measured deflection)`:'awaiting field data', setPass===null?null:(setPass?'good':'bad'));
+    statTile(tt,'Test load', uMass(r.testLoad_kg), `SWL ${uMass(inp.swl_kg)} × ${inp.testFactor}`, null);
+    statTile(tt,'Predicted deflection at test load', uLen_mm(predicted), 'from beam theory, static, no DAF/wind', null);
+    statTile(tt,'Measured deflection', Number.isFinite(meas)?uLen_mm(meas):'—', deflWithinBand===null?'awaiting field data':(deflWithinBand?'within informational ±35% band':'outside informational band — investigate'), deflWithinBand===null?null:(deflWithinBand?'good':'warn'));
+    statTile(tt,'Permanent set / limit', Number.isFinite(set)?uLen_mm(set):'—', Number.isFinite(setLimit)?`limit ${uLen_mm(setLimit)} (${inp.permSetPct}% of measured deflection)`:'awaiting field data', setPass===null?null:(setPass?'good':'bad'));
     const visualOk = $('visualOk').checked;
     const overallTestPass = setPass===true && visualOk && Number.isFinite(meas);
     const testBanner = document.createElement('div');
@@ -767,11 +1219,11 @@
       <tr><th>Asset / Boom ID</th><td class="v">${$('assetId').value||'—'}</td></tr>
       <tr><th>Rig / Location</th><td class="v">${$('rigLoc').value||'—'}</td></tr>
       <tr><th>Test date</th><td class="v">${$('testDate').value||'—'}</td></tr>
-      <tr><th>SWL</th><td class="v">${inp.swl_kg} kg</td></tr>
-      <tr><th>Test load applied</th><td class="v">${fmt(r.testLoad_kg,1)} kg (${inp.testFactor}× SWL)</td></tr>
-      <tr><th>Predicted deflection</th><td class="v">${fmt(predicted,1)} mm</td></tr>
-      <tr><th>Measured deflection</th><td class="v">${Number.isFinite(meas)?fmt(meas,1)+' mm':'—'}</td></tr>
-      <tr><th>Measured permanent set</th><td class="v">${Number.isFinite(set)?fmt(set,1)+' mm':'—'}</td></tr>
+      <tr><th>SWL</th><td class="v">${uMass(inp.swl_kg)}</td></tr>
+      <tr><th>Test load applied</th><td class="v">${uMass(r.testLoad_kg)} (${inp.testFactor}× SWL)</td></tr>
+      <tr><th>Predicted deflection</th><td class="v">${uLen_mm(predicted)}</td></tr>
+      <tr><th>Measured deflection</th><td class="v">${Number.isFinite(meas)?uLen_mm(meas):'—'}</td></tr>
+      <tr><th>Measured permanent set</th><td class="v">${Number.isFinite(set)?uLen_mm(set):'—'}</td></tr>
       <tr><th>Visual inspection</th><td class="v">${visualOk?'No defects observed':'Not confirmed'}</td></tr>
       <tr><th>Result</th><td class="v">${tagText}</td></tr>
       <tr><th>Tested by</th><td class="v">${$('testedBy').value||'—'}</td></tr>
@@ -779,7 +1231,10 @@
     `;
   }
 
+  if(!loadState()) applyDefaults();
+  if(isUs()) convertAllUnits(true);
   recalc();
+  saveState();
 })();
 </script>
 </body>
