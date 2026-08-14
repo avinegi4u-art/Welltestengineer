@@ -262,6 +262,11 @@ function buildSupports3d(model, combo, inp){
     const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/model.dy)));
     for(let c=0;c<4;c++) sup.push({node:model.nk(si,c), uz:1});
   }
+  if(active('kingpost') && !active('guys') && inp.kingpostEnabled !== false){
+    const yKing=inp.kingpostPos_m ?? inp.guyAttachPos_m ?? model.nodes[model.nk(model.siG, 2)].y;
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/model.dy)));
+    for(const c of [2, 3]) sup.push({node:model.nk(si, c), uz:1});
+  }
   return sup;
 }
 
@@ -387,9 +392,15 @@ function supportReactions3d(model, sol, combo, inp){
   const R = sol.R;
   let kingpostR = 0;
   if(comboActive(combo, 'kingpost')){
-    const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
-    if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
-    else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+    if(!comboActive(combo, 'guys')){
+      const yKing=inp.kingpostPos_m ?? inp.guyAttachPos_m ?? model.nodes[model.nk(model.siG, 2)].y;
+      const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/model.dy)));
+      for(const c of [2, 3]) kingpostR=Math.max(kingpostR, Math.abs(R[6*model.nk(si,c)+2]));
+    } else {
+      const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
+      if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
+      else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+    }
   }
   let boomrestR = 0;
   if(comboActive(combo, 'boomrest') && inp.boomRestEnabled){

@@ -79,6 +79,16 @@ assert(opRes.governing.id === 'D10_S', 'op_res governing member D10_S brace');
 assert(opRes.supportsOut.kingpost.R_kN > 50 && opRes.supportsOut.kingpost.R_kN < 150,
   `op_res kingpost reaction ${opRes.supportsOut.kingpost.R_kN.toFixed(1)} kN from Sp4 support (not guy sum)`);
 
+const accHeel = sf.computeSpaceFrameCore(INP_60FT, MATRIX_COMBOS.find(c => c.id === 'acc_heel'));
+assert(accHeel.supportsOut.kingpost.R_kN > 40 && accHeel.supportsOut.kingpost.R_kN < 70,
+  `acc_heel kingpost reaction ${accHeel.supportsOut.kingpost.R_kN.toFixed(1)} kN from boom kingpost uz (not Sp4)`);
+assert(accHeel.supportsOut.kingpost.ok, 'acc_heel kingpost within rated capacity');
+
+const rao = require('./rao_presets.js');
+const raoCombo = { id: 'op_res', sfZ: 3.25, sfY: 0.29, sfX: 0.03 };
+const raoScaled = rao.applyRaoScale(raoCombo, 'conservative', { combos: { op_res: { sfZ: 3.5 } } });
+assert(Math.abs(raoScaled.sfZ - 3.5 * 1.15) < 0.01, 'RAO import scales apply preset multiplier on override');
+
 const { loads, swFactor, frameWeightN } = sf.computeSpaceFrameLoads(INP_60FT, MATRIX_COMBOS[2], model);
 assert(Math.abs(swFactor - sf.PDF_SW_FACTOR) < 0.001, 'PDF 1.27 SW factor applied');
 assert(frameWeightN > 5000 && frameWeightN < 80000, `frame self-weight ${(frameWeightN / 1000).toFixed(1)} kN plausible`);

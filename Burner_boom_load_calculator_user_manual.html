@@ -45,6 +45,7 @@
         <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
         <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
+        <li><a href="#manual-v57">Sprint H — v5.7 calibration dashboard</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -200,6 +201,14 @@
       <li><strong>Members CSV</strong> — exports <em>Bending</em> source and boom alignment <em>mx</em></li>
     </ul>
 
+    <h2 id="manual-v57">7f. Sprint H — v5.7 calibration dashboard &amp; RAO JSON</h2>
+    <ul>
+      <li><strong>Calibration dashboard</strong> — Tab 4 summary card merges PDF benchmark, digitized extract, and solved support-reaction screening (kingpost op/acc, boom rest sv_res) with status pills</li>
+      <li><strong>Accidental kingpost uz</strong> — when guylines are not in the combination support set, kingpost vertical restraint is applied at the boom station (not Sp4 guy anchor reaction)</li>
+      <li><strong>Import RAO JSON</strong> — replace per-combination sfZ/sfY/sfX with ship-specific factors (<code>{ kind: "burnerBoomRaoPresets", combos: { op_res: { sfZ, sfY, sfX }, ... } }</code>); toolbar preset still applies conservative/soft/stiff multipliers on top</li>
+      <li><strong>CI</strong> — <code>node tools/rao_presets.js</code> validates RAO merge logic on each PR</li>
+    </ul>
+
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
@@ -272,6 +281,8 @@
     <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, bolt utilization, and (matrix mode) multi-support and 3-direction force components for the governing combination.</p>
 
     <h2 id="manual-tab4">10. Tab 4 — Results</h2>
+    <h3>Calibration dashboard (3D mode)</h3>
+    <p>When <strong>3D space frame</strong> is active, the calibration dashboard summarizes PDF benchmark, digitized member extract, and support-reaction screening in one place. Use <em>Import RAO JSON</em> to load vessel-specific matrix scale factors.</p>
     <h3>Load combination matrix (matrix mode)</h3>
     <p>Eight rows with stress utilization, safety factor, base moment, guyline tension, and pass/fail. The governing row (★) drives the sticky header status and governs charts/schematic values.</p>
     <h3>Quality checks</h3>
@@ -340,7 +351,7 @@
       <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
       <li>EN 1991-1-4 wind on cylinders (Cd)</li>
       <li>Euler column buckling (K = 2 cantilever)</li>
-      <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
+      <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports; import RAO JSON for ship-specific calibration</li>
     </ul>
     <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
     <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>

@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.6 · solved support reactions · RAO presets · cert extracts</p>
+          <p class="meta">v5.7 · calibration dashboard · RAO JSON import · kingpost uz</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -324,6 +324,7 @@
     <input type="file" id="importProjectFile" accept="application/json,.json" hidden>
     <input type="file" id="importPdfBenchmarkFile" accept="application/json,.json" hidden>
     <input type="file" id="importPdfDigitizedFile" accept="application/json,.json" hidden>
+    <input type="file" id="importRaoPresetsFile" accept="application/json,.json" hidden>
   </div>
 
   <div class="disclaimer">
@@ -582,7 +583,19 @@
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
       <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
-      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys · 1.27× frame SW · kingpost/boom-rest reactions from solved supports (Sp4 vertical, boom-rest uz).</p>
+      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys · 1.27× frame SW · kingpost uz at boom station (accidental) or Sp4 vertical (operating); boom-rest uz in survival.</p>
+    </div>
+
+    <div class="card" id="calibrationDashboardCard" style="display:none;">
+      <h2>Calibration dashboard <span class="badge-sm" id="calibDashStatus">—</span></h2>
+      <p class="hint" style="margin-top:-6px;">Combined screening status for PDF benchmark, digitized member extracts, and solved 3D support reactions. Import ship-specific RAO scale factors to replace matrix combination sfZ/sfY/sfX.</p>
+      <div class="status-grid" id="calibDashPills" style="margin-bottom:12px;"></div>
+      <div class="btnrow no-print" style="margin-bottom:10px;">
+        <button type="button" class="action secondary" id="importRaoPresets">Import RAO JSON</button>
+        <button type="button" class="action secondary" id="exportRaoPresets">Export RAO JSON</button>
+        <button type="button" class="action ghost" id="resetRaoPresets">Reset RAO scales</button>
+      </div>
+      <table class="matrix-table" id="calibDashTable"></table>
     </div>
 
     <div class="card" id="modeCompareCard">
@@ -774,6 +787,7 @@
         <li><a href="#manual-v54">Sprint E — v5.4 workflow</a></li>
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
         <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
+        <li><a href="#manual-v57">Sprint H — v5.7 calibration dashboard</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -929,6 +943,14 @@
       <li><strong>Members CSV</strong> — exports <em>Bending</em> source and boom alignment <em>mx</em></li>
     </ul>
 
+    <h2 id="manual-v57">7f. Sprint H — v5.7 calibration dashboard &amp; RAO JSON</h2>
+    <ul>
+      <li><strong>Calibration dashboard</strong> — Tab 4 summary card merges PDF benchmark, digitized extract, and solved support-reaction screening (kingpost op/acc, boom rest sv_res) with status pills</li>
+      <li><strong>Accidental kingpost uz</strong> — when guylines are not in the combination support set, kingpost vertical restraint is applied at the boom station (not Sp4 guy anchor reaction)</li>
+      <li><strong>Import RAO JSON</strong> — replace per-combination sfZ/sfY/sfX with ship-specific factors (<code>{ kind: "burnerBoomRaoPresets", combos: { op_res: { sfZ, sfY, sfX }, ... } }</code>); toolbar preset still applies conservative/soft/stiff multipliers on top</li>
+      <li><strong>CI</strong> — <code>node tools/rao_presets.js</code> validates RAO merge logic on each PR</li>
+    </ul>
+
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
@@ -1001,6 +1023,8 @@
     <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, bolt utilization, and (matrix mode) multi-support and 3-direction force components for the governing combination.</p>
 
     <h2 id="manual-tab4">10. Tab 4 — Results</h2>
+    <h3>Calibration dashboard (3D mode)</h3>
+    <p>When <strong>3D space frame</strong> is active, the calibration dashboard summarizes PDF benchmark, digitized member extract, and support-reaction screening in one place. Use <em>Import RAO JSON</em> to load vessel-specific matrix scale factors.</p>
     <h3>Load combination matrix (matrix mode)</h3>
     <p>Eight rows with stress utilization, safety factor, base moment, guyline tension, and pass/fail. The governing row (★) drives the sticky header status and governs charts/schematic values.</p>
     <h3>Quality checks</h3>
@@ -1069,7 +1093,7 @@
       <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
       <li>EN 1991-1-4 wind on cylinders (Cd)</li>
       <li>Euler column buckling (K = 2 cantilever)</li>
-      <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
+      <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports; import RAO JSON for ship-specific calibration</li>
     </ul>
     <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
     <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
@@ -1109,7 +1133,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.6.0';
+  const APP_VERSION = '5.7.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1122,6 +1146,77 @@
     soft_rao: { name: 'Soft RAO vessel', sfMult: 0.92, sfYMult: 1.1 },
     stiff_rao: { name: 'Stiff RAO vessel', sfMult: 1.12, sfYMult: 0.95 },
   };
+
+  const RAO_COMBO_SCALES_DEFAULT = {
+    op_roll: { sfZ: 2.40, sfY: 0.18, sfX: 0.04 },
+    op_pitch: { sfZ: 2.10, sfY: 0.22, sfX: 0.05 },
+    op_res: { sfZ: 3.25, sfY: 0.29, sfX: 0.03 },
+    sv_roll: { sfZ: 2.00, sfY: 0.15, sfX: 0.04 },
+    sv_pitch: { sfZ: 1.80, sfY: 0.18, sfX: 0.05 },
+    sv_res: { sfZ: 2.50, sfY: 0.25, sfX: 0.03 },
+    acc_heel: { sfZ: 1.00, sfY: 0.10, sfX: 0.08 },
+    lift: { sfZ: 1.00, sfY: 0.00, sfX: 0.00 },
+  };
+
+  function loadRaoOverride(){
+    try {
+      const raw = localStorage.getItem(RAO_OVERRIDE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function saveRaoOverride(override){
+    if(!override) localStorage.removeItem(RAO_OVERRIDE_KEY);
+    else localStorage.setItem(RAO_OVERRIDE_KEY, JSON.stringify(override));
+  }
+
+  function getRaoComboScales(){
+    const override = loadRaoOverride();
+    if(!override?.combos) return RAO_COMBO_SCALES_DEFAULT;
+    const merged = { ...RAO_COMBO_SCALES_DEFAULT };
+    for(const [id, scales] of Object.entries(override.combos)){
+      if(scales && typeof scales === 'object') merged[id] = { ...(merged[id] || {}), ...scales };
+    }
+    return merged;
+  }
+
+  function exportRaoPresetJson(){
+    const override = loadRaoOverride();
+    const payload = override || {
+      doc: 'SESAM screening defaults — not ship-specific RAO calibration',
+      combos: RAO_COMBO_SCALES_DEFAULT,
+      presets: COMBO_SCALE_PRESETS,
+    };
+    downloadBlob('burner-boom-rao-presets.json', 'application/json', JSON.stringify({ kind: 'burnerBoomRaoPresets', ...payload }, null, 2));
+  }
+
+  function importRaoPresetJson(data){
+    if(!data || typeof data !== 'object') throw new Error('invalid');
+    if(data.combos && typeof data.combos !== 'object') throw new Error('missing combos');
+    saveRaoOverride({ doc: data.doc, combos: data.combos, presets: data.presets });
+  }
+
+  $('importRaoPresets')?.addEventListener('click', ()=> $('importRaoPresetsFile').click());
+  $('importRaoPresetsFile')?.addEventListener('change', e=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try {
+        importRaoPresetJson(JSON.parse(reader.result));
+        recalc();
+      } catch(err){ alert('Invalid RAO JSON — expected { combos: { op_res: { sfZ, sfY, sfX }, ... } }'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('exportRaoPresets')?.addEventListener('click', exportRaoPresetJson);
+  $('resetRaoPresets')?.addEventListener('click', ()=>{
+    if(confirm('Reset matrix RAO scale factors to built-in SESAM screening defaults?')){
+      saveRaoOverride(null);
+      recalc();
+    }
+  });
 
   const PIPE_PRESETS = {
     '6sch40': { OD_mm: 168.3, t_mm: 7.11 },
@@ -1151,6 +1246,7 @@
   const PROJECT_PRESET_KEY = 'burnerBoomProjectPresets_v1';
   const PDF_BENCHMARK_OVERRIDE_KEY = 'burnerBoomPdfBenchmarks_v1';
   const PDF_DIGITIZED_OVERRIDE_KEY = 'burnerBoomPdfDigitized_v1';
+  const RAO_OVERRIDE_KEY = 'burnerBoomRaoPresets_v1';
   const BUILTIN_RIG_PRESETS = {
     '60ft_default': { name: '60 ft default', L_m: 18.288, kingpostPos_m: 6.19, windStayPos_m: 5.18, boomRestPos_m: 5.46, guyAttachPos_m: 6.19 },
     '90ft_reference': { name: '90 ft reference', L_m: 27.432, kingpostPos_m: 9.28, windStayPos_m: 7.77, boomRestPos_m: 8.19, guyAttachPos_m: 9.28 }
@@ -2010,6 +2106,11 @@ function buildSupports3d(model, combo, inp){
     const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.boomRestPos_m/model.dy)));
     for(let c=0;c<4;c++) sup.push({node:model.nk(si,c), uz:1});
   }
+  if(active('kingpost') && !active('guys') && inp.kingpostEnabled !== false){
+    const yKing=inp.kingpostPos_m ?? inp.guyAttachPos_m ?? model.nodes[model.nk(model.siG, 2)].y;
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/model.dy)));
+    for(const c of [2, 3]) sup.push({node:model.nk(si, c), uz:1});
+  }
   return sup;
 }
 
@@ -2135,9 +2236,15 @@ function supportReactions3d(model, sol, combo, inp){
   const R = sol.R;
   let kingpostR = 0;
   if(comboActive(combo, 'kingpost')){
-    const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
-    if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
-    else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+    if(!comboActive(combo, 'guys')){
+      const yKing=inp.kingpostPos_m ?? inp.guyAttachPos_m ?? model.nodes[model.nk(model.siG, 2)].y;
+      const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/model.dy)));
+      for(const c of [2, 3]) kingpostR=Math.max(kingpostR, Math.abs(R[6*model.nk(si,c)+2]));
+    } else {
+      const sp4 = model.nodes.findIndex(n => n.tag === 'Sp4');
+      if(sp4 >= 0) kingpostR = Math.abs(R[6 * sp4 + 2]);
+      else kingpostR = Math.abs(R[6 * model.nk(model.siG, 2) + 2]);
+    }
   }
   let boomrestR = 0;
   if(comboActive(combo, 'boomrest') && inp.boomRestEnabled){
@@ -2675,6 +2782,63 @@ function computeSpaceFrameCore(inp, combo){
     el.innerHTML = html;
     if($('pdfDigitizedStatus')) $('pdfDigitizedStatus').textContent = report.allPass ? 'Extract OK' : 'Extract drift';
     if($('pdfDigitizedStatus')) $('pdfDigitizedStatus').className = 'status-pill ' + (report.allPass ? 'ok' : 'fail');
+  }
+
+  const CALIB_SUPPORT_CHECKS = [
+    { id: 'op_res', label: 'Kingpost · operating', prop: 'kingpost', lo: 50, hi: 150 },
+    { id: 'acc_heel', label: 'Kingpost · accidental', prop: 'kingpost', lo: 40, hi: 70 },
+    { id: 'sv_res', label: 'Boom rest · survival', prop: 'boomrest', lo: 20, hi: 80 },
+  ];
+
+  function buildCalibrationDashboard(envelope, pdfReport, digitizedReport){
+    if(!envelope) return null;
+    const pills = [
+      { id: 'pdf_benchmark', label: 'PDF benchmark', pass: !!pdfReport?.allPass, detail: pdfReport?.allPass ? 'Within bands' : (pdfReport ? 'Drift' : '—') },
+      { id: 'pdf_digitized', label: 'PDF extracts', pass: !!digitizedReport?.allPass, detail: digitizedReport?.allPass ? 'Match' : (digitizedReport ? 'Drift' : '—') },
+    ];
+    const supportRows = [];
+    let supportsPass = true;
+    for(const chk of CALIB_SUPPORT_CHECKS){
+      const row = envelope.rows.find(x => x.combo.id === chk.id);
+      const sup = row?.r?.supports?.[chk.prop];
+      if(!sup || !row.r.space3d) continue;
+      const rKn = sup.R_kN ?? 0;
+      const inBand = rKn >= chk.lo && rKn <= chk.hi;
+      const pass = sup.ok && inBand;
+      if(!pass) supportsPass = false;
+      supportRows.push({ ...chk, R_kN: rKn, capacityOk: sup.ok, inBand, pass });
+    }
+    pills.push({ id: 'supports', label: 'Support reactions', pass: supportsPass, detail: supportsPass ? 'Within bands' : 'Review' });
+    const raoOverride = loadRaoOverride();
+    pills.push({ id: 'rao', label: 'RAO scales', pass: true, detail: raoOverride ? 'Custom vessel' : 'SESAM default' });
+    const trackPass = pills.filter(p => p.id !== 'rao').every(p => p.pass);
+    return { pills, supportRows, allPass: trackPass, raoDoc: raoOverride?.doc || 'SESAM screening defaults' };
+  }
+
+  function renderCalibrationDashboard(dash){
+    const card = $('calibrationDashboardCard');
+    const pillsEl = $('calibDashPills');
+    const tableEl = $('calibDashTable');
+    if(!card || !pillsEl || !tableEl) return;
+    if(!dash){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    pillsEl.innerHTML = dash.pills.map(p =>
+      `<div class="${p.pass ? 'pass' : 'fail'}"><strong>${p.label}</strong> — ${p.detail}</div>`
+    ).join('');
+    if($('calibDashStatus')){
+      $('calibDashStatus').textContent = dash.allPass ? 'Calibration OK' : 'Review required';
+      $('calibDashStatus').className = 'status-pill ' + (dash.allPass ? 'ok' : 'fail');
+    }
+    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">${dash.raoDoc} · support reaction screening (60 ft default model)</caption>`;
+    html += '<thead><tr><th>Check</th><th>Reaction</th><th>Band</th><th>Capacity</th><th>Status</th></tr></thead><tbody>';
+    for(const row of dash.supportRows){
+      html += `<tr class="${row.pass ? '' : 'fail'}"><td>${row.label}</td><td class="n">${fmt(row.R_kN, 1)} kN</td><td class="n">${row.lo}–${row.hi} kN</td><td>${row.capacityOk ? 'OK' : 'EXCEEDED'}</td><td>${row.pass ? 'OK' : 'DRIFT'}</td></tr>`;
+    }
+    html += '</tbody>';
+    tableEl.innerHTML = html;
   }
 
   function exportPdfDigitizedTables(){
@@ -3218,11 +3382,16 @@ function computeSpaceFrameCore(inp, combo){
 
   function scaleMatrixCombo(combo, inp){
     const key = inp.comboScalePreset || 'default';
-    const p = COMBO_SCALE_PRESETS[key] || COMBO_SCALE_PRESETS.default;
-    if(!p || ((p.sfMult == null || p.sfMult === 1) && !p.sfYMult)) return combo;
+    const presets = { ...COMBO_SCALE_PRESETS, ...(loadRaoOverride()?.presets || {}) };
+    const p = presets[key] || presets.default || COMBO_SCALE_PRESETS.default;
+    const base = getRaoComboScales()[combo.id] || {};
+    let sfZ = base.sfZ != null ? base.sfZ : combo.sfZ;
+    let sfY = base.sfY != null ? base.sfY : combo.sfY;
+    let sfX = base.sfX != null ? base.sfX : combo.sfX;
     const m = p.sfMult ?? 1;
     const my = p.sfYMult ?? m;
-    return { ...combo, sfZ: combo.sfZ * m, sfY: combo.sfY * my, sfX: combo.sfX * m };
+    if(m === 1 && my === 1 && sfZ === combo.sfZ && sfY === combo.sfY && sfX === combo.sfX) return combo;
+    return { ...combo, sfZ: sfZ * m, sfY: sfY * my, sfX: sfX * m };
   }
 
   function computeEnvelope(inp){
@@ -3510,13 +3679,16 @@ function computeSpaceFrameCore(inp, combo){
       lastPdfDigitizedReport = buildPdfDigitizedReport(envelope);
       renderPdfDigitizedTable(lastPdfDigitizedReport);
       renderCertPdfDigitized(lastPdfDigitizedReport);
+      renderCalibrationDashboard(buildCalibrationDashboard(envelope, lastPdfReport, lastPdfDigitizedReport));
     } else {
       lastPdfReport = null;
       lastPdfDigitizedReport = null;
       if($('pdfBenchmarkCard')) $('pdfBenchmarkCard').style.display = 'none';
       if($('pdfDigitizedCard')) $('pdfDigitizedCard').style.display = 'none';
+      if($('calibrationDashboardCard')) $('calibrationDashboardCard').style.display = 'none';
       renderCertPdfCalibration(null);
       renderCertPdfDigitized(null);
+      renderCalibrationDashboard(null);
     }
     if($('autoModeCompare')?.checked){
       lastModeComparison = computeModeComparison(inp);
