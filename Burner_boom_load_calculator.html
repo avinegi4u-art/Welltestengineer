@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.1 · 60 ft 3D space frame · exports · mode compare</p>
+          <p class="meta">v5.2 · Sp5–Sp10 guys · bracing unity · rig presets</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -293,6 +293,13 @@
       <option value="10sch40">NPS 10" Sch 40</option>
     </select>
     <button type="button" class="action secondary" id="preset90ft">90 ft reference</button>
+    <label for="rigPreset">Rig</label>
+    <select id="rigPreset" aria-label="Rig support preset">
+      <option value="60ft_default" selected>60 ft default</option>
+      <option value="90ft_reference">90 ft reference</option>
+      <option value="custom">Custom</option>
+    </select>
+    <button type="button" class="action secondary" id="saveRigPreset">Save rig</button>
     <button type="button" class="action secondary" id="openManual">Manual</button>
     <span class="sep"></span>
     <button type="button" class="action secondary" id="exportJson">Export JSON</button>
@@ -528,7 +535,8 @@
         <div class="field"><label><input type="checkbox" id="boomRestEnabled" checked style="width:auto;margin-right:6px;">Boom rest vertical support (survival)</label></div>
         <div class="field"><label>Boom rest position from base</label><input type="number" id="boomRestPos_m" value="5.46" step="0.1" min="0"><span class="hint">m — 60 ft ref (PDF 90 ft = 8.19 m)</span></div>
         <div class="field"><label>Boom rest rated capacity</label><input type="number" id="boomRestRated_kN" value="60" step="1" min="0"><span class="hint">kN</span></div>
-        <div class="field"><label>Accidental dry-weight factor</label><input type="number" id="accidentalDryFactor" value="0.85" step="0.01" min="0.5" max="1"><span class="hint">Empty pipe fraction of operating weight</span></div>
+        <div class="field"><label>Accidental dry-weight factor</label><input type="number" id="accidentalDryFactor" value="0.85" step="0.01" min="0.5" max="1"><span class="hint">Empty-pipe fraction at tip (base = full weight)</span></div>
+        <div class="field"><label>Accidental static heel</label><input type="number" id="accidentalHeel_deg" value="5" step="0.5" min="0" max="15"><span class="hint">deg — tilts weight lateral in 3D accidental case</span></div>
         <div class="field"><label>Lifting load factor</label><input type="number" id="liftingLoadFactor" value="2" step="0.1" min="1"><span class="hint">× total weight (PDF lifting = 2)</span></div>
       </div>
     </div>
@@ -558,7 +566,7 @@
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
       <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
-      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design (18.288&nbsp;m) · 18 bays @ 1.016&nbsp;m · braced box frame (+X ⊥ boom, +Y along boom, +Z up) · Bm119 chords · Rope_pipe effective areas · topology scaled from CT-12-4536 (90&nbsp;ft PDF).</p>
+      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys (by effective guy count) · 1.27× frame SW · accidental heel geometry.</p>
     </div>
 
     <div class="card" id="modeCompareCard">
@@ -571,8 +579,8 @@
     </div>
 
     <div class="card" id="memberResultsCard" style="display:none;">
-      <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · PDF sections</span></h2>
-      <p class="hint" style="margin-top:-6px;">Top 20 members by utilization. Rope axial from 3D solve; Bm119 axial from 3D solve + bending from 3D base-moment tributary (1.27× frame self-weight per PDF).</p>
+      <h2>Member unity checks <span class="badge-sm">Bm119 · ropes · bracing</span></h2>
+      <p class="hint" style="margin-top:-6px;">Top 25 members by utilization (chords, Sp5–Sp10 guys, diagonals/cross-braces). Rope axial from 3D solve; Bm119 bending from 3D base-moment tributary (1.27× frame SW).</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="memberTable"></table></div>
     </div>
 
@@ -786,7 +794,8 @@
         <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
-        <tr><td><strong>90 ft reference</strong></td><td>Loads a 27.432&nbsp;m (90&nbsp;ft) reference case with mid-span secondary load — for comparison with the project PDF.</td></tr>
+        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions.</td></tr>
+        <tr><td><strong>90 ft reference</strong></td><td>Loads the 90&nbsp;ft rig preset and PDF comparison loads.</td></tr>
         <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
         <tr><td><strong>Members CSV</strong></td><td>Exports governing-combination member unity table (Bm119 + ropes) for spreadsheets.</td></tr>
         <tr><td><strong>Analysis report</strong></td><td>JSON bundle: inputs, matrix summary, top members, optional mode comparison.</td></tr>
@@ -829,9 +838,11 @@
       <li><strong>18 bays</strong> at 1.016&nbsp;m (60&nbsp;ft / 18) · four corner chords (box_75 / box_90)</li>
       <li><strong>Bm119</strong> — top starboard chord segments (box_90x90x8, A=2624 mm²)</li>
       <li><strong>Bracing:</strong> vertical box_75, diagonal L75x75x8, cross L_200x100x10</li>
-      <li><strong>Rope trusses:</strong> Rope_pipe effective areas (PDF Appendix B) for kingpost guys, lateral guy, wind stay</li>
-      <li><strong>Supports:</strong> turntable base fixity, Sp4 kingpost (~6.19&nbsp;m on 60&nbsp;ft), Sp8 lateral guy, Sp3 wind stay — positions scale with boom length from the 90&nbsp;ft PDF geometry</li>
-      <li><strong>Member table:</strong> rope axial from 3D solve; Bm119 axial from 3D solve; chord bending from solved base-moment tributary; frame dead load × 1.27 (PDF)</li>
+      <li><strong>Rope trusses:</strong> Sp3 wind stay, Sp4 kingpost guys (56/40&nbsp;mm), Sp8 lateral guy; <strong>Sp5–Sp10</strong> added when effective guylines ≥ 2 (windward screening count on Tab 3)</li>
+      <li><strong>Supports:</strong> deck anchors fixed at connected Sp nodes; kingpost / wind-stay / guy positions follow rig preset or custom Tab 3 values</li>
+      <li><strong>Accidental heel:</strong> dry-pipe fraction varies base→tip; static heel angle tilts weight in 3D accidental combination</li>
+      <li><strong>Member table:</strong> Bm119 chords, all guy ropes, and bracing (D/V/X) unity — top 25 by utilization</li>
+      <li><strong>Rig presets:</strong> toolbar <em>Rig</em> dropdown + <em>Save rig</em> stores support positions in browser localStorage</li>
     </ul>
     <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
 
@@ -995,7 +1006,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.1 · Matches <code>Burner_boom_load_calculator.html</code> v5.1 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.2 · Matches <code>Burner_boom_load_calculator.html</code> v5.2 · For preliminary engineering use only.
     </footer>
     </div>
   </section>
@@ -1014,7 +1025,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.1.0';
+  const APP_VERSION = '5.2.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1041,7 +1052,14 @@
     ratedMoment_kNm: 60, ratedLoad_kN: 30, bcd_mm: 400, nBolts: 12, boltAllow_kN: 45,
     swl_kg: 110, testFactor: 1.5, permSetPct: 10,
     kingpostPos_m: 6.19, kingpostRated_kN: 80, windStayPos_m: 5.18, windStayRated_kN: 25,
-    boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50
+    boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50,
+    accidentalHeel_deg: 5, rigPreset: '60ft_default'
+  };
+
+  const RIG_PRESET_KEY = 'burnerBoomRigPresets_v1';
+  const BUILTIN_RIG_PRESETS = {
+    '60ft_default': { name: '60 ft default', L_m: 18.288, kingpostPos_m: 6.19, windStayPos_m: 5.18, boomRestPos_m: 5.46, guyAttachPos_m: 6.19 },
+    '90ft_reference': { name: '90 ft reference', L_m: 27.432, kingpostPos_m: 9.28, windStayPos_m: 7.77, boomRestPos_m: 8.19, guyAttachPos_m: 9.28 }
   };
 
   const UNIT_FIELDS = [
@@ -1210,13 +1228,8 @@
   });
 
   $('preset90ft').addEventListener('click', ()=>{
-    applyDefaults();
-    $('L_m').value = isUs() ? (27.432 * CONV.m_ft).toFixed(2) : 27.432;
-    $('kingpostPos_m').value = isUs() ? (9.28 * CONV.m_ft).toFixed(2) : 9.28;
-    $('windStayPos_m').value = isUs() ? (7.77 * CONV.m_ft).toFixed(2) : 7.77;
-    $('boomRestPos_m').value = isUs() ? (8.19 * CONV.m_ft).toFixed(2) : 8.19;
-    $('guyAttachPos_m').value = isUs() ? (9.28 * CONV.m_ft).toFixed(2) : 9.28;
-    $('guyLength_m').value = isUs() ? (12 * CONV.m_ft).toFixed(2) : 12;
+    if($('rigPreset')) $('rigPreset').value = '90ft_reference';
+    applyRigPreset('90ft_reference');
     $('pipePreset').value = '8sch40';
     $('OD_mm').value = isUs() ? (219.1 * CONV.mm_in).toFixed(3) : 219.1;
     $('t_mm').value = isUs() ? (8.18 * CONV.mm_in).toFixed(3) : 8.18;
@@ -1225,9 +1238,86 @@
     $('tipLoad_kg').value = isUs() ? (80 * CONV.kg_lb).toFixed(1) : 80;
     $('extraLoad_kg').value = isUs() ? (30 * CONV.kg_lb).toFixed(1) : 30;
     $('extraPos_m').value = isUs() ? (13.716 * CONV.m_ft).toFixed(2) : 13.716;
+    $('guyLength_m').value = isUs() ? (12 * CONV.m_ft).toFixed(2) : 12;
     $('swl_kg').value = isUs() ? (110 * CONV.kg_lb).toFixed(1) : 110;
     recalc();
   });
+
+  function loadCustomRigPresets(){
+    try { return JSON.parse(localStorage.getItem(RIG_PRESET_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function setRigField(id, valM){
+    const el = $(id);
+    if(!el || valM == null) return;
+    el.value = isUs() ? (valM * (id.includes('_mm') ? CONV.mm_in : CONV.m_ft)).toFixed(id.includes('_mm') ? 3 : 2) : valM;
+  }
+
+  function refreshRigPresetSelect(selectedId){
+    const sel = $('rigPreset');
+    if(!sel) return;
+    const custom = loadCustomRigPresets();
+    sel.innerHTML = '';
+    for(const [id, p] of Object.entries(BUILTIN_RIG_PRESETS)){
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = p.name;
+      sel.appendChild(opt);
+    }
+    const customOpt = document.createElement('option');
+    customOpt.value = 'custom'; customOpt.textContent = 'Custom';
+    sel.appendChild(customOpt);
+    for(const [id, p] of Object.entries(custom)){
+      const opt = document.createElement('option');
+      opt.value = 'user:' + id; opt.textContent = p.name || id;
+      sel.insertBefore(opt, customOpt);
+    }
+    if(selectedId && [...sel.options].some(o => o.value === selectedId)) sel.value = selectedId;
+    else if([...sel.options].some(o => o.value === 'custom')) sel.value = 'custom';
+  }
+
+  function applyRigPreset(id){
+    if(!id || id === 'custom') return;
+    const custom = loadCustomRigPresets();
+    const key = id.startsWith('user:') ? id.slice(5) : id;
+    const preset = id.startsWith('user:') ? custom[key] : BUILTIN_RIG_PRESETS[id];
+    if(!preset) return;
+    suppressSave = true;
+    if(preset.L_m != null) setRigField('L_m', preset.L_m);
+    setRigField('kingpostPos_m', preset.kingpostPos_m);
+    setRigField('windStayPos_m', preset.windStayPos_m);
+    setRigField('boomRestPos_m', preset.boomRestPos_m);
+    setRigField('guyAttachPos_m', preset.guyAttachPos_m);
+    suppressSave = false;
+    recalc();
+  }
+
+  function markRigCustom(){
+    const sel = $('rigPreset');
+    if(sel && sel.value !== 'custom') sel.value = 'custom';
+  }
+
+  $('rigPreset')?.addEventListener('change', e => applyRigPreset(e.target.value));
+  $('saveRigPreset')?.addEventListener('click', ()=>{
+    const name = prompt('Name for this rig preset (vessel / location):');
+    if(!name || !name.trim()) return;
+    const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || ('rig_' + Date.now());
+    const custom = loadCustomRigPresets();
+    custom[id] = {
+      name: name.trim(),
+      L_m: valMetric('L_m', v => v / CONV.m_ft),
+      kingpostPos_m: valMetric('kingpostPos_m', v => v / CONV.m_ft),
+      windStayPos_m: valMetric('windStayPos_m', v => v / CONV.m_ft),
+      boomRestPos_m: valMetric('boomRestPos_m', v => v / CONV.m_ft),
+      guyAttachPos_m: valMetric('guyAttachPos_m', v => v / CONV.m_ft),
+    };
+    localStorage.setItem(RIG_PRESET_KEY, JSON.stringify(custom));
+    refreshRigPresetSelect('user:' + id);
+    recalc();
+  });
+  for(const fid of ['L_m','kingpostPos_m','windStayPos_m','boomRestPos_m','guyAttachPos_m']){
+    $(fid)?.addEventListener('input', markRigCustom);
+  }
 
   $('unitSystem').addEventListener('change', e=>{
     const nextUs = e.target.value === 'us';
@@ -1273,13 +1363,13 @@
     }
     const gov = lastEnvelope.governing;
     const rows = gov.r.memberRows
-      .filter(m => m.id.startsWith('Bm119') || m.truss)
+      .filter(isUnityTableMember)
       .sort((a,b) => b.util - a.util);
-    const header = ['Member','Section','Util_pct','N_kN','My_kNm','Status','GoverningCase'];
+    const header = ['Member','Type','Section','Util_pct','N_kN','My_kNm','Status','GoverningCase'];
     const lines = [header.join(',')];
     for(const m of rows){
       lines.push([
-        csvEscape(m.id), csvEscape(m.sn || ''), csvEscape(fmt(m.util * 100, 1)),
+        csvEscape(m.id), csvEscape(m.cat || memberCategory(m.id)), csvEscape(m.sn || ''), csvEscape(fmt(m.util * 100, 1)),
         csvEscape(fmt((m.N || 0) / 1000, 2)), csvEscape(fmt((m.My || 0) / 1e6, 2)),
         csvEscape(m.pass ? 'OK' : 'FAIL'), csvEscape(gov.combo.label)
       ].join(','));
@@ -1308,10 +1398,11 @@
         guyT_kN: r.supports?.guys?.T_kN || 0
       })) : null,
       topMembers: lastEnvelope?.governing?.r?.memberRows
-        ? lastEnvelope.governing.r.memberRows.filter(m => m.id.startsWith('Bm119') || m.truss)
-          .sort((a, b) => b.util - a.util).slice(0, 20)
-          .map(m => ({ id: m.id, section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass }))
+        ? lastEnvelope.governing.r.memberRows.filter(isUnityTableMember)
+          .sort((a, b) => b.util - a.util).slice(0, 25)
+          .map(m => ({ id: m.id, type: m.cat || memberCategory(m.id), section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass }))
         : null,
+      worstBrace: lastEnvelope?.governing?.r?.worstBrace || null,
       modeComparison: lastModeComparison
     };
     downloadBlob('burner-boom-analysis-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', JSON.stringify(report, null, 2));
@@ -1400,6 +1491,7 @@
       boomRestPos_m: valMetric('boomRestPos_m', v => v / CONV.m_ft) || 0,
       boomRestRated_kN: valMetric('boomRestRated_kN', v => v / CONV.kn_kip) || 0,
       accidentalDryFactor: parseFloat($('accidentalDryFactor')?.value)||0.85,
+      accidentalHeel_deg: parseFloat($('accidentalHeel_deg')?.value)||5,
       liftingLoadFactor: parseFloat($('liftingLoadFactor')?.value)||2,
       guysEnabled: !!$('guysEnabled')?.checked,
       nGuysEffective: parseFloat($('nGuysEffective')?.value)||1,
@@ -1426,14 +1518,70 @@
 
   // ---- 3D space frame (PDF topology) ----
 
+
 const PDF_L_DESIGN_M = 18.288; // 60 ft — native design baseline
 const PDF_L_PDF90_M = 27.432;  // 90 ft SESAM drawing (geometry source)
 const PDF_N_BAYS = 18;
 const PDF_DY_M = PDF_L_DESIGN_M / PDF_N_BAYS;
-const PDF_L_REF_M = PDF_L_DESIGN_M;
+const PDF_L_REF_M = PDF_L_DESIGN_M; // alias for embed scripts
 const PDF_E = 200000, PDF_G = PDF_E / 2.6, PDF_E_ROPE = 150000;
+const PDF_SW_FACTOR = 1.27; // SESAM structural dead-load multiplier on frame self-weight
 
 function pdfGeomScale(Lm){ return Lm / PDF_L_PDF90_M; }
+
+/** Deck anchor catalogue — CT-12-4536 90 ft PDF coordinates (scaled by gs at runtime). */
+const PDF_ANCHORS_90 = [
+  { tag: 'Sp1',  x: 0.35,  y: 2.20,  z: 8.50 },
+  { tag: 'Sp2',  x: -0.35, y: 2.20,  z: 8.50 },
+  { tag: 'Sp3',  x: 0.50,  y: 3.88,  z: 0.02 },
+  { tag: 'Sp4',  x: -0.50, y: 9.28,  z: 9.00 },
+  { tag: 'Sp5',  x: 0.42,  y: 4.80,  z: 7.20 },
+  { tag: 'Sp6',  x: -0.42, y: 4.80,  z: 7.20 },
+  { tag: 'Sp7',  x: 0.55,  y: 6.50,  z: 8.00 },
+  { tag: 'Sp8',  x: -0.38, y: 5.28,  z: 6.36 },
+  { tag: 'Sp9',  x: 0.48,  y: 11.00, z: 9.50 },
+  { tag: 'Sp10', x: -0.48, y: 11.00, z: 9.50 },
+];
+
+const EXTRA_GUY_LINKS = [
+  { id: 'GuySp5',  anchor: 'Sp5',  corner: 0, sn: 'Rope_pipe_30mm_eff', minGuys: 2 },
+  { id: 'GuySp6',  anchor: 'Sp6',  corner: 1, sn: 'Rope_pipe_30mm_eff', minGuys: 3 },
+  { id: 'GuySp7',  anchor: 'Sp7',  corner: 2, sn: 'Rope_pipe_35mm_eff', minGuys: 4 },
+  { id: 'GuySp9',  anchor: 'Sp9',  corner: 2, sn: 'Rope_pipe_40mm_eff', minGuys: 5 },
+  { id: 'GuySp10', anchor: 'Sp10', corner: 3, sn: 'Rope_pipe_40mm_eff', minGuys: 6 },
+  { id: 'GuySp1',  anchor: 'Sp1',  corner: 0, sn: 'Rope_pipe_30mm_eff', minGuys: 7 },
+  { id: 'GuySp2',  anchor: 'Sp2',  corner: 1, sn: 'Rope_pipe_30mm_eff', minGuys: 8 },
+];
+
+function memberCategory(id){
+  if(id.startsWith('Bm119')) return 'chord';
+  if(/^Guy|^Stay/.test(id)) return 'rope';
+  if(/^[DVX]\d/.test(id)) return 'brace';
+  if(/^Bm\d/.test(id)) return 'chord';
+  return 'other';
+}
+
+function isUnityTableMember(m){
+  const c = memberCategory(m.id);
+  return (c === 'chord' && m.id.startsWith('Bm119')) || c === 'rope' || c === 'brace';
+}
+
+function dryFractionAtY(y, Lm, inp, useCombo, combo){
+  if(!useCombo || combo.condition !== 'accidental') return 1;
+  const dryTip = inp.accidentalDryFactor != null ? inp.accidentalDryFactor : 0.85;
+  const t = Math.min(1, Math.max(0, y / Math.max(Lm, 1e-9)));
+  return 1 - (1 - dryTip) * t;
+}
+
+function heelRad(inp, useCombo, combo){
+  if(!useCombo || combo.condition !== 'accidental') return 0;
+  return (inp.accidentalHeel_deg != null ? inp.accidentalHeel_deg : 5) * Math.PI / 180;
+}
+
+function applyHeelLoad(addLoad, node, W, heel){
+  if(Math.abs(heel) < 1e-9) addLoad(node, 0, 0, -W);
+  else addLoad(node, W * Math.sin(heel), 0, -W * Math.cos(heel));
+}
 
 const PDF_SECTIONS = {
   box_75x75x6:       { A: 1656,  Iy: 1.32e6,  Iz: 1.32e6,  J: 2.64e6,  Zy: 35200, Zz: 35200, E: PDF_E, truss: false },
@@ -1519,7 +1667,7 @@ function gaussSolve(K,n,b){
   const x=new Float64Array(n); for(let i=0;i<n;i++) x[i]=m[i*(n+1)+n]; return x;
 }
 
-function buildModel(Lm){
+function buildModel(Lm, inp = {}){
   const gs=pdfGeomScale(Lm), sc=Lm/PDF_L_DESIGN_M, dy=Lm/PDF_N_BAYS;
   const hw=0.45*gs, hh=0.375*gs;
   const nodes=[], nk=(si,c)=>si*4+c;
@@ -1540,17 +1688,36 @@ function buildModel(Lm){
     }
     if(si%3===0) add(`X${si}`, nk(si,0), nk(si,2), 'L_200x100x10', false);
   }
-  const yKing=9.28*gs, ySp8=5.28*gs, yStay=7.77*gs, yBoomRest=8.19*gs;
-  const siG=Math.round(yKing/dy);
-  const sp4=nodes.length; nodes.push({x:-0.5*gs,y:yKing,z:9*gs,tag:'Sp4'});
-  add('Guy56', nk(siG,2), sp4, 'Rope_pipe_56mm_eff', true);
-  add('Guy40', nk(siG,3), sp4, 'Rope_pipe_40mm_eff', true);
-  const sp8=nodes.length; nodes.push({x:-0.38*gs,y:ySp8,z:6.36*gs,tag:'Sp8'});
-  add('GuyLat35', nk(siG,1), sp8, 'Rope_pipe_35mm_eff', true);
-  const siW=Math.round(yStay/dy);
-  const sp3=nodes.length; nodes.push({x:0.5*gs,y:yStay*0.5,z:0.02,tag:'Sp3'});
-  add('Stay30', nk(siW,1), sp3, 'Rope_pipe_30mm_eff', true);
-  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy)};
+  const yKing=inp.guyAttachPos_m ?? inp.kingpostPos_m ?? 9.28*gs;
+  const yStay=inp.windStayPos_m ?? 7.77*gs;
+  const yBoomRest=inp.boomRestPos_m ?? 8.19*gs;
+  const siG=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yKing/dy)));
+  const siW=Math.min(PDF_N_BAYS, Math.max(0, Math.round(yStay/dy)));
+  const nGuys=Math.max(1, inp.nGuysEffective || 1);
+  const neededAnchors=new Set(['Sp3','Sp4','Sp8']);
+  for(const g of EXTRA_GUY_LINKS){
+    if(nGuys >= g.minGuys) neededAnchors.add(g.anchor);
+  }
+  const anchorIdx={};
+  for(const a of PDF_ANCHORS_90){
+    if(!neededAnchors.has(a.tag)) continue;
+    let y=a.y*gs, x=a.x*gs, z=a.z*gs;
+    if(a.tag==='Sp4'){ y=yKing; x=-0.5*gs; z=9*gs; }
+    if(a.tag==='Sp3'){ y=yStay*0.5; x=0.5*gs; z=0.02; }
+    const idx=nodes.length;
+    nodes.push({x,y,z,tag:a.tag});
+    anchorIdx[a.tag]=idx;
+  }
+  add('Guy56', nk(siG,2), anchorIdx.Sp4, 'Rope_pipe_56mm_eff', true);
+  add('Guy40', nk(siG,3), anchorIdx.Sp4, 'Rope_pipe_40mm_eff', true);
+  add('GuyLat35', nk(siG,1), anchorIdx.Sp8, 'Rope_pipe_35mm_eff', true);
+  add('Stay30', nk(siW,1), anchorIdx.Sp3, 'Rope_pipe_30mm_eff', true);
+  for(const g of EXTRA_GUY_LINKS){
+    if(nGuys >= g.minGuys && anchorIdx[g.anchor] != null){
+      add(g.id, nk(siG, g.corner), anchorIdx[g.anchor], g.sn, true);
+    }
+  }
+  return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy), anchorIdx};
 }
 
 function solve3d(model, loads, supports){
@@ -1566,7 +1733,7 @@ function solve3d(model, loads, supports){
     else kG=transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
     const map=[6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
     for(let r=0;r<12;r++) for(let c=0;c<12;c++) K[map[r]*ndof+map[c]]+=kG[r*12+c];
-    meta.push({el,Lmm,R,map});
+    meta.push({el,Lmm,R,map,kG});
   }
   for(const ld of loads){ F[6*ld.node+0]+=ld.fx||0; F[6*ld.node+1]+=ld.fy||0; F[6*ld.node+2]+=ld.fz||0; }
   const fixed=new Set();
@@ -1584,15 +1751,24 @@ function solve3d(model, loads, supports){
   return {u,R,meta,ndof};
 }
 
+function ropeAnchorNodes(model){
+  const anchors=new Set();
+  for(const el of model.elements){
+    if(!el.tr) continue;
+    for(const idx of [el.i, el.j]){
+      const tag=model.nodes[idx].tag;
+      if(tag && tag.startsWith('Sp')) anchors.add(idx);
+    }
+  }
+  return anchors;
+}
+
 function buildSupports3d(model, combo, inp){
   const sup=[];
   const active=s=>combo && combo.supports.includes(s);
-  const sp4=model.nodes.findIndex(n=>n.tag==='Sp4');
-  const sp8=model.nodes.findIndex(n=>n.tag==='Sp8');
-  const sp3=model.nodes.findIndex(n=>n.tag==='Sp3');
-  if(sp4>=0) sup.push({node:sp4,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
-  if(sp8>=0) sup.push({node:sp8,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
-  if(sp3>=0) sup.push({node:sp3,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
+  for(const node of ropeAnchorNodes(model)){
+    sup.push({node,ux:1,uy:1,uz:1,rx:1,ry:1,rz:1});
+  }
   if(active('lifting')){
     const mid=model.nk(Math.floor(PDF_N_BAYS/2),2);
     sup.push({node:mid, ux:1, uy:1, uz:1, rx:1, ry:1, rz:1});
@@ -1608,65 +1784,112 @@ function buildSupports3d(model, combo, inp){
 
 function computeSpaceFrameLoads(inp, combo, model){
   const g=9.81, rhoSteel=7.85e-6;
+  const swFactor=inp.structuralSwFactor!=null?inp.structuralSwFactor:PDF_SW_FACTOR;
   const OD=inp.OD_mm, t=Math.min(inp.t_mm, inp.OD_mm/2-0.01);
-  const A=Math.PI/4*(OD*OD-(OD-2*t)*(OD-2*t));
-  const wSelf=A*rhoSteel*g;
   const wAdded=(inp.addedW_kgpm*g)/1000;
-  const wGravity=wSelf+wAdded;
   const useCombo=!!combo;
   const lf=useCombo?(combo.condition==='lifting'?inp.liftingLoadFactor:combo.loadFactor):1;
   let wMult=lf;
-  if(useCombo && combo.condition==='accidental') wMult*=inp.accidentalDryFactor;
   const sfZ=useCombo?combo.sfZ:1, sfY=useCombo?combo.sfY:1, sfX=useCombo?combo.sfX:1;
+  const heel=heelRad(inp, useCombo, combo);
   const windMultX=useCombo?combo.windX:1, windMultY=useCombo?combo.windY:1, daf=inp.DAF;
   let windSpeed=inp.windSpeed_ms;
   if(useCombo && combo.condition==='survival') windSpeed*=1.15;
   if(useCombo && combo.condition==='lifting') windSpeed=0;
   const theta=inp.angle_deg*Math.PI/180, cosT=Math.cos(theta), sinT=Math.sin(theta);
-  const wZ=wGravity*cosT*wMult*daf*sfZ;
-  const Ptip=inp.tipLoad_kg*g*cosT*wMult*daf*sfZ;
-  const Pextra=inp.extraLoad_kg*g*cosT*wMult*daf*sfZ;
+  const deadMult=cosT*wMult*daf*sfZ;
+  const liveMult=deadMult;
   const q=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
   const wWind=q*inp.Cd*(OD/1000)/1000;
-  const loads=[];
-  const wBay=-wZ*model.dy*1000;
-  const fxDyn=useCombo?(wZ*inp.L_m*1000*sfX/Math.max(sfZ,1e-9))/inp.L_m:0;
+  const nodal=new Map();
+  const addLoad=(node,fx,fy,fz)=>{
+    let ld=nodal.get(node);
+    if(!ld){ ld={fx:0,fy:0,fz:0}; nodal.set(node,ld); }
+    ld.fx+=fx; ld.fy+=fy; ld.fz+=fz;
+  };
+  let frameWeightN=0;
+  for(const el of model.elements){
+    if(el.tr||el.sec.truss) continue;
+    const a=model.nodes[el.i], b=model.nodes[el.j];
+    const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+    const yMid=(a.y+b.y)/2;
+    const dry=dryFractionAtY(yMid, inp.L_m, inp, useCombo, combo);
+    const W=rhoSteel*el.sec.A*Lmm*g*swFactor*deadMult*dry;
+    frameWeightN+=W;
+    applyHeelLoad(addLoad, el.i, W/2, heel);
+    applyHeelLoad(addLoad, el.j, W/2, heel);
+  }
+  const wAddedLine=wAdded*swFactor*deadMult;
+  for(let si=0;si<PDF_N_BAYS;si++){
+    const yMid=(si+0.5)*model.dy;
+    const dry=dryFractionAtY(yMid, inp.L_m, inp, useCombo, combo);
+    const wBay=wAddedLine*dry*model.dy/4;
+    for(let c=0;c<4;c++) applyHeelLoad(addLoad, model.nk(si,c), wBay, heel);
+  }
+  const dryTip=dryFractionAtY(inp.L_m, inp.L_m, inp, useCombo, combo);
+  const Ptip=inp.tipLoad_kg*g*liveMult*dryTip;
+  const Pextra=inp.extraLoad_kg*g*liveMult;
+  const refVertical=frameWeightN+wAddedLine*inp.L_m;
+  const fxDyn=useCombo?refVertical*sfX/Math.max(sfZ,1e-9)/inp.L_m:0;
   for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    loads.push({node:model.nk(si,c), fz:wBay/4, fx:(wWind*windMultX+fxDyn)*model.dy*1000/4});
+    addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
   }
-  loads.push({node:model.nk(PDF_N_BAYS,2), fz:-Ptip});
+  applyHeelLoad(addLoad, model.nk(PDF_N_BAYS,2), Ptip, heel);
   if(inp.extraLoad_kg>0){
-    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round(inp.extraPos_m/model.dy)));
-    loads.push({node:model.nk(si,2), fz:-Pextra});
+    const si=Math.min(PDF_N_BAYS,Math.max(0,Math.round(inp.extraPos_m/model.dy)));
+    const dryExtra=dryFractionAtY(inp.extraPos_m, inp.L_m, inp, useCombo, combo);
+    applyHeelLoad(addLoad, model.nk(si,2), Pextra*dryExtra, heel);
   }
-  if(useCombo && windMultY>0) loads.push({node:model.nk(PDF_N_BAYS,2), fy:wWind*inp.L_m*1000*windMultY*sinT, fz:-wWind*inp.L_m*1000*windMultY*cosT});
-  const Fz_total=wZ*inp.L_m*1000 + Ptip + Pextra;
-  return {loads, wZ, wWind, windMultX, Ptip, Pextra, sfZ, sfX, sfY, wMult, daf, Fz_total};
+  if(useCombo && windMultY>0){
+    const wy=wWind*inp.L_m*windMultY;
+    addLoad(model.nk(PDF_N_BAYS,2),0,wy*sinT,-wy*cosT);
+  }
+  const loads=[];
+  for(const [node,ld] of nodal) loads.push({node,...ld});
+  const wZ=refVertical/inp.L_m/1000;
+  const Fz_total=refVertical+Ptip+Pextra;
+  return {loads,wZ,wWind,windMultX,Ptip,Pextra,sfZ,sfX,sfY,wMult,daf,Fz_total,frameWeightN,swFactor};
 }
 
 function memberEndForces(meta, u){
   const members=[];
   for(const m of meta){
-    const ul=new Float64Array(12);
-    for(let k=0;k<12;k++) ul[k]=u[m.map[k]];
+    const ug=new Float64Array(12);
+    for(let k=0;k<12;k++) ug[k]=u[m.map[k]];
     const sec=m.el.sec, R=m.R;
     if(m.el.tr||sec.truss){
-      const du=(ul[6]-ul[0])*R[0]+(ul[7]-ul[1])*R[1]+(ul[8]-ul[2])*R[2];
+      const du=(ug[6]-ug[0])*R[0]+(ug[7]-ug[1])*R[1]+(ug[8]-ug[2])*R[2];
       const N=sec.E*sec.A/m.Lmm*du;
-      members.push({id:m.el.id, sn:m.el.sn, N, My:0, Mz:0, V:0, truss:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,My:0,Mz:0,V:0,truss:true});
     } else {
-      const ug=new Float64Array(12);
+      const fg=new Float64Array(12);
+      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=m.kG[i*12+k]*ug[k]; fg[i]=s; }
+      const lx=R[0], mx=R[1], nx=R[2];
+      const Ni=fg[0]*lx+fg[1]*mx+fg[2]*nx;
+      const Nj=fg[6]*lx+fg[7]*mx+fg[8]*nx;
+      const N=Math.max(Math.abs(Ni),Math.abs(Nj));
+      const ul=new Float64Array(12);
       for(let block=0;block<4;block++){
         for(let i=0;i<3;i++){
           let s=0;
-          for(let j=0;j<3;j++) s+=R[i*3+j]*ul[block*3+j];
-          ug[block*3+i]=s;
+          for(let j=0;j<3;j++) s+=R[i*3+j]*ug[block*3+j];
+          ul[block*3+i]=s;
         }
       }
       const kL=beam3dLocalK(sec.E,PDF_G,sec.A,sec.Iy,sec.Iz,sec.J,m.Lmm);
       const fl=new Float64Array(12);
-      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=kL[i*12+k]*ug[k]; fl[i]=s; }
-      members.push({id:m.el.id, sn:m.el.sn, N:Math.abs(fl[0]), My:Math.max(Math.abs(fl[4]),Math.abs(fl[10]))/2, Mz:Math.max(Math.abs(fl[5]),Math.abs(fl[11]))/2, V:Math.hypot(fl[1],fl[2]), truss:false});
+      for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=kL[i*12+k]*ul[k]; fl[i]=s; }
+      const MyA=Math.max(Math.abs(fl[4]),Math.abs(fl[10]));
+      const MzA=Math.max(Math.abs(fl[5]),Math.abs(fl[11]));
+      let My,Mz;
+      if(Math.abs(R[1])>0.85){
+        const Mb=MzA>0?Math.min(MyA,MzA):MyA;
+        My=Mb; Mz=0;
+      } else {
+        My=MyA; Mz=MzA;
+      }
+      const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
+      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,truss:false,solved:true});
     }
   }
   return members;
@@ -1674,35 +1897,41 @@ function memberEndForces(meta, u){
 
 function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
   const allow=Fy/SF;
-  let worst={util:0,id:'Bm119',sn:'box_90x90x8',sigma:0,allow};
+  let worst={util:0,id:'Bm119_0',sn:'box_90x90x8',sigma:0,allow};
+  let worstBrace={util:0,id:'—',sn:'',sigma:0,allow};
   const rows=members.map(m=>{
     const sec=PDF_SECTIONS[m.sn]||{};
+    const cat=memberCategory(m.id);
     if(m.truss){
       const tAllow=(sec.allow||120)*1000;
-      const util=Math.max(0,m.N)/tAllow;
-      return {...m, util, pass:util<=1};
+      const util=Math.max(0,Math.abs(m.N))/tAllow;
+      return {...m,cat,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
     }
-    let si=0;
-    const m119=m.id.match(/^Bm119_(\d+)/);
-    if(m119) si=parseInt(m119[1],10);
-    else if(m.id.match(/^Bm(\d+)/)) si=parseInt(m.id.match(/^Bm(\d+)/)[1],10)%100;
-    const frac=(si+0.5)/PDF_N_BAYS;
-    const Mmem=Mbase*frac*frac;
-    const Nmem=Math.abs(Nax)/(4*Math.max(PDF_N_BAYS,1));
     const A=sec.A||2624;
-    const Zy=sec.Zy||66000;
+    const Zy=sec.Zy||66000, Zz=sec.Zz||Zy;
+    let Nmem=Math.abs(m.N);
+    let Mmem=0;
+    if(m.id.startsWith('Bm119')){
+      const si=parseInt(m.id.match(/^Bm119_(\d+)/)[1],10);
+      const frac=(si+0.5)/PDF_N_BAYS;
+      Mmem=Mbase*frac*frac;
+    } else if(m.solved){
+      Mmem=Math.min(Math.max(Math.abs(m.My),Math.abs(m.Mz)),Mbase*0.5);
+    }
     const sa=Nmem/A;
-    const sb=Mmem/(Zy||1);
+    const sb=Mmem/Zy+(m.id.startsWith('Bm119')?0:Math.abs(m.Mz)/Zz);
     const sigma=sa+sb;
     const util=allow>0?sigma/allow:0;
     if(m.id.startsWith('Bm119') && util>worst.util) worst={util,id:m.id,sn:m.sn,sigma,allow};
-    return {...m, N:Nmem, My:Mmem, Mz:0, util, pass:util<=1, tributary:true};
+    if(cat==='brace' && util>worstBrace.util) worstBrace={util,id:m.id,sn:m.sn,sigma,allow};
+    return {...m,cat,N:Nmem,My:Mmem,Mz:m.id.startsWith('Bm119')?0:Math.abs(m.Mz),util,pass:util<=1,sigma,allow,solved:true,
+      axialFrom:'3D solved',bendingFrom:m.id.startsWith('Bm119')?'3D base tributary':'solved cap'};
   });
-  return {rows, worst};
+  return {rows,worst,worstBrace};
 }
 
 function computeSpaceFrameCore(inp, combo){
-  const model=buildModel(inp.L_m);
+  const model=buildModel(inp.L_m, inp);
   const {loads}=computeSpaceFrameLoads(inp, combo, model);
   const supports=buildSupports3d(model, combo, inp);
   const sol=solve3d(model, loads, supports);
@@ -1721,10 +1950,10 @@ function computeSpaceFrameCore(inp, combo){
   const sigmaEq=unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
-  const guyM=members.find(m=>m.id==='GuyLat35');
   const stayM=members.find(m=>m.id==='Stay30');
   const kpR=members.filter(m=>m.id.startsWith('Guy')).reduce((s,m)=>s+Math.abs(m.N),0);
-  const guyT=guyM?Math.abs(guyM.N)/1000/inp.nGuysEffective:0;
+  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
+  const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
@@ -1779,7 +2008,8 @@ function computeSpaceFrameCore(inp, combo){
         comboLabel: combo ? combo.label : null, supports: core.supportsOut, utilStress, pass,
         Fx_total: Vres, Fz_total: N_d, Fy_ax: N_d,
         space3d: true, frameNodes: core.model.nodes.length, frameMembers: core.model.elements.length,
-        memberRows: core.unity.rows, worstMember: core.unity.worst, bm119Count: core.model.elements.filter(e => e.id.startsWith('Bm119')).length
+        memberRows: core.unity.rows, worstMember: core.unity.worst, worstBrace: core.unity.worstBrace,
+        bm119Count: core.model.elements.filter(e => e.id.startsWith('Bm119')).length
       };
     } catch (_e) {
       return computeFrame({ ...inp, analysisMode: 'frame' }, combo);
@@ -1795,18 +2025,18 @@ function computeSpaceFrameCore(inp, combo){
     }
     const r = src?.r;
     if(!r?.memberRows?.length){
-      el.innerHTML = '<tbody><tr><td colspan="5" class="hint">Member unity data unavailable for this envelope.</td></tr></tbody>';
+      el.innerHTML = '<tbody><tr><td colspan="6" class="hint">Member unity data unavailable for this envelope.</td></tr></tbody>';
       return;
     }
-    const rows = r.memberRows
-      .filter(m => m.id.startsWith('Bm119') || m.truss)
-      .sort((a,b) => b.util - a.util)
-      .slice(0, 20);
-    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">Case: ${src.combo?.label || r.comboLabel || '—'}</caption>`;
-    html += '<thead><tr><th>Member</th><th>Section</th><th>Util.</th><th>N (kN)</th><th>Status</th></tr></thead><tbody>';
+    const rows = r.memberRows.filter(isUnityTableMember).sort((a,b) => b.util - a.util).slice(0, 25);
+    let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">Case: ${src.combo?.label || r.comboLabel || '—'}`;
+    if(r.worstBrace?.id && r.worstBrace.id !== '—') html += ` · worst brace: ${r.worstBrace.id} ${fmt(r.worstBrace.util * 100, 0)}%`;
+    html += '</caption>';
+    html += '<thead><tr><th>Member</th><th>Type</th><th>Section</th><th>Util.</th><th>N (kN)</th><th>Status</th></tr></thead><tbody>';
     for(const m of rows){
       const gov = m.id === r.worstMember?.id;
-      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${fmt((m.N||0)/1000,1)}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
+      const cat = m.cat || memberCategory(m.id);
+      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${fmt((m.N||0)/1000,1)}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
     }
     html += '</tbody>';
     el.innerHTML = html;
@@ -2433,9 +2663,12 @@ function computeSpaceFrameCore(inp, combo){
     }
     if(inp.analysisMode === 'space3d' && gov.r.memberRows){
       html += '<tr><th colspan="2" style="padding-top:8px;">Top members (3D)</th></tr>';
-      const top = gov.r.memberRows.filter(m => m.id.startsWith('Bm119') || m.truss).sort((a, b) => b.util - a.util).slice(0, 5);
+      const top = gov.r.memberRows.filter(isUnityTableMember).sort((a, b) => b.util - a.util).slice(0, 5);
       for(const m of top){
-        html += `<tr><th>${m.id}</th><td class="v">${fmt(m.util * 100, 0)}% · N ${uForce_kN((m.N || 0) / 1000)}</td></tr>`;
+        html += `<tr><th>${m.id}</th><td class="v">${fmt(m.util * 100, 0)}% · ${m.cat || memberCategory(m.id)} · N ${uForce_kN((m.N || 0) / 1000)}</td></tr>`;
+      }
+      if(gov.r.worstBrace?.id && gov.r.worstBrace.id !== '—'){
+        html += `<tr><th>Worst brace</th><td class="v">${gov.r.worstBrace.id} · ${fmt(gov.r.worstBrace.util * 100, 0)}%</td></tr>`;
       }
     }
     el.innerHTML = html;
@@ -2687,6 +2920,7 @@ function computeSpaceFrameCore(inp, combo){
   }
 
   if(!loadState()) applyDefaults();
+  refreshRigPresetSelect($('rigPreset')?.value || '60ft_default');
   if(isUs()) convertAllUnits(true);
   recalc();
   saveState();

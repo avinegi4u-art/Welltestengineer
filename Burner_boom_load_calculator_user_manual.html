@@ -3,173 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Burner Boom Load Calculator v2 — User Manual</title>
+  <title>Burner Boom Load Calculator v5.2 — User Manual</title>
   <style>
-    :root {
-      --ink: #0f172a;
-      --muted: #475569;
-      --accent: #007ea8;
-      --accent-2: #00b4d8;
-      --border: #cbd5e1;
-      --bg: #ffffff;
-      --callout: #ecfeff;
-      --warn: #fff7ed;
-      --good: #ecfdf5;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Inter, system-ui, sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.55;
-      color: var(--ink);
-      background: #eef2f6;
-    }
-    .toolbar {
-      position: sticky; top: 0; z-index: 10;
-      display: flex; gap: 0.75rem; align-items: center; justify-content: space-between;
-      padding: 0.75rem 1.25rem;
-      background: #070b10; color: #eef5ff;
-      border-bottom: 1px solid #243041;
-    }
-    .toolbar button, .toolbar a.btn {
-      font: inherit; border: 0; border-radius: 999px;
-      padding: 0.55rem 1rem; cursor: pointer;
-      background: #00b4d8; color: #03131b; font-weight: 700;
-      text-decoration: none; display: inline-block;
-    }
-    .toolbar .hint { font-size: 0.9rem; color: #9fb0c4; }
-    .page {
-      width: min(210mm, calc(100% - 2rem));
-      margin: 1.25rem auto 2rem;
-      background: var(--bg);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-      padding: 18mm 16mm;
-    }
-    h1, h2, h3, h4 { color: var(--accent); line-height: 1.25; }
-    h1 { font-size: 1.85rem; margin: 0 0 0.35rem; }
-    h2 { font-size: 1.2rem; margin: 1.6rem 0 0.55rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.25rem; page-break-after: avoid; }
-    h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; color: var(--accent-2); page-break-after: avoid; }
-    h4 { font-size: 0.95rem; margin: 0.85rem 0 0.35rem; color: var(--ink); }
-    p { margin: 0.5rem 0; }
-    ul, ol { margin: 0.45rem 0 0.75rem 1.2rem; padding: 0; }
-    li { margin: 0.2rem 0; }
-    .cover {
-      border: 2px solid var(--accent);
-      border-radius: 12px;
-      padding: 1.25rem 1.35rem;
-      margin-bottom: 1.5rem;
-      background: linear-gradient(135deg, #f0fdff 0%, #f4f8fb 100%);
-    }
-    .cover .meta { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
-    .cover .badge {
-      display: inline-block; margin-top: 0.75rem;
-      padding: 0.25rem 0.65rem; border-radius: 999px;
-      background: var(--accent); color: #fff;
-      font-size: 0.82rem; font-weight: 700; letter-spacing: 0.03em;
-    }
-    .toc {
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 1rem 1.15rem; margin: 1rem 0 1.5rem;
-      background: #fafbfc; page-break-inside: avoid;
-    }
-    .toc ol { margin: 0.5rem 0 0 1.1rem; }
-    .toc a { color: var(--accent-2); text-decoration: none; }
-    .toc a:hover { text-decoration: underline; }
-    table {
-      width: 100%; border-collapse: collapse;
-      margin: 0.65rem 0 1rem; font-size: 0.92rem;
-      page-break-inside: avoid;
-    }
-    th, td {
-      border: 1px solid var(--border);
-      padding: 0.42rem 0.55rem;
-      text-align: left; vertical-align: top;
-    }
-    th { background: #edf8fb; color: var(--accent); font-weight: 700; }
-    code, .mono {
-      font-family: ui-monospace, Menlo, Consolas, monospace;
-      font-size: 0.9em; background: #f1f5f9;
-      padding: 0.08rem 0.28rem; border-radius: 4px;
-    }
-    .callout {
-      border-left: 4px solid var(--accent);
-      background: var(--callout);
-      padding: 0.75rem 0.9rem; margin: 0.75rem 0;
-      border-radius: 0 8px 8px 0; page-break-inside: avoid;
-    }
-    .callout.warn { border-left-color: #d97706; background: var(--warn); }
-    .callout.good { border-left-color: #059669; background: var(--good); }
-    .workflow {
-      display: grid; grid-template-columns: repeat(5, 1fr);
-      gap: 0.45rem; margin: 0.75rem 0 1rem;
-    }
-    .workflow div {
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 0.55rem; text-align: center; font-size: 0.82rem; background: #fafbfc;
-    }
-    .workflow strong { display: block; color: var(--accent); margin-bottom: 0.2rem; }
-    .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.75rem 0; }
-    .status-grid div { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; font-size: 0.88rem; }
-    .status-grid .pass { border-left: 4px solid #059669; }
-    .status-grid .warn { border-left: 4px solid #d97706; }
-    .status-grid .fail { border-left: 4px solid #dc2626; }
-    .page-break { page-break-before: always; }
-    footer {
-      margin-top: 2rem; padding-top: 0.75rem;
-      border-top: 1px solid var(--border);
-      color: var(--muted); font-size: 0.85rem;
-    }
-    @media (max-width: 760px) {
-      .workflow, .status-grid { grid-template-columns: 1fr; }
-    }
-    @media print {
-      body { background: #fff; }
-      .toolbar { display: none !important; }
-      .page { width: auto; margin: 0; box-shadow: none; padding: 12mm 10mm; }
-      a { color: inherit; text-decoration: none; }
-    }
+    :root { --ink:#0f172a; --muted:#475569; --accent:#007ea8; --accent-2:#00b4d8; --border:#cbd5e1; --bg:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Segoe UI",Inter,system-ui,sans-serif; font-size:10.5pt; line-height:1.55; color:var(--ink); background:#eef2f6; }
+    .page { width:min(210mm,calc(100% - 2rem)); margin:1.25rem auto 2rem; background:var(--bg); box-shadow:0 8px 30px rgba(0,0,0,.12); padding:18mm 16mm; }
+    h1,h2,h3 { color:var(--accent); }
+    h2 { font-size:1.2rem; border-bottom:2px solid var(--accent); padding-bottom:.25rem; margin-top:1.6rem; }
+    table { width:100%; border-collapse:collapse; margin:.75rem 0; font-size:10pt; }
+    th,td { border:1px solid var(--border); padding:.45rem .55rem; text-align:left; vertical-align:top; }
+    th { background:#f1f5f9; }
+    .toc { border:1px solid var(--border); border-radius:10px; padding:1rem; background:#fafbfc; }
+    .callout { border-left:4px solid var(--accent-2); background:#ecfeff; padding:.65rem .85rem; margin:.75rem 0; }
+    .callout.warn { border-color:#f59e0b; background:#fff7ed; }
+    .status-grid { display:grid; gap:.65rem; }
+    .pass,.warn,.fail { padding:.55rem .75rem; border-radius:8px; font-size:10pt; }
+    .pass { background:#ecfdf5; border:1px solid #6ee7b7; }
+    .warn { background:#fff7ed; border:1px solid #fdba74; }
+    .fail { background:#fef2f2; border:1px solid #fca5a5; }
+    footer { margin-top:2rem; font-size:9pt; color:var(--muted); }
+    @media print { body { background:#fff; } .page { box-shadow:none; width:auto; margin:0; } .no-print { display:none !important; } }
   </style>
 </head>
 <body>
-  <div class="toolbar">
-    <span class="hint">Burner Boom Load Calculator — User Manual v2.0</span>
-    <div>
-      <a class="btn" href="Burner_boom_load_calculator.html">Open Calculator</a>
-      <button type="button" onclick="window.print()">Print / Save PDF</button>
-    </div>
-  </div>
-
-  <main class="page">
-    <section class="cover avoid-break">
-      <h1>Burner Boom Load Analysis &amp; Rig-Up Calculator</h1>
-      <p class="meta">User Manual · Version 2.0 · Well-test burner / flare boom structural screening</p>
-      <span class="badge">OFFLINE HTML · NO INSTALL REQUIRED</span>
-      <p style="margin-top:0.85rem;">Companion file: <code>Burner_boom_load_calculator.html</code></p>
-    </section>
-
-    <nav class="toc" aria-label="Table of contents">
+<div class="page manual-doc">
+<div class="btnrow no-print" style="margin-bottom:12px;">
+        <button type="button" class="action secondary" onclick="window.print()">Print / Save Manual as PDF</button>
+      </div>
+<nav class="toc" aria-label="Table of contents">
       <strong>Contents</strong>
       <ol>
-        <li><a href="#purpose">Purpose &amp; scope</a></li>
-        <li><a href="#start">Getting started</a></li>
-        <li><a href="#workflow">Recommended workflow</a></li>
-        <li><a href="#toolbar">Toolbar &amp; global controls</a></li>
-        <li><a href="#status">Understanding PASS / MARGINAL / FAIL</a></li>
-        <li><a href="#tab1">Tab 1 — Boom &amp; Section</a></li>
-        <li><a href="#tab2">Tab 2 — Loads &amp; Wind</a></li>
-        <li><a href="#tab3">Tab 3 — Rig / Turntable Interface</a></li>
-        <li><a href="#tab4">Tab 4 — Results</a></li>
-        <li><a href="#tab5">Tab 5 — Load Test Sign-off</a></li>
-        <li><a href="#save">Saving &amp; sharing jobs</a></li>
-        <li><a href="#print">Printing &amp; certificates</a></li>
-        <li><a href="#limits">Limitations &amp; standards</a></li>
-        <li><a href="#faq">FAQ &amp; troubleshooting</a></li>
+        <li><a href="#manual-purpose">Purpose &amp; scope</a></li>
+        <li><a href="#manual-start">Getting started</a></li>
+        <li><a href="#manual-workflow">Recommended workflow</a></li>
+        <li><a href="#manual-toolbar">Toolbar &amp; global controls</a></li>
+        <li><a href="#manual-matrix">Matrix envelope mode (v3)</a></li>
+        <li><a href="#manual-frame">Frame solver (v4)</a></li>
+        <li><a href="#manual-space3d">3D space frame (v5)</a></li>
+        <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
+        <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
+        <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
+        <li><a href="#manual-tab3">Tab 3 — Rig / Turntable Interface</a></li>
+        <li><a href="#manual-tab4">Tab 4 — Results</a></li>
+        <li><a href="#manual-tab5">Tab 5 — Load Test Sign-off</a></li>
+        <li><a href="#manual-save">Saving &amp; sharing jobs</a></li>
+        <li><a href="#manual-print">Printing &amp; certificates</a></li>
+        <li><a href="#manual-limits">Limitations &amp; standards</a></li>
+        <li><a href="#manual-faq">FAQ &amp; troubleshooting</a></li>
       </ol>
     </nav>
 
-    <h2 id="purpose">1. Purpose &amp; scope</h2>
-    <p>This calculator performs a <strong>first-pass structural screening</strong> of a cantilever burner or flare boom rigged to a rig structure or turntable. It evaluates:</p>
+    <h2 id="manual-purpose">1. Purpose &amp; scope</h2>
+    <p>This calculator performs a <strong>first-pass structural screening</strong> of a cantilever burner or flare boom rigged to a rig structure or turntable. Version 3 adds a <strong>matrix envelope mode</strong> inspired by SESAM offshore load-combination reports (e.g. the project 90&nbsp;ft PDF). It evaluates:</p>
     <ul>
       <li>Gravity loads (self-weight, fittings, tip equipment) with dynamic amplification</li>
       <li>Wind load on a circular pipe (ASCE 7 / EN 1991-1-4 style)</li>
@@ -178,6 +64,7 @@
       <li>Simplified bolt/pin group tension</li>
       <li>D/t slenderness and Euler buckling screening</li>
       <li>Deflection vs a user-set serviceability limit (L/n)</li>
+      <li><strong>Matrix mode:</strong> 8 operating/survival/accidental/lifting combinations with 3-direction scale factors; multi-support reactions (kingpost, wind stay, boom rest); windward guyline tension screening</li>
       <li>Proof-load test evaluation and printable certificate</li>
     </ul>
     <div class="callout warn">
@@ -185,7 +72,7 @@
     </div>
     <p><strong>Default configuration:</strong> 60&nbsp;ft boom (18.288&nbsp;m), NPS 8″ Sch&nbsp;40 pipe, operating load case (horizontal). A separate <strong>90&nbsp;ft reference</strong> preset is available in the toolbar.</p>
 
-    <h2 id="start">2. Getting started</h2>
+    <h2 id="manual-start">2. Getting started</h2>
     <ol>
       <li>Download or copy <code>Burner_boom_load_calculator.html</code> to your computer.</li>
       <li>Open it in a modern browser (Chrome, Edge, Firefox, Safari). Double-click the file or drag it into a browser window.</li>
@@ -196,7 +83,7 @@
       <strong>Tip:</strong> Bookmark the file path or keep calculator + manual in the same folder. Use <strong>Export JSON</strong> before clearing browser data or switching machines.
     </div>
 
-    <h2 id="workflow">3. Recommended workflow</h2>
+    <h2 id="manual-workflow">3. Recommended workflow</h2>
     <p>Work through the five tabs in order. Results update live as you type.</p>
     <div class="workflow">
       <div><strong>1</strong>Boom &amp; Section<br>Geometry, pipe, material</div>
@@ -206,22 +93,26 @@
       <div><strong>5</strong>Load Test<br>Proof load, field data, certificate</div>
     </div>
     <ol>
-      <li>Select unit system (Metric or US) and load case (Operating, Erection, or Storm).</li>
+      <li>Select unit system (Metric or US), analysis mode (Simple cantilever or Matrix envelope), and quick load case if using simple mode.</li>
       <li>Confirm boom length and pipe section match the physical boom drawing.</li>
-      <li>Enter rig equipment ratings from OEM / rig documentation on Tab 3.</li>
-      <li>Review Tab 4 — resolve any <strong>FAIL</strong> on strength or capacity before rig-up.</li>
+      <li>Enter turntable ratings and, in matrix mode, multi-support and guyline capacities on Tab 3.</li>
+      <li>Review Tab 4 — in matrix mode check the combination table and governing row; resolve any <strong>FAIL</strong> before rig-up.</li>
       <li>After physical proof load test, complete Tab 5 and print the certificate.</li>
     </ol>
 
-    <h2 id="toolbar">4. Toolbar &amp; global controls</h2>
+    <h2 id="manual-toolbar">4. Toolbar &amp; global controls</h2>
     <table>
       <thead><tr><th>Control</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values convert when you switch.</td></tr>
-        <tr><td><strong>Load case</strong></td><td><strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values, unchanged by preset.</td></tr>
+        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
+        <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
-        <tr><td><strong>90 ft reference</strong></td><td>Loads a 27.432&nbsp;m (90&nbsp;ft) reference case with mid-span secondary load — for comparison with the project PDF.</td></tr>
+        <tr><td><strong>Rig preset</strong></td><td>60&nbsp;ft default, 90&nbsp;ft reference, or saved vessel presets (localStorage). <strong>Save rig</strong> stores boom length + support positions.</td></tr>
+        <tr><td><strong>90 ft reference</strong></td><td>Loads the 90&nbsp;ft rig preset and PDF comparison loads.</td></tr>
         <tr><td><strong>Export JSON</strong></td><td>Downloads all inputs and settings as a JSON file.</td></tr>
+        <tr><td><strong>Members CSV</strong></td><td>Exports governing-combination member unity table (Bm119 + ropes) for spreadsheets.</td></tr>
+        <tr><td><strong>Analysis report</strong></td><td>JSON bundle: inputs, matrix summary, top members, optional mode comparison.</td></tr>
         <tr><td><strong>Import JSON</strong></td><td>Restores a previously exported job file.</td></tr>
         <tr><td><strong>Reset</strong></td><td>Restores factory defaults (60&nbsp;ft boom, 8″ Sch 40, operating case).</td></tr>
         <tr><td><strong>Theme</strong> (header)</td><td>Toggles dark / light appearance.</td></tr>
@@ -229,15 +120,55 @@
       </tbody>
     </table>
 
-    <h2 id="status">5. Understanding PASS / MARGINAL / FAIL</h2>
+    <h2 id="manual-matrix">5. Matrix envelope mode (v3)</h2>
+    <p>Matrix mode runs eight fixed combinations aligned with typical offshore burner-boom reports:</p>
+    <table>
+      <thead><tr><th>Group</th><th>Combinations</th><th>Active supports</th></tr></thead>
+      <tbody>
+        <tr><td>Operating</td><td>Heave+Roll, Heave+Pitch, Heave+Resultant</td><td>Turntable, kingpost, wind stay, guylines</td></tr>
+        <tr><td>Survival</td><td>Heave+Roll, Heave+Pitch, Heave+Resultant</td><td>Turntable, boom rest (stowed)</td></tr>
+        <tr><td>Accidental</td><td>Static heel (dry pipe fraction)</td><td>Turntable, kingpost</td></tr>
+        <tr><td>Lifting</td><td>Crane / guylines (2× weight default)</td><td>Lifting reduction on base moment</td></tr>
+      </tbody>
+    </table>
+    <p>Each combination applies <strong>3-direction scale factors</strong> (X lateral ⊥ boom, Y axial ∥ boom, Z vertical) plus directional wind multipliers. This is a <strong>screening envelope</strong>, not a 3D space-frame FEA — member-by-member checks, temperature derating, and full guyline truss geometry are not modeled.</p>
+    <p>The <strong>Load combination matrix</strong> table on Tab 4 lists all rows; the ★ governing row sets the header status pill and the detailed reaction block on Tab 3.</p>
+
+    <h2 id="manual-frame">6. Frame solver (v4)</h2>
+    <p><strong>Frame solver + matrix (2D FEA)</strong> is the default analysis mode. It builds a 2D plane-frame model in the boom elevation plane:</p>
+    <ul>
+      <li><strong>12 Euler-Bernoulli beam segments</strong> along the boom chord (same pipe A, I, E as Tab 1)</li>
+      <li><strong>Truss links</strong> for wind stay and windward guylines to fixed deck anchors</li>
+      <li><strong>Support constraints</strong> — pinned turntable base; vertical restraints at kingpost / boom-rest nodes per combination</li>
+      <li><strong>Direct stiffness solution</strong> — Gaussian elimination on free DOFs; reactions and guy tensions from solved displacements</li>
+    </ul>
+    <p>The same 8 load combinations and 3-direction scale factors apply. Results feed the matrix table and PASS/FAIL checks. This is substantially closer to SESAM-style boundary conditions than 1D screening, but is still a <strong>lumped 2D model</strong> — not the full 3D braced space frame with box sections, fishplates, and member unity checks from the PDF.</p>
+    <p>Use <strong>Matrix envelope (1D screening)</strong> for fast hand-checks; use <strong>Frame solver</strong> when supports and guylines must interact through stiffness in 2D.</p>
+
+    <h2 id="manual-space3d">7. 3D space frame (v5) — 60 ft design</h2>
+    <p><strong>3D space frame (PDF topology)</strong> is the default mode. It builds a braced space frame for the standard <strong>60&nbsp;ft (18.288&nbsp;m) burner boom</strong>, with member layout and sections scaled from the CT-12-4536 / SESAM 90&nbsp;ft report:</p>
+    <ul>
+      <li><strong>Coordinates:</strong> +X ⊥ boom, +Y along boom, +Z up (PDF §2.1)</li>
+      <li><strong>18 bays</strong> at 1.016&nbsp;m (60&nbsp;ft / 18) · four corner chords (box_75 / box_90)</li>
+      <li><strong>Bm119</strong> — top starboard chord segments (box_90x90x8, A=2624 mm²)</li>
+      <li><strong>Bracing:</strong> vertical box_75, diagonal L75x75x8, cross L_200x100x10</li>
+      <li><strong>Rope trusses:</strong> Sp3 wind stay, Sp4 kingpost guys (56/40&nbsp;mm), Sp8 lateral guy; <strong>Sp5–Sp10</strong> added when effective guylines ≥ 2 (windward screening count on Tab 3)</li>
+      <li><strong>Supports:</strong> deck anchors fixed at connected Sp nodes; kingpost / wind-stay / guy positions follow rig preset or custom Tab 3 values</li>
+      <li><strong>Accidental heel:</strong> dry-pipe fraction varies base→tip; static heel angle tilts weight in 3D accidental combination</li>
+      <li><strong>Member table:</strong> Bm119 chords, all guy ropes, and bracing (D/V/X) unity — top 25 by utilization</li>
+      <li><strong>Rig presets:</strong> toolbar <em>Rig</em> dropdown + <em>Save rig</em> stores support positions in browser localStorage</li>
+    </ul>
+    <p>Use the toolbar <strong>90&nbsp;ft reference</strong> preset only when comparing against the original SESAM PDF. The default 60&nbsp;ft case is the operational burner boom configuration.</p>
+
+    <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
-      <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, and buckling are within limits.</div>
+      <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
       <div class="warn"><strong>MARGINAL — deflection</strong><br>Strength is OK but tip deflection exceeds L/n serviceability criterion. Review with engineer; may still be acceptable per operator spec.</div>
-      <div class="fail"><strong>FAIL — strength/capacity</strong><br>One or more primary checks exceeded: stress, turntable, bolts, buckling, or invalid geometry.</div>
+      <div class="fail"><strong>FAIL — strength/capacity</strong><br>One or more primary checks exceeded: stress, turntable, bolts, buckling, multi-support capacity, guyline tension, or invalid geometry.</div>
     </div>
     <p>On Tab 4, individual result tiles use green / amber / red borders. The banner distinguishes <strong>primary strength</strong> failures from <strong>serviceability deflection</strong> warnings.</p>
 
-    <h2 id="tab1" class="page-break">6. Tab 1 — Boom &amp; Section</h2>
+    <h2 id="manual-tab1" >7. Tab 1 — Boom &amp; Section</h2>
     <table>
       <thead><tr><th>Field</th><th>Description</th></tr></thead>
       <tbody>
@@ -251,7 +182,7 @@
     </table>
     <p>The <strong>Derived section properties</strong> table shows ID, area, I, Z, D/t, and distributed weight — verify against supplier data.</p>
 
-    <h2 id="tab2">7. Tab 2 — Loads &amp; Wind</h2>
+    <h2 id="manual-tab2">8. Tab 2 — Loads &amp; Wind</h2>
     <h3>Gravity loads</h3>
     <table>
       <thead><tr><th>Field</th><th>Description</th></tr></thead>
@@ -276,7 +207,7 @@
     <h3>Deflection limit</h3>
     <p>Serviceability check: maximum allowable deflection = <strong>L / n</strong>. Default n = 200. This is flagged as <strong>MARGINAL</strong> if exceeded but does not alone cause a primary FAIL.</p>
 
-    <h2 id="tab3">8. Tab 3 — Rig / Turntable Interface</h2>
+    <h2 id="manual-tab3">9. Tab 3 — Rig / Turntable Interface</h2>
     <p>Enter rated capacities from rig or equipment documentation:</p>
     <ul>
       <li><strong>Turntable rated moment</strong> — maximum bending moment at base connection (kN·m or kip·ft).</li>
@@ -287,9 +218,22 @@
       <li>Bolt circle diameter (BCD), number of bolts N, allowable tension per bolt.</li>
       <li>Max bolt tension ≈ 2M/(NR) + N_axial/N — first-pass screening only.</li>
     </ul>
-    <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, and bolt utilization.</p>
+    <h3>Multi-support boundary conditions (matrix mode)</h3>
+    <p>Enable/disable supports and enter position + rated capacity. The tool computes simplified static reactions and reduces turntable moment when a vertical support (kingpost or boom rest) carries part of the vertical load. Wind stay carries lateral load before guyline tension is calculated.</p>
+    <ul>
+      <li><strong>Kingpost</strong> — vertical support, active in operating and accidental combinations.</li>
+      <li><strong>Wind stay</strong> — lateral support at boom, operating combinations only.</li>
+      <li><strong>Boom rest</strong> — vertical support when boom is stowed, survival combinations.</li>
+      <li><strong>Accidental dry factor</strong> — fraction of operating weight for empty-pipe accidental case (default 0.85).</li>
+      <li><strong>Lifting load factor</strong> — multiplier on total weight for lifting combination (default 2.0).</li>
+    </ul>
+    <h3>Guyline screening</h3>
+    <p>Windward effective guylines share residual lateral load after wind-stay capacity. Tension T ≈ (F_x / n_guys) / sin(angle). Compare to allowable per guy. Guy length is recorded for documentation; tension uses angle and lateral force only (straight-line screening).</p>
+    <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, bolt utilization, and (matrix mode) multi-support and 3-direction force components for the governing combination.</p>
 
-    <h2 id="tab4">9. Tab 4 — Results</h2>
+    <h2 id="manual-tab4">10. Tab 4 — Results</h2>
+    <h3>Load combination matrix (matrix mode)</h3>
+    <p>Eight rows with stress utilization, safety factor, base moment, guyline tension, and pass/fail. The governing row (★) drives the sticky header status and governs charts/schematic values.</p>
     <h3>Quality checks</h3>
     <p>Validates geometry (positive dimensions, t &lt; OD/2, D/t warning, load position within span).</p>
     <h3>Structural summary tiles</h3>
@@ -305,7 +249,7 @@
     <h3>Full calculation report</h3>
     <p>Single table suitable for copy/paste into a calculation sheet or email. All values respect the selected unit system.</p>
 
-    <h2 id="tab5" class="page-break">10. Tab 5 — Load Test Sign-off</h2>
+    <h2 id="manual-tab5" >11. Tab 5 — Load Test Sign-off</h2>
     <p>Use after a physical proof load test on the boom:</p>
     <ol>
       <li>Set <strong>SWL</strong> (Safe Working Load) — total rigged payload reference (kg or lb).</li>
@@ -323,12 +267,14 @@
     </ul>
     <p>Click <strong>Print / Save Certificate as PDF</strong> to generate a sign-off sheet with signature lines for tester, witness, certifying engineer, and client representative.</p>
 
-    <h2 id="save">11. Saving &amp; sharing jobs</h2>
+    <h2 id="manual-save">12. Saving &amp; sharing jobs</h2>
     <table>
       <thead><tr><th>Method</th><th>When to use</th></tr></thead>
       <tbody>
         <tr><td>Automatic (localStorage)</td><td>Same browser — resumes on reopen.</td></tr>
         <tr><td>Export JSON</td><td>Backup, email to colleague, archive with project number.</td></tr>
+        <tr><td>Members CSV</td><td>Governing 3D member unity table for Excel / QA sign-off.</td></tr>
+        <tr><td>Analysis report</td><td>Structured JSON with matrix envelope and top members for digital records.</td></tr>
         <tr><td>Import JSON</td><td>Restore backup or open someone else's job file.</td></tr>
         <tr><td>Reset</td><td>Return to 60&nbsp;ft default case; clears certificate text fields.</td></tr>
       </tbody>
@@ -337,14 +283,15 @@
       Clearing browser site data removes auto-saved sessions. Export JSON before clearing cache or reinstalling the browser.
     </div>
 
-    <h2 id="print">12. Printing &amp; certificates</h2>
+    <h2 id="manual-print">13. Printing &amp; certificates</h2>
     <ul>
-      <li><strong>Load test certificate</strong> — use the button on Tab 5; hides toolbar and tabs in print view.</li>
-      <li><strong>Full record</strong> — browser Print on Results tab after scrolling; print CSS expands all tabs for a multi-section report (toolbar hidden).</li>
+      <li><strong>Load test certificate</strong> — Tab 5 includes proof-load fields <em>and</em> a structural screening appendix (matrix + top members when using frame/3D modes).</li>
+      <li><strong>Full record</strong> — browser Print on Results tab; print CSS hides toolbar/tabs.</li>
+      <li><strong>Members CSV / Analysis report</strong> — toolbar exports for spreadsheets and QA records.</li>
       <li>Use <em>Save as PDF</em> in the print dialog for electronic records.</li>
     </ul>
 
-    <h2 id="limits">13. Limitations &amp; standards</h2>
+    <h2 id="manual-limits">14. Limitations &amp; standards</h2>
     <p>Simplified models referenced in the calculator footer:</p>
     <ul>
       <li>AISC ASD allowable stress (Fy / SF)</li>
@@ -352,11 +299,15 @@
       <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
       <li>EN 1991-1-4 wind on cylinders (Cd)</li>
       <li>Euler column buckling (K = 2 cantilever)</li>
+      <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports, not ship-specific RAO calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> local stress concentrations, fatigue, corrosion allowance, tapered sections, FEA-level connection detail, dynamic wind gust time history, or lift-plan rigging angles.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — chord bending uses tributary distribution from solved base reactions; axial and rope forces use the stiffness solution.</p>
+    <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
-    <h2 id="faq">14. FAQ &amp; troubleshooting</h2>
+    <h2 id="manual-faq">15. FAQ &amp; troubleshooting</h2>
+    <h4>Simple vs matrix vs 3D?</h4>
+    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with member table. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
     <h4>Why does status show MARGINAL but stress passes?</h4>
     <p>Long pipe cantilevers often exceed L/200 deflection under self-weight while stress remains acceptable. The tool separates serviceability (MARGINAL) from strength (FAIL).</p>
     <h4>Values look wrong after switching units</h4>
@@ -369,8 +320,9 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v2.0 · Matches <code>Burner_boom_load_calculator.html</code> v2.0 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.2 · Matches <code>Burner_boom_load_calculator.html</code> v5.2 · For preliminary engineering use only.
     </footer>
-  </main>
+    
+</div>
 </body>
 </html>
