@@ -97,6 +97,14 @@ const cal = pdf.runPdfCalibration(INP_60FT);
 assert(cal.every(c => c.pass), 'PDF calibration cases within tolerance bands');
 assert(cal[0].metrics.find(m => m.key === 'bm119_id').pass, 'op_res governing chord Bm119_17');
 
+const svRes = sf.computeSpaceFrameCore(INP_60FT, MATRIX_COMBOS.find(c => c.id === 'sv_res'));
+const solvedBm = svRes.unity.rows.filter(m => m.id.startsWith('Bm119') && m.bendingFrom === 'solved');
+assert(solvedBm.length >= 5, `sv_res Bm119 solved bending on ${solvedBm.length} boom-aligned segments`);
+
+const digitized = require('./pdf_digitized_tables.js');
+const digReport = digitized.buildDigitizedReport(digitized.PDF_DIGITIZED_DEFAULT);
+assert(digReport.allPass, 'digitized PDF member tables within tolerance');
+
 if (failed) {
   console.error(`\n${failed} regression failure(s)`);
   process.exit(1);

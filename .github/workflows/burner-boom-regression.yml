@@ -6,6 +6,7 @@ on:
       - 'Burner_boom_load_calculator.html'
       - 'tools/space_frame_3d.js'
       - 'tools/pdf_benchmarks.js'
+      - 'tools/pdf_digitized_tables.js'
       - 'tools/space_frame_regression.js'
       - '.github/workflows/burner-boom-regression.yml'
   push:
@@ -15,6 +16,7 @@ on:
       - 'Burner_boom_load_calculator.html'
       - 'tools/space_frame_3d.js'
       - 'tools/pdf_benchmarks.js'
+      - 'tools/pdf_digitized_tables.js'
       - 'tools/space_frame_regression.js'
 
 jobs:
@@ -29,6 +31,8 @@ jobs:
         run: node tools/space_frame_3d.js
       - name: PDF calibration benchmarks
         run: node tools/pdf_benchmarks.js
+      - name: PDF digitized member tables
+        run: node tools/pdf_digitized_tables.js
       - name: 60 ft regression suite
         run: node tools/space_frame_regression.js
       - name: Validate embedded calculator script

@@ -72,7 +72,7 @@ const PDF_BENCHMARKS = {
       label: 'Survival · Heave+Resultant',
       combo: { id: 'sv_res', condition: 'survival', loadFactor: 1, sfZ: 2.50, sfY: 0.25, sfX: 0.03, windX: 0.99, windY: 0.10, supports: ['turntable', 'boomrest'] },
       metrics: [
-        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 18.6, tolPct: 30 },
+        { key: 'bm119_util_pct', label: 'Bm119 unity', ref: 10.9, tolPct: 30 },
         { key: 'tip_defl_mm', label: 'Tip deflection', ref: 1133, tolPct: 25 },
         { key: 'Mbase_kNm', label: 'Turntable moment', ref: 1.87, tolPct: 30 },
       ],

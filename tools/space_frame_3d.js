@@ -372,7 +372,7 @@ function memberEndForces(meta, u){
         My=MyA; Mz=MzA;
       }
       const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
-      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,truss:false,solved:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
     }
   }
   return members;
@@ -389,13 +389,22 @@ function pickGoverningUnity(unity){
   return g;
 }
 
-/** Hybrid Bm119 bending: tributary from base moment, refined by solved local moment when plausible. */
+/** True when local member x-axis aligns with boom (Y global) — solved bending is meaningful. */
+function bm119OrientationReliable(m){
+  return m.mx != null && m.mx >= 0.85;
+}
+
+/** Bm119 bending: solved local moment when boom-aligned and sane; else hybrid or tributary. */
 function bm119BendingMoment(m, Mbase, si){
   const frac=(si+0.5)/PDF_N_BAYS;
   const Mtrib=Mbase*frac*frac;
   const Msolved=Math.max(Math.abs(m.My||0), Math.abs(m.Mz||0));
   const cap=Mbase*Math.min(0.55, frac*frac*1.35);
-  if(!Msolved || Msolved>Mbase*0.95 || Msolved>Mtrib*8) return { Mmem: Mtrib, source: 'tributary' };
+  const sane=Msolved > 0 && Msolved <= Mbase*0.95 && Msolved <= Mtrib*8;
+  if(bm119OrientationReliable(m) && sane){
+    return { Mmem: Math.min(Msolved, cap), source: 'solved' };
+  }
+  if(!Msolved || !sane) return { Mmem: Mtrib, source: 'tributary' };
   return { Mmem: Math.max(Mtrib, Math.min(Msolved, cap)), source: 'hybrid' };
 }
 
@@ -482,7 +491,7 @@ function computeSpaceFrameCore(inp, combo){
   return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, bm119OrientationReliable, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {
