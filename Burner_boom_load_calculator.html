@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burner Boom Load Analysis v5.6</title>
+<title>Burner Boom Load Analysis v5.8</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b10'/%3E%3Cpath d='M12 48 L52 48' stroke='%2300b4d8' stroke-width='4'/%3E%3Cpath d='M12 48 L48 16' stroke='%23ff6b35' stroke-width='4'/%3E%3Ccircle cx='12' cy='48' r='4' fill='%2300b4d8'/%3E%3C/svg%3E" />
 <style>
   :root.viz-root, .viz-root {
@@ -248,7 +248,7 @@
         <div class="brand-mark" aria-hidden="true">🔥</div>
         <div>
           <h1>Burner Boom Load Analysis</h1>
-          <p class="meta">v5.7.1 · unit labels follow SI / US</p>
+          <p class="meta">v5.8 · tension-only guys · P-Δ · Rayleigh DAF</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -259,7 +259,7 @@
   </div>
 
   <header class="app">
-    <p class="sub">Cantilever boom structural check for well-test burner/flare booms rigged to a rig structure or turntable — bending, wind, base reactions, D/t &amp; buckling screening, and proof-load sign-off.</p>
+    <p class="sub">Cantilever boom structural check for well-test burner/flare booms — 3D space frame with tension-only guys, P-Δ geometric stiffness, member wind, and Rayleigh period. Screening, not a certified FEA substitute.</p>
   </header>
 
   <div class="toolbar no-print" role="toolbar" aria-label="Calculator controls">
@@ -273,7 +273,7 @@
       <option value="simple">Simple cantilever</option>
       <option value="matrix">Matrix envelope (1D screening)</option>
       <option value="frame">Frame solver + matrix (2D FEA)</option>
-      <option value="space3d" selected>3D space frame (PDF topology)</option>
+      <option value="space3d" selected>3D space frame (physics fidelity)</option>
     </select>
     <span class="sep"></span>
     <label for="loadCase">Quick case</label>
@@ -447,6 +447,20 @@
           <input type="number" id="DAF" value="1.15" step="0.01" min="1">
           <span class="hint">Rig motion / raising-lowering / vibration — 1.10–1.30 typical</span>
         </div>
+        <div class="field">
+          <label><input type="checkbox" id="physicsFidelity" checked style="width:auto;margin-right:6px;">Physics fidelity (3D)</label>
+          <span class="hint">Tension-only ropes, P-Δ geometric stiffness, member projected wind, Rayleigh period. Linear screening remains for PDF bands.</span>
+        </div>
+        <div class="field">
+          <label>Vessel heave period</label>
+          <input type="number" id="vesselPeriod_s" value="8" step="0.5" min="2" max="20">
+          <span class="hint">s — used for SDOF DAF vs boom natural period (not a substitute for RAO)</span>
+        </div>
+        <div class="field">
+          <label>Structural damping ζ</label>
+          <input type="number" id="dampingZeta" value="0.02" step="0.005" min="0.005" max="0.1">
+          <span class="hint">Steel space-frame typical 0.02; welded 0.01–0.03</span>
+        </div>
       </div>
     </div>
 
@@ -583,7 +597,13 @@
       <p class="hint" style="margin-top:-6px;">Runs 8 SESAM-style combinations with 3-direction dynamic scale factors (X ⊥ boom, Y ∥ boom, Z vertical). Governing row drives header status.</p>
       <p class="hint" id="frameInfo" style="display:none;margin-top:6px;color:var(--series-1);"><strong>Frame solver active:</strong> 2D plane-frame direct stiffness (12 boom segments + truss guys/stays). Reactions from solved displacements — closer to SESAM than 1D screening.</p>
       <div style="overflow-x:auto;"><table class="matrix-table" id="matrixTable"></table></div>
-      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys · 1.27× frame SW · kingpost uz at boom station (accidental) or Sp4 vertical (operating); boom-rest uz in survival.</p>
+      <p class="hint" id="space3dInfo" style="display:none;margin-top:8px;color:var(--series-1);"><strong>3D space frame active:</strong> 60&nbsp;ft design · 18 bays · Bm119 + bracing · Sp3/4/8 + Sp5–Sp10 guys · 1.27× frame SW · kingpost uz at boom station (accidental) or Sp4 vertical (operating); boom-rest uz in survival. Physics fidelity: tension-only ropes, P-Δ, member wind, Rayleigh DAF.</p>
+    </div>
+
+    <div class="card" id="physicsCard" style="display:none;">
+      <h2>Physics fidelity <span class="badge-sm" id="physicsStatus">—</span></h2>
+      <p class="hint" style="margin-top:-6px;">Governing 3D solve with tension-only guys (ropes cannot compress), geometric stiffness (P-Δ), member projected wind in newtons, and a Rayleigh estimate of the boom period. PDF calibration bands stay on the linear screening path.</p>
+      <table class="report" id="physicsTable"></table>
     </div>
 
     <div class="card" id="calibrationDashboardCard" style="display:none;">
@@ -788,6 +808,7 @@
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
         <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
         <li><a href="#manual-v57">Sprint H — v5.7 calibration dashboard</a></li>
+        <li><a href="#manual-v58">Sprint I — v5.8 physics fidelity</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -852,7 +873,7 @@
       <thead><tr><th>Control</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values <em>and the unit labels under each input</em> convert when you switch (kN↔kip, mm↔in, etc.).</td></tr>
-        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
+        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default, physics fidelity)</strong> — PDF braced topology; tension-only guys, P-Δ, member wind, Rayleigh Tₙ. Uncheck physics on Tab 2 for linear 3D screening.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>RAO / SF preset</strong></td><td>Scales matrix combination dynamic factors (sfZ, sfY, sfX) for vessel-specific screening.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
@@ -951,6 +972,20 @@
       <li><strong>CI</strong> — <code>node tools/rao_presets.js</code> validates RAO merge logic on each PR</li>
     </ul>
 
+    <h2 id="manual-v58">7g. Sprint I — v5.8 physics fidelity</h2>
+    <p>Default 3D solve is the <strong>physics path</strong> (Tab 2 checkbox on). Linear first-order 3D remains available for PDF screening bands.</p>
+    <ul>
+      <li><strong>Tension-only guys</strong> — ropes that go into compression are removed (slack) and reactivated if elongation would put them back in tension. Linear 3D had Guy40 / GuyLat35 in compression, which a rope cannot do.</li>
+      <li><strong>P-Δ geometric stiffness</strong> — member axial force feeds Kg (beam geometric stiffness, truss geometric stiffness). Beam P is capped at 0.6× member Euler so the tangent stiffness cannot lock or go singular. Iterate until slack set and axial forces settle (~5%).</li>
+      <li><strong>Member projected wind</strong> — drag is q·Cd·width·L in <em>newtons</em> on every beam. The linear path still uses the old station-wind formula (N/mm mixed with metres) so PDF calibration numbers do not move.</li>
+      <li><strong>Rayleigh period + SDOF DAF</strong> — Tₙ from the physics displaced shape and lumped mass; DAF vs vessel heave period and ζ is shown as insight. Applied loads still use the user DAF field.</li>
+      <li><strong>Braced-chord buckling</strong> — Euler on a bay with K=0.65, not K=2 full-length cantilever. NPS 8 Sch 40 local buckling (D/t) is compared with yield.</li>
+      <li><strong>PDF / digitized cards</strong> — always re-solved with physics off, so Guy56 ≈ 155 kN screening bands stay on the linear path while the governing matrix uses physics.</li>
+    </ul>
+    <div class="callout warn">
+      Physics fidelity is still a reduced space-frame model (iterated first-order P-Δ, not co-rotational large-displacement FEA). It is the better engineering solve in this file — not a SESAM or ABAQUS replacement.
+    </div>
+
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
@@ -982,7 +1017,10 @@
         <tr><td>Tip point weight</td><td>Concentrated load at boom tip — igniter, pilot, nozzle assembly.</td></tr>
         <tr><td>Secondary point weight</td><td>Mid-boom equipment — ladder cage, valve, junction box.</td></tr>
         <tr><td>Secondary weight position</td><td>Distance from base to secondary load. Default mid-span on 60&nbsp;ft boom (9.144&nbsp;m).</td></tr>
-        <tr><td>DAF</td><td>Dynamic amplification for rig motion / raising. Typical 1.10–1.30.</td></tr>
+        <tr><td>DAF</td><td>Dynamic amplification for rig motion / raising. Typical 1.10–1.30. Physics mode still applies this factor to loads; Rayleigh SDOF DAF is reported separately for comparison.</td></tr>
+        <tr><td>Physics fidelity (3D)</td><td>On (default): tension-only ropes, P-Δ, member wind in newtons, Rayleigh Tₙ. Off: linear 3D used for PDF screening bands.</td></tr>
+        <tr><td>Vessel heave period</td><td>Seconds — compared with boom Tₙ for an SDOF DAF estimate (not a substitute for ship RAO).</td></tr>
+        <tr><td>Structural damping ζ</td><td>Typical steel space-frame 0.02 (welded 0.01–0.03).</td></tr>
       </tbody>
     </table>
     <h3>Wind</h3>
@@ -1023,6 +1061,8 @@
     <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, bolt utilization, and (matrix mode) multi-support and 3-direction force components for the governing combination.</p>
 
     <h2 id="manual-tab4">10. Tab 4 — Results</h2>
+    <h3>Physics fidelity card (3D, default on)</h3>
+    <p>Shows linear vs physics tip displacement, slack ropes, Rayleigh Tₙ, SDOF DAF vs vessel period, braced-chord Euler (K=0.65 bay), and pipe D/t vs yield. Member table marks slack guys as <strong>SLACK</strong> (zero axial). PDF calibration cards stay on the linear screening path.</p>
     <h3>Calibration dashboard (3D mode)</h3>
     <p>When <strong>3D space frame</strong> is active, the calibration dashboard summarizes PDF benchmark, digitized member extract, and support-reaction screening in one place. Use <em>Import RAO JSON</em> to load vessel-specific matrix scale factors.</p>
     <h3>Load combination matrix (matrix mode)</h3>
@@ -1033,7 +1073,7 @@
     <ul>
       <li><strong>Equivalent stress σ_eq</strong> — combined bending + axial + shear (von Mises-style).</li>
       <li><strong>Actual safety factor</strong> — Fy / σ_eq vs target SF.</li>
-      <li><strong>Buckling SF</strong> — Euler capacity with K=2 (cantilever) vs axial component.</li>
+      <li><strong>Buckling SF</strong> — physics 3D uses braced-chord Euler (K=0.65 bay); simple/1D/2D still show K=2 cantilever screening.</li>
       <li><strong>Deflection</strong> — resultant gravity + wind deflection vs L/n.</li>
       <li><strong>Bolt utilization</strong> — percentage of allowable per-bolt tension.</li>
     </ul>
@@ -1092,16 +1132,20 @@
       <li>API 5L / ASTM pipe grades</li>
       <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
       <li>EN 1991-1-4 wind on cylinders (Cd)</li>
-      <li>Euler column buckling (K = 2 cantilever)</li>
+      <li>Euler column buckling — physics 3D uses K=0.65 on a braced bay; simple mode uses K=2 cantilever</li>
+      <li>Tension-only guy iteration and first-order P-Δ geometric stiffness (v5.8)</li>
+      <li>Rayleigh boom period + SDOF DAF vs vessel heave (insight; user DAF still applied to loads)</li>
       <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports; import RAO JSON for ship-specific calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
-    <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), co-rotational large-displacement FEA, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — physics path removes rope compression and adds P-Δ; Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions.</p>
+    <p><strong>Modeled (v5.8):</strong> 3D braced space frame (60&nbsp;ft default) with tension-only guys, P-Δ, member projected wind, Rayleigh Tₙ, 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
     <h2 id="manual-faq">15. FAQ &amp; troubleshooting</h2>
     <h4>Simple vs matrix vs 3D?</h4>
-    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with member table. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
+    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with physics fidelity (tension-only guys, P-Δ). Uncheck physics on Tab 2 for linear 3D. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
+    <h4>Why do Guy40 / GuyLat35 show SLACK?</h4>
+    <p>Those ropes go into compression in a linear truss model. A guy cannot push. Physics mode drops them and redistributes load to taut guys (typically Guy56). That is the physically correct path.</p>
     <h4>Why does status show MARGINAL but stress passes?</h4>
     <p>Long pipe cantilevers often exceed L/200 deflection under self-weight while stress remains acceptable. The tool separates serviceability (MARGINAL) from strength (FAIL).</p>
     <h4>Values look wrong after switching units</h4>
@@ -1114,7 +1158,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.6 · Matches <code>Burner_boom_load_calculator.html</code> v5.6 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.8 · Matches <code>Burner_boom_load_calculator.html</code> v5.8 · Engineering screening — not certified FEA.
     </footer>
     </div>
   </section>
@@ -1122,7 +1166,8 @@
   <p class="footnote">
     <b>Standards referenced (simplified screening only):</b> AISC ASD allowable stress (Fy/SF); API 5L / ASTM pipe grades;
     ASCE 7-16 velocity pressure q<sub>z</sub> = 0.613 K<sub>z</sub>K<sub>zt</sub>K<sub>d</sub>V² (implemented as ½ρV² with exposure factor);
-    EN 1991-1-4 wind on cylinders (Cd); Euler column buckling screening (K=2 cantilever).
+    EN 1991-1-4 wind on cylinders (Cd); Euler screening (K=2 simple cantilever; K=0.65 braced bay in physics 3D);
+    tension-only guys and first-order P-Δ (v5.8).
     Does <b>not</b> replace certified structural analysis, FEA, or rig-owner approval.
     Companion reference: <i>Structural Analysis of 90 Ft Burner Boom</i> (project PDF).
   </p>
@@ -1133,7 +1178,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'burnerBoomCalc_v5';
-  const APP_VERSION = '5.7.1';
+  const APP_VERSION = '5.8.0';
 
   const CONV = {
     m_ft: 3.280839895, mm_in: 0.0393700787, kg_lb: 2.20462262, ms_mph: 2.23693629,
@@ -1239,7 +1284,8 @@
     swl_kg: 110, testFactor: 1.5, permSetPct: 10,
     kingpostPos_m: 6.19, kingpostRated_kN: 80, windStayPos_m: 5.18, windStayRated_kN: 25,
     boomRestPos_m: 5.46, boomRestRated_kN: 60, guyAttachPos_m: 6.19, guyLength_m: 8, guyAllow_kN: 50,
-    accidentalHeel_deg: 5, rigPreset: '60ft_default', autoModeCompare: false, projectPreset: '', comboScalePreset: 'default'
+    accidentalHeel_deg: 5, rigPreset: '60ft_default', autoModeCompare: false, projectPreset: '', comboScalePreset: 'default',
+    physicsFidelity: true, vesselPeriod_s: 8, dampingZeta: 0.02
   };
 
   const RIG_PRESET_KEY = 'burnerBoomRigPresets_v1';
@@ -1345,7 +1391,11 @@
 
   function applyDefaults(){
     suppressSave = true;
-    Object.entries(DEFAULTS).forEach(([k,v])=>{ if($(k)) $(k).value = v; });
+    Object.entries(DEFAULTS).forEach(([k,v])=>{
+      if(!$(k)) return;
+      if(typeof v === 'boolean') $(k).checked = v;
+      else $(k).value = v;
+    });
     $('matPreset').value = '241';
     $('sfPreset').value = '1.67';
     $('defLimitPreset').value = '200';
@@ -1358,6 +1408,9 @@
     if($('boomRestEnabled')) $('boomRestEnabled').checked = true;
     if($('guysEnabled')) $('guysEnabled').checked = true;
     if($('autoModeCompare')) $('autoModeCompare').checked = false;
+    if($('physicsFidelity')) $('physicsFidelity').checked = true;
+    if($('vesselPeriod_s')) $('vesselPeriod_s').value = 8;
+    if($('dampingZeta')) $('dampingZeta').value = 0.02;
     $('visualOk').checked = false;
     ['assetId','rigLoc','testDate','testedBy','witnessedBy'].forEach(id=>{ if($(id)) $(id).value=''; });
     suppressSave = false;
@@ -1714,7 +1767,7 @@
         csvEscape(m.id), csvEscape(m.cat || memberCategory(m.id)), csvEscape(m.sn || ''), csvEscape(fmt(m.util * 100, 1)),
         csvEscape(fmt((m.N || 0) / 1000, 2)), csvEscape(fmt((m.My || 0) / 1e6, 2)),
         csvEscape(m.bendingFrom || ''), csvEscape(m.mx != null ? fmt(m.mx, 3) : ''),
-        csvEscape(m.pass ? 'OK' : 'FAIL'), csvEscape(gov.combo.label)
+        csvEscape(m.slack ? 'SLACK' : (m.pass ? 'OK' : 'FAIL')), csvEscape(gov.combo.label)
       ].join(','));
     }
     downloadBlob('burner-boom-members-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv', lines.join('\n'));
@@ -1733,7 +1786,8 @@
         worstMember: lastEnvelope.governing.r.worstMember,
         pass: lastEnvelope.governing.r.pass,
         supports: lastEnvelope.governing.r.supports,
-        dRes_mm: lastEnvelope.governing.r.dRes
+        dRes_mm: lastEnvelope.governing.r.dRes,
+        physics: lastEnvelope.governing.r.physics || null
       } : null,
       matrix: lastEnvelope ? lastEnvelope.rows.map(({ combo, r }) => ({
         id: combo.id, label: combo.label, utilPct: r.utilStress * 100,
@@ -1743,7 +1797,7 @@
       topMembers: lastEnvelope?.governing?.r?.memberRows
         ? lastEnvelope.governing.r.memberRows.filter(isUnityTableMember)
           .sort((a, b) => b.util - a.util).slice(0, 25)
-          .map(m => ({ id: m.id, type: m.cat || memberCategory(m.id), section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass }))
+          .map(m => ({ id: m.id, type: m.cat || memberCategory(m.id), section: m.sn, utilPct: m.util * 100, N_kN: (m.N || 0) / 1000, pass: m.pass, slack: !!m.slack }))
         : null,
       worstBrace: lastEnvelope?.governing?.r?.worstBrace || null,
       pdfCalibration: lastPdfReport,
@@ -1818,6 +1872,9 @@
       extraLoad_kg: valMetric('extraLoad_kg', v => v / CONV.kg_lb) || 0,
       extraPos_m: valMetric('extraPos_m', v => v / CONV.m_ft) || 0,
       DAF: parseFloat($('DAF').value)||1,
+      physicsFidelity: !!$('physicsFidelity')?.checked,
+      vesselPeriod_s: parseFloat($('vesselPeriod_s')?.value)||8,
+      dampingZeta: parseFloat($('dampingZeta')?.value)||0.02,
       windSpeed_ms: valMetric('windSpeed_ms', v => v / CONV.ms_mph) || 0,
       Cd: parseFloat($('Cd').value)||1.2,
       rhoAir: parseFloat($('rhoAir').value)||1.225,
@@ -2074,18 +2131,73 @@ function buildModel(Lm, inp = {}){
   return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy), anchorIdx};
 }
 
-function solve3d(model, loads, supports){
+function elementDofMap(el){
+  return [6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
+}
+
+/** Geometric stiffness, local 12×12. P tension-positive (N), L (mm). */
+function beamGeometricLocalK(P, L){
+  const k=new Float64Array(144);
+  const a=P/L;
+  const s=(i,j,v)=>{ k[i*12+j]+=v; if(i!==j) k[j*12+i]+=v; };
+  s(1,1,6/5*a); s(7,7,6/5*a); s(1,7,-6/5*a);
+  s(1,5,a*L/10); s(1,11,a*L/10); s(5,7,-a*L/10); s(7,11,-a*L/10);
+  s(5,5,2*L*L/15*a); s(11,11,2*L*L/15*a); s(5,11,-L*L/30*a);
+  s(2,2,6/5*a); s(8,8,6/5*a); s(2,8,-6/5*a);
+  s(2,4,-a*L/10); s(2,10,-a*L/10); s(4,8,a*L/10); s(8,10,a*L/10);
+  s(4,4,2*L*L/15*a); s(10,10,2*L*L/15*a); s(4,10,-L*L/30*a);
+  return k;
+}
+
+/** 3D bar geometric stiffness. P tension-positive (N), L (mm). */
+function trussGeometricK(P, L, R){
+  const k=new Float64Array(144);
+  const r=[R[0],R[1],R[2]];
+  const a=P/L;
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    const Aij=((i===j)?1:0)-r[i]*r[j];
+    const v=a*Aij;
+    k[i*12+j]+=v; k[(i+6)*12+(j+6)]+=v; k[i*12+(j+6)]-=v; k[(i+6)*12+j]-=v;
+  }
+  return k;
+}
+
+function trussExtensionForce(el, model, u){
+  const a=model.nodes[el.i], b=model.nodes[el.j];
+  const R=dirCos3(a.x,a.y,a.z,b.x,b.y,b.z);
+  const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+  const du=(u[6*el.j]-u[6*el.i])*R[0]+(u[6*el.j+1]-u[6*el.i+1])*R[1]+(u[6*el.j+2]-u[6*el.i+2])*R[2];
+  return el.sec.E*el.sec.A/Lmm*du;
+}
+
+function solve3d(model, loads, supports, opts){
+  opts=opts||{};
+  const slack=opts.slack||new Set();
+  const axial=opts.axial||new Map();
   const n=model.nodes.length, ndof=6*n;
   const K=new Float64Array(ndof*ndof), F=new Float64Array(ndof);
   const meta=[];
   for(const el of model.elements){
+    if(slack.has(el.id)) continue;
     const a=model.nodes[el.i], b=model.nodes[el.j];
     const R=dirCos3(a.x,a.y,a.z,b.x,b.y,b.z);
     const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
-    let kG;
-    if(el.tr||el.sec.truss) kG=trussGlobalK(el.sec.E, el.sec.A, Lmm, R);
-    else kG=transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
-    const map=[6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
+    const isTruss=el.tr||el.sec.truss;
+    let kG=isTruss?trussGlobalK(el.sec.E, el.sec.A, Lmm, R)
+      :transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
+    const P=axial.get(el.id)||0;
+    if(Math.abs(P)>1){
+      let Puse=P;
+      if(!isTruss){
+        const Imin=Math.min(el.sec.Iy||el.sec.Iz, el.sec.Iz||el.sec.Iy);
+        const Pcr=Math.PI*Math.PI*el.sec.E*Imin/(Lmm*Lmm);
+        const cap=0.6*Pcr;
+        Puse=Math.max(-cap, Math.min(cap, P));
+      }
+      const kg=isTruss?trussGeometricK(Puse, Lmm, R):transform12(beamGeometricLocalK(Puse, Lmm), R);
+      for(let i=0;i<144;i++) kG[i]+=kg[i];
+    }
+    const map=elementDofMap(el);
     for(let r=0;r<12;r++) for(let c=0;c<12;c++) K[map[r]*ndof+map[c]]+=kG[r*12+c];
     meta.push({el,Lmm,R,map,kG});
   }
@@ -2102,7 +2214,163 @@ function solve3d(model, loads, supports){
   const u=new Float64Array(ndof); for(let a=0;a<nf;a++) u[free[a]]=uf[a];
   const R=new Float64Array(ndof);
   for(let i=0;i<ndof;i++){ let s=0; for(let j=0;j<ndof;j++) s+=K[i*ndof+j]*u[j]; R[i]=s-F[i]; }
-  return {u,R,meta,ndof};
+  return {u,R,meta,ndof,F};
+}
+
+function setsEqual(a, b){
+  if(a.size!==b.size) return false;
+  for(const x of a) if(!b.has(x)) return false;
+  return true;
+}
+
+function axialConverged(prev, next, tol){
+  let maxRel=0;
+  const ids=new Set([...prev.keys(), ...next.keys()]);
+  for(const id of ids){
+    const p=prev.get(id)||0, n=next.get(id)||0;
+    maxRel=Math.max(maxRel, Math.abs(n-p)/(Math.abs(p)+1));
+  }
+  return maxRel<=tol;
+}
+
+function tipDispMm(model, u){
+  const tip=model.nk(PDF_N_BAYS,2);
+  return Math.hypot(u[6*tip], u[6*tip+1], u[6*tip+2]);
+}
+
+/** Tension-only ropes + P-Δ geometric stiffness iteration. */
+function solve3dPhysics(model, loads, supports){
+  let slack=new Set();
+  let axial=new Map();
+  let sol=null, dLinear=0, iters=0, droppedKg=false;
+  for(let iter=0; iter<10; iter++){
+    iters=iter+1;
+    try {
+      sol=solve3d(model, loads, supports, {slack, axial});
+    } catch(err){
+      if(String(err.message||err).indexOf('Singular')<0) throw err;
+      droppedKg=true;
+      sol=solve3d(model, loads, supports, {slack, axial:new Map()});
+      break;
+    }
+    if(iter===0) dLinear=tipDispMm(model, sol.u);
+    const members=memberEndForces(sol.meta, sol.u);
+    const nextSlack=new Set();
+    const nextAxial=new Map();
+    for(const m of members){
+      const Ns=m.Nsigned!=null?m.Nsigned:m.N;
+      if(m.truss){
+        if(Ns<-5) nextSlack.add(m.id);
+        else nextAxial.set(m.id, Ns);
+      } else {
+        nextAxial.set(m.id, Ns);
+      }
+    }
+    for(const el of model.elements){
+      if(!(el.tr||el.sec.truss)) continue;
+      if(!slack.has(el.id) && !nextSlack.has(el.id)) continue;
+      const Ns=trussExtensionForce(el, model, sol.u);
+      if(Ns>5) nextSlack.delete(el.id);
+      else if(Ns<-5) nextSlack.add(el.id);
+    }
+    const slackStable=setsEqual(slack, nextSlack);
+    const pStable=axialConverged(axial, nextAxial, 0.05);
+    slack=nextSlack; axial=nextAxial;
+    if(iter>0 && slackStable && pStable) break;
+  }
+  const dPhysics=tipDispMm(model, sol.u);
+  return {
+    sol,
+    physics: {
+      slackGuys:[...slack].sort(),
+      iters,
+      dLinear,
+      dPhysics,
+      pDeltaAmp: dLinear>1e-6?dPhysics/dLinear:1,
+      droppedKg,
+    }
+  };
+}
+
+function memberWidthMm(sn, fallback){
+  if(/^box_90/.test(sn)) return 90;
+  if(/^box_75/.test(sn)) return 75;
+  if(/^L_200/.test(sn)) return 200;
+  if(/^L75/.test(sn)) return 75;
+  return fallback;
+}
+
+function lumpedMassKg(model, inp){
+  const n=model.nodes.length;
+  const mass=new Float64Array(n);
+  const rho=7.85e-6;
+  const sw=inp.structuralSwFactor!=null?inp.structuralSwFactor:PDF_SW_FACTOR;
+  for(const el of model.elements){
+    if(el.tr||el.sec.truss) continue;
+    const a=model.nodes[el.i], b=model.nodes[el.j];
+    const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+    const m=rho*el.sec.A*Lmm*sw;
+    mass[el.i]+=m/2; mass[el.j]+=m/2;
+  }
+  const wAdded=inp.addedW_kgpm||0;
+  for(let si=0;si<=PDF_N_BAYS;si++){
+    const share=wAdded*model.dy/4;
+    for(let c=0;c<4;c++) mass[model.nk(si,c)]+=share;
+  }
+  mass[model.nk(PDF_N_BAYS,2)]+=inp.tipLoad_kg||0;
+  if(inp.extraLoad_kg>0){
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round((inp.extraPos_m||0)/model.dy)));
+    mass[model.nk(si,2)]+=inp.extraLoad_kg;
+  }
+  let total=0; for(let i=0;i<n;i++) total+=mass[i];
+  return {mass, total};
+}
+
+function rayleighPeriod(model, sol, inp){
+  const {mass, total}=lumpedMassKg(model, inp);
+  const F=sol.F||new Float64Array(sol.ndof);
+  let uFu=0, uMu=0;
+  for(let i=0;i<model.nodes.length;i++){
+    const ux=sol.u[6*i], uy=sol.u[6*i+1], uz=sol.u[6*i+2];
+    uFu+=ux*(F[6*i]||0)+uy*(F[6*i+1]||0)+uz*(F[6*i+2]||0);
+    uMu+=mass[i]*(ux*ux+uy*uy+uz*uz);
+  }
+  if(uMu<1e-9 || uFu<=0) return {Tn:Infinity, omega:0, massTotal:total};
+  const omega=Math.sqrt(1000*uFu/uMu);
+  return {Tn:2*Math.PI/omega, omega, massTotal:total};
+}
+
+function sdofDaf(Tn, Tv, zeta){
+  if(!Number.isFinite(Tn) || Tn<=0 || !Tv) return 1;
+  const r=Tn/Tv;
+  const den=Math.sqrt((1-r*r)*(1-r*r)+(2*zeta*r)*(2*zeta*r));
+  if(den<1e-9) return 2.5;
+  return Math.min(2.5, Math.max(1, 1/den));
+}
+
+function chordBayBuckling(members, model, inp){
+  const sec=PDF_SECTIONS.box_90x90x8;
+  const L=model.dy*1000;
+  const K=0.65;
+  const Pcr=Math.PI*Math.PI*sec.E*sec.Iy/(K*K*L*L);
+  let Nmax=0, id='—';
+  for(const m of members){
+    if(!m.id.startsWith('Bm119')) continue;
+    const Ns=m.Nsigned!=null?m.Nsigned:0;
+    const Nc=Ns<0?-Ns:0;
+    if(Nc>Nmax){ Nmax=Nc; id=m.id; }
+  }
+  const sf=Nmax>0?Pcr/Nmax:Infinity;
+  return {Pcr_kN:Pcr/1000, Ncomp_kN:Nmax/1000, id, sf, ok:sf>=(inp.SF||1.67), K, L_mm:L};
+}
+
+function pipeLocalBuckling(inp){
+  const D=inp.OD_mm, t=Math.min(inp.t_mm, D/2-0.01);
+  const Dt=t>0?D/t:Infinity;
+  const nu=0.3;
+  const Fel=2*PDF_E/(Math.sqrt(3*(1-nu*nu))*Dt);
+  const Fy=inp.Fy_MPa;
+  return {Dt, Fel_MPa:Fel, Fcr_MPa:Math.min(Fy, Fel), governs:Fel<Fy?'local':'yield'};
 }
 
 function ropeAnchorNodes(model){
@@ -2190,8 +2458,25 @@ function computeSpaceFrameLoads(inp, combo, model){
   const Pextra=inp.extraLoad_kg*g*liveMult;
   const refVertical=frameWeightN+wAddedLine*inp.L_m;
   const fxDyn=useCombo?refVertical*sfX/Math.max(sfZ,1e-9)/inp.L_m:0;
-  for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
+  if(inp.physicsFidelity){
+    const qPa=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
+    for(const el of model.elements){
+      if(el.tr||el.sec.truss) continue;
+      const a=model.nodes[el.i], b=model.nodes[el.j];
+      const L_m=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+      const width_m=memberWidthMm(el.sn, OD)/1000;
+      const Fdrag=qPa*inp.Cd*width_m*L_m*windMultX;
+      addLoad(el.i, Fdrag/2, 0, 0);
+      addLoad(el.j, Fdrag/2, 0, 0);
+    }
+    const Fdyn=fxDyn*inp.L_m;
+    for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
+      addLoad(model.nk(si,c), Fdyn*model.dy/inp.L_m/4, 0, 0);
+    }
+  } else {
+    for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
+      addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
+    }
   }
   applyHeelLoad(addLoad, model.nk(PDF_N_BAYS,2), Ptip, heel);
   if(inp.extraLoad_kg>0){
@@ -2219,7 +2504,7 @@ function memberEndForces(meta, u){
     if(m.el.tr||sec.truss){
       const du=(ug[6]-ug[0])*R[0]+(ug[7]-ug[1])*R[1]+(ug[8]-ug[2])*R[2];
       const N=sec.E*sec.A/m.Lmm*du;
-      members.push({id:m.el.id,sn:m.el.sn,N,My:0,Mz:0,V:0,truss:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,Nsigned:N,My:0,Mz:0,V:0,truss:true});
     } else {
       const fg=new Float64Array(12);
       for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=m.kG[i*12+k]*ug[k]; fg[i]=s; }
@@ -2248,7 +2533,8 @@ function memberEndForces(meta, u){
         My=MyA; Mz=MzA;
       }
       const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
-      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
+      const Nsigned=0.5*(Ni-Nj);
+      members.push({id:m.el.id,sn:m.el.sn,N,Nsigned,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
     }
   }
   return members;
@@ -2322,6 +2608,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     const cat=memberCategory(m.id);
     if(m.truss){
       const tAllow=(sec.allow||120)*1000;
+      if(m.slack){
+        return {...m,cat,util:0,pass:true,slack:true,N:0,Nsigned:0,sigma:0,allow:tAllow/1000,solved:true,bendingFrom:'slack'};
+      }
       const util=Math.max(0,Math.abs(m.N))/tAllow;
       return {...m,cat,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
     }
@@ -2361,8 +2650,30 @@ function computeSpaceFrameCore(inp, combo){
   const loadInfo=computeSpaceFrameLoads(inp, combo, model);
   const {loads}=loadInfo;
   const supports=buildSupports3d(model, combo, inp);
-  const sol=solve3d(model, loads, supports);
-  const members=memberEndForces(sol.meta, sol.u);
+  let sol, physics=null;
+  if(inp.physicsFidelity){
+    const pack=solve3dPhysics(model, loads, supports);
+    sol=pack.sol;
+    physics=pack.physics;
+  } else {
+    sol=solve3d(model, loads, supports);
+  }
+  let members=memberEndForces(sol.meta, sol.u);
+  if(physics){
+    for(const id of physics.slackGuys){
+      const existing=members.find(m=>m.id===id);
+      if(existing){ existing.slack=true; existing.N=0; existing.Nsigned=0; existing.util=0; }
+      else {
+        const el=model.elements.find(e=>e.id===id);
+        members.push({id,sn:el?.sn||'rope',N:0,Nsigned:0,My:0,Mz:0,V:0,truss:true,slack:true});
+      }
+    }
+    physics.rayleigh=rayleighPeriod(model, sol, inp);
+    physics.dafPhysics=sdofDaf(physics.rayleigh.Tn, inp.vesselPeriod_s||8, inp.dampingZeta||0.02);
+    physics.chordBuckling=chordBayBuckling(members, model, inp);
+    physics.pipeLocal=pipeLocalBuckling(inp);
+    physics.userDaf=inp.DAF||1;
+  }
   const tempFactor=(combo && combo.condition==='operating')?0.9:1;
   let Mbase=0, Vres=0, Nax=0;
   for(let c=0;c<4;c++){ Mbase+=Math.hypot(sol.R[6*c+4], sol.R[6*c+5]); Vres+=Math.hypot(sol.R[6*c], sol.R[6*c+1]); Nax+=Math.abs(sol.R[6*c+2]); }
@@ -2378,11 +2689,12 @@ function computeSpaceFrameCore(inp, combo){
   const sigmaEq=governing.sigma||unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
-  const stayM=members.find(m=>m.id==='Stay30');
+  const stayM=members.find(m=>m.id==='Stay30' && !m.slack);
   const { kingpostR, boomrestR } = supportReactions3d(model, sol, combo, inp);
-  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
+  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.max(0, m.Nsigned!=null?m.Nsigned:m.N));
   const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
+  const chordOk=!physics||!physics.chordBuckling||physics.chordBuckling.ok;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
     kingpost:{R_kN:kingpostR/1000,ok:!comboActive(combo,'kingpost')||kingpostR/1000<=inp.kingpostRated_kN},
@@ -2392,8 +2704,9 @@ function computeSpaceFrameCore(inp, combo){
   };
   const memberPass=governing.util<=1;
   const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.boomrest.ok && supportsOut.guys.ok
-    && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
-  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
+    && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN
+    && chordOk;
+  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id, physics};
 }
 
 
@@ -2435,17 +2748,58 @@ function computeSpaceFrameCore(inp, combo){
         sigmaBend, sigmaAxial, sigmaCombined: sigmaBend + sigmaAxial, tau, sigmaEq,
         allow, actualSF, dVert: dRes, dWind: 0, dRes, defLimit, boltTension_kN, boltUtil, R: Rbolt,
         xs, Mg, Mw, Mr, defl, predictedTestDefl: dRes, testLoad_kg: inp.swl_kg * inp.testFactor,
-        Dt: core.t > 0 ? core.OD / core.t : 0, Pcr: 0, bucklingSF: Infinity, bucklingPass: true, t: core.t,
+        Dt: core.t > 0 ? core.OD / core.t : 0,
+        Pcr: core.physics?.chordBuckling ? core.physics.chordBuckling.Pcr_kN * 1000 : 0,
+        bucklingSF: core.physics?.chordBuckling?.sf ?? Infinity,
+        bucklingPass: core.physics?.chordBuckling?.ok ?? true, t: core.t,
         comboLabel: combo ? combo.label : null, comboId: combo ? combo.id : null, supports: core.supportsOut, utilStress, pass,
         Fx_total: Vres, Fz_total: N_d, Fy_ax: N_d,
         space3d: true, frameNodes: core.model.nodes.length, frameMembers: core.model.elements.length,
         memberRows: core.unity.rows, worstMember: core.unity.worst, worstBrace: core.unity.worstBrace,
         governingMember: gov, frameWeight_kN: core.frameWeightN / 1000,
-        bm119Count: core.model.elements.filter(e => e.id.startsWith('Bm119')).length
+        bm119Count: core.model.elements.filter(e => e.id.startsWith('Bm119')).length,
+        physics: core.physics || null
       };
     } catch (_e) {
       return computeFrame({ ...inp, analysisMode: 'frame' }, combo);
     }
+  }
+
+  function renderPhysicsCard(envelope, inp){
+    const card = $('physicsCard');
+    const table = $('physicsTable');
+    if(!card || !table) return;
+    const r = envelope?.governing?.r;
+    const p = r?.physics;
+    if(inp?.analysisMode !== 'space3d' || !inp.physicsFidelity || !p){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    const tn = p.rayleigh?.Tn;
+    const tnTxt = Number.isFinite(tn) ? fmt(tn, 2) + ' s' : '—';
+    const slack = (p.slackGuys && p.slackGuys.length) ? p.slackGuys.join(', ') : 'none (all ropes in tension)';
+    const chord = p.chordBuckling;
+    const pipe = p.pipeLocal;
+    if($('physicsStatus')){
+      if(p.droppedKg){
+        $('physicsStatus').textContent = 'P-Δ dropped (singular)';
+        $('physicsStatus').className = 'status-pill warn';
+      } else {
+        $('physicsStatus').textContent = p.slackGuys?.length ? 'Ropes slack-checked' : 'All ropes taut';
+        $('physicsStatus').className = 'status-pill pass';
+      }
+    }
+    table.innerHTML = `
+      <tr><th>Linear tip displacement (same loads)</th><td class="v">${uLen_mm(p.dLinear)}</td></tr>
+      <tr><th>Physics tip displacement (tension-only + P-Δ)</th><td class="v">${uLen_mm(p.dPhysics)}</td></tr>
+      <tr><th>Nonlinear / linear ratio</th><td class="v">${fmt(p.pDeltaAmp, 3)} · ${p.iters} iters</td></tr>
+      <tr><th>Slack ropes (compression removed)</th><td class="v">${slack}</td></tr>
+      <tr><th>Rayleigh period Tₙ</th><td class="v">${tnTxt} · mass ${fmt(p.rayleigh?.massTotal||0, 0)} kg</td></tr>
+      <tr><th>SDOF DAF at T_vessel ${fmt(inp.vesselPeriod_s||8, 1)} s, ζ ${fmt(inp.dampingZeta||0.02, 3)}</th><td class="v">${fmt(p.dafPhysics, 3)} (user DAF ${fmt(p.userDaf||inp.DAF, 2)})</td></tr>
+      <tr><th>Braced-chord Euler (K=${chord?.K}, bay ${fmt(chord?.L_mm||0, 0)} mm)</th><td class="v">Pcr ${uForce_kN(chord?.Pcr_kN||0)} · Ncomp ${uForce_kN(chord?.Ncomp_kN||0)} · SF ${Number.isFinite(chord?.sf)?fmt(chord.sf, 1):'∞'} ${chord?.ok?'OK':'FAIL'}</td></tr>
+      <tr><th>Pipe local buckling vs yield</th><td class="v">D/t ${fmt(pipe?.Dt, 1)} · F_el ${uStress(pipe?.Fel_MPa||0)} · governs ${pipe?.governs||'—'}</td></tr>
+    `;
   }
 
   function renderMemberTable(envelope){
@@ -2460,7 +2814,10 @@ function computeSpaceFrameCore(inp, combo){
       el.innerHTML = '<tbody><tr><td colspan="6" class="hint">Member unity data unavailable for this envelope.</td></tr></tbody>';
       return;
     }
-    const rows = r.memberRows.filter(isUnityTableMember).sort((a,b) => b.util - a.util).slice(0, 25);
+    const unityRows = r.memberRows.filter(isUnityTableMember);
+    const slack = unityRows.filter(m => m.slack);
+    const top = unityRows.filter(m => !m.slack).sort((a,b) => b.util - a.util).slice(0, Math.max(8, 25 - slack.length));
+    const rows = [...slack, ...top];
     let html = `<caption class="hint" style="caption-side:top;text-align:left;margin-bottom:6px;">Case: ${src.combo?.label || r.comboLabel || '—'}`;
     if(r.governingMember) html += ` · governing: ${r.governingMember.id} ${fmt(r.governingMember.util * 100, 0)}%`;
     html += '</caption>';
@@ -2468,8 +2825,8 @@ function computeSpaceFrameCore(inp, combo){
     for(const m of rows){
       const gov = m.id === r.governingMember?.id;
       const cat = m.cat || memberCategory(m.id);
-      const bend = m.bendingFrom || (m.id.startsWith('Bm119') ? 'tributary' : '—');
-      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${uForce_kN((m.N||0)/1000)}</td><td>${bend}</td><td>${m.pass?'OK':'FAIL'}</td></tr>`;
+      const bend = m.slack ? 'slack' : (m.bendingFrom || (m.id.startsWith('Bm119') ? 'tributary' : '—'));
+      html += `<tr class="${gov?'gov ':''}${m.pass?'':'fail'}"><td>${m.id}${gov?' ★':''}</td><td>${cat}</td><td>${m.sn||'—'}</td><td class="n">${fmt(m.util*100,0)}%</td><td class="n">${uForce_kN((m.N||0)/1000)}</td><td>${bend}</td><td>${m.slack?'SLACK':(m.pass?'OK':'FAIL')}</td></tr>`;
     }
     html += '</tbody>';
     el.innerHTML = html;
@@ -3484,7 +3841,7 @@ function computeSpaceFrameCore(inp, combo){
       { mode: 'Simple cantilever', key: 'simple', util: simpleR.utilStress, combo: $('loadCase').selectedOptions[0].textContent, pass: simpleR.pass, d_mm: simpleR.dRes },
       { mode: 'Matrix 1D screening', key: 'matrix', util: matrixEnv.governing.r.utilStress, combo: matrixEnv.governing.combo.label, pass: matrixEnv.governing.r.pass, d_mm: matrixEnv.governing.r.dRes },
       { mode: '2D plane frame', key: 'frame', util: frameEnv.governing.r.utilStress, combo: frameEnv.governing.combo.label, pass: frameEnv.governing.r.pass, d_mm: frameEnv.governing.r.dRes },
-      { mode: '3D space frame', key: 'space3d', util: spaceEnv.governing.r.utilStress, combo: spaceEnv.governing.combo.label, pass: spaceEnv.governing.r.pass, d_mm: spaceEnv.governing.r.dRes, worstMember: spaceEnv.governing.r.worstMember?.id }
+      { mode: inp.physicsFidelity ? '3D space frame (physics)' : '3D space frame (linear)', key: 'space3d', util: spaceEnv.governing.r.utilStress, combo: spaceEnv.governing.combo.label, pass: spaceEnv.governing.r.pass, d_mm: spaceEnv.governing.r.dRes, worstMember: spaceEnv.governing.r.worstMember?.id }
     ];
   }
 
@@ -3552,6 +3909,10 @@ function computeSpaceFrameCore(inp, combo){
     html += `<tr><th>Governing member</th><td class="v">${fmt(gov.r.utilStress * 100, 0)}% · ${gov.r.governingMember ? gov.r.governingMember.id + ' (' + gov.r.governingMember.cat + ')' : (gov.r.worstMember ? gov.r.worstMember.id : '—')}</td></tr>`;
     html += `<tr><th>Bm119 chord util.</th><td class="v">${fmt((gov.r.worstMember?.util ?? gov.r.utilStress) * 100, 0)}%${gov.r.worstMember ? ' · ' + gov.r.worstMember.id : ''}</td></tr>`;
     html += `<tr><th>Tip deflection</th><td class="v">${uLen_mm(gov.r.dRes)} (limit ${uLen_mm(gov.r.defLimit)})</td></tr>`;
+    if(gov.r.physics){
+      const p = gov.r.physics;
+      html += `<tr><th>Physics fidelity</th><td class="v">Tₙ ${Number.isFinite(p.rayleigh?.Tn)?fmt(p.rayleigh.Tn,2)+' s':'—'} · slack ${p.slackGuys?.length?p.slackGuys.join(', '):'none'} · DAF_phys ${fmt(p.dafPhysics,3)}</td></tr>`;
+    }
     if(gov.r.supports){
       html += `<tr><th>Kingpost / wind stay / guy</th><td class="v">${uForce_kN(gov.r.supports.kingpost.R_kN)} / ${uForce_kN(gov.r.supports.windstay.R_kN)} / ${gov.r.supports.guys.T_kN > 0 ? uForce_kN(gov.r.supports.guys.T_kN) : '—'}</td></tr>`;
     }
@@ -3659,11 +4020,18 @@ function computeSpaceFrameCore(inp, combo){
       if($('frameInfo')) $('frameInfo').style.display = inp.analysisMode === 'frame' ? '' : 'none';
       if($('space3dInfo')) $('space3dInfo').style.display = inp.analysisMode === 'space3d' ? '' : 'none';
       if($('memberResultsCard')) $('memberResultsCard').style.display = inp.analysisMode === 'space3d' ? '' : 'none';
-      if(inp.analysisMode === 'space3d' && envelope) renderMemberTable(envelope);
+      if(inp.analysisMode === 'space3d' && envelope){
+        renderMemberTable(envelope);
+        renderPhysicsCard(envelope, inp);
+      } else if($('physicsCard')) {
+        $('physicsCard').style.display = 'none';
+      }
     } else {
       r = compute(inp, null);
       lastEnvelope = null;
       if($('matrixResultsCard')) $('matrixResultsCard').style.display = 'none';
+      if($('physicsCard')) $('physicsCard').style.display = 'none';
+      if($('memberResultsCard')) $('memberResultsCard').style.display = 'none';
     }
 
     $('t_mm').classList.toggle('invalid', inp.t_mm >= inp.OD_mm/2);
@@ -3695,7 +4063,7 @@ function computeSpaceFrameCore(inp, combo){
       <tr><th>Base bending moment (resultant, gravity+wind)</th><td class="v">${uMoment(r.Mres/1e6)}</td></tr>
       <tr><th>Base shear (resultant)</th><td class="v">${uForce_kN(r.Vres/1000)}</td></tr>
       <tr><th>Base axial force</th><td class="v">${uForce_kN(r.N_d/1000)}</td></tr>
-      <tr><th>Euler buckling (K=2 cantilever)</th><td class="v">Pcr ${uForce_kN(r.Pcr/1000)} · SF ${fmt(r.bucklingSF,2)} ${r.bucklingPass?'OK':'FAIL'}</td></tr>
+      <tr><th>${r.physics?.chordBuckling ? 'Braced-chord Euler (K=0.65 bay)' : 'Euler buckling (K=2 cantilever)'}</th><td class="v">Pcr ${uForce_kN(r.Pcr/1000)} · SF ${Number.isFinite(r.bucklingSF) && r.bucklingSF < 1e6 ? fmt(r.bucklingSF, 1) : '∞'} ${r.bucklingPass?'OK':'FAIL'}</td></tr>
       <tr><th>Turntable rated moment</th><td class="v">${uMoment(inp.ratedMoment_kNm)} — ${momentOk?'OK':'EXCEEDED'}</td></tr>
       <tr><th>Turntable rated load</th><td class="v">${uForce_kN(inp.ratedLoad_kN)} — ${loadOk?'OK':'EXCEEDED'}</td></tr>
       <tr><th>Max bolt/pin tension (simplified)</th><td class="v">${uForce_kN(r.boltTension_kN)}</td></tr>
@@ -3723,13 +4091,16 @@ function computeSpaceFrameCore(inp, combo){
     drawBracedSchematic(inp);
     renderCertAnalysis(envelope, inp, r);
     if(inp.analysisMode === 'space3d' && envelope){
-      lastPdfReport = buildPdfBenchmarkReport(envelope);
+      const calibEnv = inp.physicsFidelity
+        ? computeEnvelope({ ...inp, physicsFidelity: false, analysisMode: 'space3d' })
+        : envelope;
+      lastPdfReport = buildPdfBenchmarkReport(calibEnv);
       renderPdfBenchmarkTable(lastPdfReport);
       renderCertPdfCalibration(lastPdfReport);
-      lastPdfDigitizedReport = buildPdfDigitizedReport(envelope);
+      lastPdfDigitizedReport = buildPdfDigitizedReport(calibEnv);
       renderPdfDigitizedTable(lastPdfDigitizedReport);
       renderCertPdfDigitized(lastPdfDigitizedReport);
-      renderCalibrationDashboard(buildCalibrationDashboard(envelope, lastPdfReport, lastPdfDigitizedReport));
+      renderCalibrationDashboard(buildCalibrationDashboard(calibEnv, lastPdfReport, lastPdfDigitizedReport));
     } else {
       lastPdfReport = null;
       lastPdfDigitizedReport = null;
@@ -3753,7 +4124,12 @@ function computeSpaceFrameCore(inp, combo){
     statTile(tiles,'Equivalent stress (σ_eq)', uStress(r.sigmaEq), 'von Mises-style, bending+axial+shear', statusFor(r.sigmaEq/r.allow));
     statTile(tiles,'Allowable stress', uStress(r.allow), `Fy ${uStress(inp.Fy_MPa)} / SF ${inp.SF}`, null);
     statTile(tiles,'Actual safety factor', fmt(r.actualSF,2), `vs target ${inp.SF}`, sfStatus);
-    statTile(tiles,'Buckling SF (axial)', fmt(r.bucklingSF,2), `Pcr ${uForce_kN(r.Pcr/1000)}`, r.bucklingPass?'good':'bad');
+    statTile(tiles,'Buckling SF', Number.isFinite(r.bucklingSF) && r.bucklingSF < 1e6 ? fmt(r.bucklingSF,1) : '∞', r.physics?.chordBuckling ? `braced bay K=0.65 · Pcr ${uForce_kN(r.Pcr/1000)}` : `Pcr ${uForce_kN(r.Pcr/1000)} (K=2)`, r.bucklingPass?'good':'bad');
+    if(r.physics?.rayleigh){
+      const tn = r.physics.rayleigh.Tn;
+      statTile(tiles,'Rayleigh period Tₙ', Number.isFinite(tn) ? fmt(tn, 2) + ' s' : '—', `SDOF DAF ${fmt(r.physics.dafPhysics, 3)} vs user DAF ${fmt(inp.DAF, 2)}`, null);
+      statTile(tiles,'Slack ropes', r.physics.slackGuys?.length ? r.physics.slackGuys.join(', ') : 'none', 'tension-only guys (cannot compress)', 'good');
+    }
     statTile(tiles,'Bending stress', uStress(r.sigmaBend), 'from resultant moment', null);
     statTile(tiles,'Axial stress', uStress(r.sigmaAxial), 'from boom angle component', null);
     statTile(tiles,'Base moment', uMoment(r.Mres/1e6), 'at rig/turntable connection', null);

@@ -46,6 +46,7 @@
         <li><a href="#manual-v55">Sprint F — v5.5 PDF member tables</a></li>
         <li><a href="#manual-v56">Sprint G — v5.6 support reactions &amp; RAO</a></li>
         <li><a href="#manual-v57">Sprint H — v5.7 calibration dashboard</a></li>
+        <li><a href="#manual-v58">Sprint I — v5.8 physics fidelity</a></li>
         <li><a href="#manual-status">Understanding PASS / MARGINAL / FAIL</a></li>
         <li><a href="#manual-tab1">Tab 1 — Boom &amp; Section</a></li>
         <li><a href="#manual-tab2">Tab 2 — Loads &amp; Wind</a></li>
@@ -110,7 +111,7 @@
       <thead><tr><th>Control</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td><strong>Units</strong></td><td><strong>Metric (SI)</strong> — m, mm, MPa, kN, kg, m/s. <strong>US Customary</strong> — ft, in, ksi, kip, lb, mph. Values <em>and the unit labels under each input</em> convert when you switch (kN↔kip, mm↔in, etc.).</td></tr>
-        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default)</strong> — PDF braced topology with Bm119 + rope sections.</td></tr>
+        <tr><td><strong>Analysis</strong></td><td><strong>Simple cantilever</strong> · <strong>Matrix (1D)</strong> · <strong>Frame (2D)</strong> · <strong>3D space frame (default, physics fidelity)</strong> — PDF braced topology; tension-only guys, P-Δ, member wind, Rayleigh Tₙ. Uncheck physics on Tab 2 for linear 3D screening.</td></tr>
         <tr><td><strong>Load case</strong></td><td>Applies to <em>simple</em> mode only: <strong>Operating</strong> — 0°, DAF 1.15, wind 40&nbsp;m/s. <strong>Erection</strong> — 30°, DAF 1.25, wind 25&nbsp;m/s. <strong>Storm</strong> — 0°, DAF 1.0, wind 51&nbsp;m/s, exposure 1.15. <strong>Custom</strong> — manual values.</td></tr>
         <tr><td><strong>RAO / SF preset</strong></td><td>Scales matrix combination dynamic factors (sfZ, sfY, sfX) for vessel-specific screening.</td></tr>
         <tr><td><strong>Pipe section</strong></td><td>Sets OD and wall <em>t</em> for standard NPS schedules (6″/8″/10″ Sch 40/80).</td></tr>
@@ -209,6 +210,20 @@
       <li><strong>CI</strong> — <code>node tools/rao_presets.js</code> validates RAO merge logic on each PR</li>
     </ul>
 
+    <h2 id="manual-v58">7g. Sprint I — v5.8 physics fidelity</h2>
+    <p>Default 3D solve is the <strong>physics path</strong> (Tab 2 checkbox on). Linear first-order 3D remains available for PDF screening bands.</p>
+    <ul>
+      <li><strong>Tension-only guys</strong> — ropes that go into compression are removed (slack) and reactivated if elongation would put them back in tension. Linear 3D had Guy40 / GuyLat35 in compression, which a rope cannot do.</li>
+      <li><strong>P-Δ geometric stiffness</strong> — member axial force feeds Kg (beam geometric stiffness, truss geometric stiffness). Beam P is capped at 0.6× member Euler so the tangent stiffness cannot lock or go singular. Iterate until slack set and axial forces settle (~5%).</li>
+      <li><strong>Member projected wind</strong> — drag is q·Cd·width·L in <em>newtons</em> on every beam. The linear path still uses the old station-wind formula (N/mm mixed with metres) so PDF calibration numbers do not move.</li>
+      <li><strong>Rayleigh period + SDOF DAF</strong> — Tₙ from the physics displaced shape and lumped mass; DAF vs vessel heave period and ζ is shown as insight. Applied loads still use the user DAF field.</li>
+      <li><strong>Braced-chord buckling</strong> — Euler on a bay with K=0.65, not K=2 full-length cantilever. NPS 8 Sch 40 local buckling (D/t) is compared with yield.</li>
+      <li><strong>PDF / digitized cards</strong> — always re-solved with physics off, so Guy56 ≈ 155 kN screening bands stay on the linear path while the governing matrix uses physics.</li>
+    </ul>
+    <div class="callout warn">
+      Physics fidelity is still a reduced space-frame model (iterated first-order P-Δ, not co-rotational large-displacement FEA). It is the better engineering solve in this file — not a SESAM or ABAQUS replacement.
+    </div>
+
     <h2 id="manual-status">8. Understanding PASS / MARGINAL / FAIL</h2>
     <div class="status-grid">
       <div class="pass"><strong>PASS — primary checks OK</strong><br>Stress SF, turntable moment/load, bolt utilization, buckling, and (matrix mode) kingpost / wind stay / boom rest / guyline checks are within limits for the governing combination.</div>
@@ -240,7 +255,10 @@
         <tr><td>Tip point weight</td><td>Concentrated load at boom tip — igniter, pilot, nozzle assembly.</td></tr>
         <tr><td>Secondary point weight</td><td>Mid-boom equipment — ladder cage, valve, junction box.</td></tr>
         <tr><td>Secondary weight position</td><td>Distance from base to secondary load. Default mid-span on 60&nbsp;ft boom (9.144&nbsp;m).</td></tr>
-        <tr><td>DAF</td><td>Dynamic amplification for rig motion / raising. Typical 1.10–1.30.</td></tr>
+        <tr><td>DAF</td><td>Dynamic amplification for rig motion / raising. Typical 1.10–1.30. Physics mode still applies this factor to loads; Rayleigh SDOF DAF is reported separately for comparison.</td></tr>
+        <tr><td>Physics fidelity (3D)</td><td>On (default): tension-only ropes, P-Δ, member wind in newtons, Rayleigh Tₙ. Off: linear 3D used for PDF screening bands.</td></tr>
+        <tr><td>Vessel heave period</td><td>Seconds — compared with boom Tₙ for an SDOF DAF estimate (not a substitute for ship RAO).</td></tr>
+        <tr><td>Structural damping ζ</td><td>Typical steel space-frame 0.02 (welded 0.01–0.03).</td></tr>
       </tbody>
     </table>
     <h3>Wind</h3>
@@ -281,6 +299,8 @@
     <p>The <strong>Base reaction summary</strong> table updates with moment, shear, axial force, buckling check, bolt utilization, and (matrix mode) multi-support and 3-direction force components for the governing combination.</p>
 
     <h2 id="manual-tab4">10. Tab 4 — Results</h2>
+    <h3>Physics fidelity card (3D, default on)</h3>
+    <p>Shows linear vs physics tip displacement, slack ropes, Rayleigh Tₙ, SDOF DAF vs vessel period, braced-chord Euler (K=0.65 bay), and pipe D/t vs yield. Member table marks slack guys as <strong>SLACK</strong> (zero axial). PDF calibration cards stay on the linear screening path.</p>
     <h3>Calibration dashboard (3D mode)</h3>
     <p>When <strong>3D space frame</strong> is active, the calibration dashboard summarizes PDF benchmark, digitized member extract, and support-reaction screening in one place. Use <em>Import RAO JSON</em> to load vessel-specific matrix scale factors.</p>
     <h3>Load combination matrix (matrix mode)</h3>
@@ -291,7 +311,7 @@
     <ul>
       <li><strong>Equivalent stress σ_eq</strong> — combined bending + axial + shear (von Mises-style).</li>
       <li><strong>Actual safety factor</strong> — Fy / σ_eq vs target SF.</li>
-      <li><strong>Buckling SF</strong> — Euler capacity with K=2 (cantilever) vs axial component.</li>
+      <li><strong>Buckling SF</strong> — physics 3D uses braced-chord Euler (K=0.65 bay); simple/1D/2D still show K=2 cantilever screening.</li>
       <li><strong>Deflection</strong> — resultant gravity + wind deflection vs L/n.</li>
       <li><strong>Bolt utilization</strong> — percentage of allowable per-bolt tension.</li>
     </ul>
@@ -350,16 +370,20 @@
       <li>API 5L / ASTM pipe grades</li>
       <li>ASCE 7-16 velocity pressure (via ½ρV² with exposure factor)</li>
       <li>EN 1991-1-4 wind on cylinders (Cd)</li>
-      <li>Euler column buckling (K = 2 cantilever)</li>
+      <li>Euler column buckling — physics 3D uses K=0.65 on a braced bay; simple mode uses K=2 cantilever</li>
+      <li>Tension-only guy iteration and first-order P-Δ geometric stiffness (v5.8)</li>
+      <li>Rayleigh boom period + SDOF DAF vs vessel heave (insight; user DAF still applied to loads)</li>
       <li>Matrix envelope scale factors — screening defaults inspired by SESAM reports; import RAO JSON for ship-specific calibration</li>
     </ul>
-    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), ship-specific RAO calibration, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions; axial and rope forces use the stiffness solution.</p>
-    <p><strong>Modeled (v5):</strong> 3D braced space frame (60&nbsp;ft default), 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
+    <p><strong>Not modeled:</strong> fishplate clusters, fatigue, corrosion allowance, tapered sections, full SESAM member inventory (~450 members), co-rotational large-displacement FEA, dynamic wind time history, or lift-plan rigging angles. The 3D space frame is a reduced braced model — physics path removes rope compression and adds P-Δ; Bm119 chord bending uses solved local moments when boom-aligned, otherwise hybrid/tributary from base reactions.</p>
+    <p><strong>Modeled (v5.8):</strong> 3D braced space frame (60&nbsp;ft default) with tension-only guys, P-Δ, member projected wind, Rayleigh Tₙ, 8-combination matrix envelope, member unity screening, 1.27× frame self-weight, multi-support reactions, export to CSV/JSON.</p>
     <p>Reference document in repository: <em>Structural Analysis of 90 Ft Burner Boom</em> (PDF).</p>
 
     <h2 id="manual-faq">15. FAQ &amp; troubleshooting</h2>
     <h4>Simple vs matrix vs 3D?</h4>
-    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with member table. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
+    <p><strong>Simple cantilever</strong> — single operating/erection/storm preset. <strong>Matrix 1D</strong> — 8 combinations, 1D screening. <strong>2D frame</strong> — plane-frame stiffness with guys/stays. <strong>3D space frame (default)</strong> — 60&nbsp;ft braced topology with physics fidelity (tension-only guys, P-Δ). Uncheck physics on Tab 2 for linear 3D. Use <strong>Compare modes</strong> on Tab 4 to see governing utilization side-by-side.</p>
+    <h4>Why do Guy40 / GuyLat35 show SLACK?</h4>
+    <p>Those ropes go into compression in a linear truss model. A guy cannot push. Physics mode drops them and redistributes load to taut guys (typically Guy56). That is the physically correct path.</p>
     <h4>Why does status show MARGINAL but stress passes?</h4>
     <p>Long pipe cantilevers often exceed L/200 deflection under self-weight while stress remains acceptable. The tool separates serviceability (MARGINAL) from strength (FAIL).</p>
     <h4>Values look wrong after switching units</h4>
@@ -372,7 +396,7 @@
     <p>Yes. The entire application is a single HTML file with embedded CSS and JavaScript.</p>
 
     <footer>
-      Burner Boom Load Calculator User Manual v5.6 · Matches <code>Burner_boom_load_calculator.html</code> v5.6 · For preliminary engineering use only.
+      Burner Boom Load Calculator User Manual v5.8 · Matches <code>Burner_boom_load_calculator.html</code> v5.8 · Engineering screening — not certified FEA.
     </footer>
     
 </div>

@@ -9,6 +9,7 @@ on:
       - 'tools/pdf_digitized_tables.js'
       - 'tools/rao_presets.js'
       - 'tools/space_frame_regression.js'
+      - 'tools/space_frame_physics.js'
       - '.github/workflows/burner-boom-regression.yml'
   push:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'tools/pdf_digitized_tables.js'
       - 'tools/rao_presets.js'
       - 'tools/space_frame_regression.js'
+      - 'tools/space_frame_physics.js'
 
 jobs:
   regression:
@@ -37,6 +39,8 @@ jobs:
         run: node tools/pdf_digitized_tables.js
       - name: RAO preset merge
         run: node tools/rao_presets.js
+      - name: Physics fidelity (tension-only, P-Δ, Rayleigh)
+        run: node tools/space_frame_physics.js
       - name: 60 ft regression suite
         run: node tools/space_frame_regression.js
       - name: Validate embedded calculator script

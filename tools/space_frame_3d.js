@@ -203,18 +203,73 @@ function buildModel(Lm, inp = {}){
   return {nodes, elements, nk, sc, dy, gs, siG, siW, siBr:Math.round(yBoomRest/dy), anchorIdx};
 }
 
-function solve3d(model, loads, supports){
+function elementDofMap(el){
+  return [6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
+}
+
+/** Geometric stiffness, local 12×12. P tension-positive (N), L (mm). */
+function beamGeometricLocalK(P, L){
+  const k=new Float64Array(144);
+  const a=P/L;
+  const s=(i,j,v)=>{ k[i*12+j]+=v; if(i!==j) k[j*12+i]+=v; };
+  s(1,1,6/5*a); s(7,7,6/5*a); s(1,7,-6/5*a);
+  s(1,5,a*L/10); s(1,11,a*L/10); s(5,7,-a*L/10); s(7,11,-a*L/10);
+  s(5,5,2*L*L/15*a); s(11,11,2*L*L/15*a); s(5,11,-L*L/30*a);
+  s(2,2,6/5*a); s(8,8,6/5*a); s(2,8,-6/5*a);
+  s(2,4,-a*L/10); s(2,10,-a*L/10); s(4,8,a*L/10); s(8,10,a*L/10);
+  s(4,4,2*L*L/15*a); s(10,10,2*L*L/15*a); s(4,10,-L*L/30*a);
+  return k;
+}
+
+/** 3D bar geometric stiffness. P tension-positive (N), L (mm). */
+function trussGeometricK(P, L, R){
+  const k=new Float64Array(144);
+  const r=[R[0],R[1],R[2]];
+  const a=P/L;
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    const Aij=((i===j)?1:0)-r[i]*r[j];
+    const v=a*Aij;
+    k[i*12+j]+=v; k[(i+6)*12+(j+6)]+=v; k[i*12+(j+6)]-=v; k[(i+6)*12+j]-=v;
+  }
+  return k;
+}
+
+function trussExtensionForce(el, model, u){
+  const a=model.nodes[el.i], b=model.nodes[el.j];
+  const R=dirCos3(a.x,a.y,a.z,b.x,b.y,b.z);
+  const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+  const du=(u[6*el.j]-u[6*el.i])*R[0]+(u[6*el.j+1]-u[6*el.i+1])*R[1]+(u[6*el.j+2]-u[6*el.i+2])*R[2];
+  return el.sec.E*el.sec.A/Lmm*du;
+}
+
+function solve3d(model, loads, supports, opts){
+  opts=opts||{};
+  const slack=opts.slack||new Set();
+  const axial=opts.axial||new Map();
   const n=model.nodes.length, ndof=6*n;
   const K=new Float64Array(ndof*ndof), F=new Float64Array(ndof);
   const meta=[];
   for(const el of model.elements){
+    if(slack.has(el.id)) continue;
     const a=model.nodes[el.i], b=model.nodes[el.j];
     const R=dirCos3(a.x,a.y,a.z,b.x,b.y,b.z);
     const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
-    let kG;
-    if(el.tr||el.sec.truss) kG=trussGlobalK(el.sec.E, el.sec.A, Lmm, R);
-    else kG=transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
-    const map=[6*el.i,6*el.i+1,6*el.i+2,6*el.i+3,6*el.i+4,6*el.i+5,6*el.j,6*el.j+1,6*el.j+2,6*el.j+3,6*el.j+4,6*el.j+5];
+    const isTruss=el.tr||el.sec.truss;
+    let kG=isTruss?trussGlobalK(el.sec.E, el.sec.A, Lmm, R)
+      :transform12(beam3dLocalK(el.sec.E, PDF_G, el.sec.A, el.sec.Iy, el.sec.Iz, el.sec.J, Lmm), R);
+    const P=axial.get(el.id)||0;
+    if(Math.abs(P)>1){
+      let Puse=P;
+      if(!isTruss){
+        const Imin=Math.min(el.sec.Iy||el.sec.Iz, el.sec.Iz||el.sec.Iy);
+        const Pcr=Math.PI*Math.PI*el.sec.E*Imin/(Lmm*Lmm);
+        const cap=0.6*Pcr;
+        Puse=Math.max(-cap, Math.min(cap, P));
+      }
+      const kg=isTruss?trussGeometricK(Puse, Lmm, R):transform12(beamGeometricLocalK(Puse, Lmm), R);
+      for(let i=0;i<144;i++) kG[i]+=kg[i];
+    }
+    const map=elementDofMap(el);
     for(let r=0;r<12;r++) for(let c=0;c<12;c++) K[map[r]*ndof+map[c]]+=kG[r*12+c];
     meta.push({el,Lmm,R,map,kG});
   }
@@ -231,7 +286,163 @@ function solve3d(model, loads, supports){
   const u=new Float64Array(ndof); for(let a=0;a<nf;a++) u[free[a]]=uf[a];
   const R=new Float64Array(ndof);
   for(let i=0;i<ndof;i++){ let s=0; for(let j=0;j<ndof;j++) s+=K[i*ndof+j]*u[j]; R[i]=s-F[i]; }
-  return {u,R,meta,ndof};
+  return {u,R,meta,ndof,F};
+}
+
+function setsEqual(a, b){
+  if(a.size!==b.size) return false;
+  for(const x of a) if(!b.has(x)) return false;
+  return true;
+}
+
+function axialConverged(prev, next, tol){
+  let maxRel=0;
+  const ids=new Set([...prev.keys(), ...next.keys()]);
+  for(const id of ids){
+    const p=prev.get(id)||0, n=next.get(id)||0;
+    maxRel=Math.max(maxRel, Math.abs(n-p)/(Math.abs(p)+1));
+  }
+  return maxRel<=tol;
+}
+
+function tipDispMm(model, u){
+  const tip=model.nk(PDF_N_BAYS,2);
+  return Math.hypot(u[6*tip], u[6*tip+1], u[6*tip+2]);
+}
+
+/** Tension-only ropes + P-Δ geometric stiffness iteration. */
+function solve3dPhysics(model, loads, supports){
+  let slack=new Set();
+  let axial=new Map();
+  let sol=null, dLinear=0, iters=0, droppedKg=false;
+  for(let iter=0; iter<10; iter++){
+    iters=iter+1;
+    try {
+      sol=solve3d(model, loads, supports, {slack, axial});
+    } catch(err){
+      if(String(err.message||err).indexOf('Singular')<0) throw err;
+      droppedKg=true;
+      sol=solve3d(model, loads, supports, {slack, axial:new Map()});
+      break;
+    }
+    if(iter===0) dLinear=tipDispMm(model, sol.u);
+    const members=memberEndForces(sol.meta, sol.u);
+    const nextSlack=new Set();
+    const nextAxial=new Map();
+    for(const m of members){
+      const Ns=m.Nsigned!=null?m.Nsigned:m.N;
+      if(m.truss){
+        if(Ns<-5) nextSlack.add(m.id);
+        else nextAxial.set(m.id, Ns);
+      } else {
+        nextAxial.set(m.id, Ns);
+      }
+    }
+    for(const el of model.elements){
+      if(!(el.tr||el.sec.truss)) continue;
+      if(!slack.has(el.id) && !nextSlack.has(el.id)) continue;
+      const Ns=trussExtensionForce(el, model, sol.u);
+      if(Ns>5) nextSlack.delete(el.id);
+      else if(Ns<-5) nextSlack.add(el.id);
+    }
+    const slackStable=setsEqual(slack, nextSlack);
+    const pStable=axialConverged(axial, nextAxial, 0.05);
+    slack=nextSlack; axial=nextAxial;
+    if(iter>0 && slackStable && pStable) break;
+  }
+  const dPhysics=tipDispMm(model, sol.u);
+  return {
+    sol,
+    physics: {
+      slackGuys:[...slack].sort(),
+      iters,
+      dLinear,
+      dPhysics,
+      pDeltaAmp: dLinear>1e-6?dPhysics/dLinear:1,
+      droppedKg,
+    }
+  };
+}
+
+function memberWidthMm(sn, fallback){
+  if(/^box_90/.test(sn)) return 90;
+  if(/^box_75/.test(sn)) return 75;
+  if(/^L_200/.test(sn)) return 200;
+  if(/^L75/.test(sn)) return 75;
+  return fallback;
+}
+
+function lumpedMassKg(model, inp){
+  const n=model.nodes.length;
+  const mass=new Float64Array(n);
+  const rho=7.85e-6;
+  const sw=inp.structuralSwFactor!=null?inp.structuralSwFactor:PDF_SW_FACTOR;
+  for(const el of model.elements){
+    if(el.tr||el.sec.truss) continue;
+    const a=model.nodes[el.i], b=model.nodes[el.j];
+    const Lmm=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)*1000;
+    const m=rho*el.sec.A*Lmm*sw;
+    mass[el.i]+=m/2; mass[el.j]+=m/2;
+  }
+  const wAdded=inp.addedW_kgpm||0;
+  for(let si=0;si<=PDF_N_BAYS;si++){
+    const share=wAdded*model.dy/4;
+    for(let c=0;c<4;c++) mass[model.nk(si,c)]+=share;
+  }
+  mass[model.nk(PDF_N_BAYS,2)]+=inp.tipLoad_kg||0;
+  if(inp.extraLoad_kg>0){
+    const si=Math.min(PDF_N_BAYS, Math.max(0, Math.round((inp.extraPos_m||0)/model.dy)));
+    mass[model.nk(si,2)]+=inp.extraLoad_kg;
+  }
+  let total=0; for(let i=0;i<n;i++) total+=mass[i];
+  return {mass, total};
+}
+
+function rayleighPeriod(model, sol, inp){
+  const {mass, total}=lumpedMassKg(model, inp);
+  const F=sol.F||new Float64Array(sol.ndof);
+  let uFu=0, uMu=0;
+  for(let i=0;i<model.nodes.length;i++){
+    const ux=sol.u[6*i], uy=sol.u[6*i+1], uz=sol.u[6*i+2];
+    uFu+=ux*(F[6*i]||0)+uy*(F[6*i+1]||0)+uz*(F[6*i+2]||0);
+    uMu+=mass[i]*(ux*ux+uy*uy+uz*uz);
+  }
+  if(uMu<1e-9 || uFu<=0) return {Tn:Infinity, omega:0, massTotal:total};
+  const omega=Math.sqrt(1000*uFu/uMu);
+  return {Tn:2*Math.PI/omega, omega, massTotal:total};
+}
+
+function sdofDaf(Tn, Tv, zeta){
+  if(!Number.isFinite(Tn) || Tn<=0 || !Tv) return 1;
+  const r=Tn/Tv;
+  const den=Math.sqrt((1-r*r)*(1-r*r)+(2*zeta*r)*(2*zeta*r));
+  if(den<1e-9) return 2.5;
+  return Math.min(2.5, Math.max(1, 1/den));
+}
+
+function chordBayBuckling(members, model, inp){
+  const sec=PDF_SECTIONS.box_90x90x8;
+  const L=model.dy*1000;
+  const K=0.65;
+  const Pcr=Math.PI*Math.PI*sec.E*sec.Iy/(K*K*L*L);
+  let Nmax=0, id='—';
+  for(const m of members){
+    if(!m.id.startsWith('Bm119')) continue;
+    const Ns=m.Nsigned!=null?m.Nsigned:0;
+    const Nc=Ns<0?-Ns:0;
+    if(Nc>Nmax){ Nmax=Nc; id=m.id; }
+  }
+  const sf=Nmax>0?Pcr/Nmax:Infinity;
+  return {Pcr_kN:Pcr/1000, Ncomp_kN:Nmax/1000, id, sf, ok:sf>=(inp.SF||1.67), K, L_mm:L};
+}
+
+function pipeLocalBuckling(inp){
+  const D=inp.OD_mm, t=Math.min(inp.t_mm, D/2-0.01);
+  const Dt=t>0?D/t:Infinity;
+  const nu=0.3;
+  const Fel=2*PDF_E/(Math.sqrt(3*(1-nu*nu))*Dt);
+  const Fy=inp.Fy_MPa;
+  return {Dt, Fel_MPa:Fel, Fcr_MPa:Math.min(Fy, Fel), governs:Fel<Fy?'local':'yield'};
 }
 
 function ropeAnchorNodes(model){
@@ -319,8 +530,25 @@ function computeSpaceFrameLoads(inp, combo, model){
   const Pextra=inp.extraLoad_kg*g*liveMult;
   const refVertical=frameWeightN+wAddedLine*inp.L_m;
   const fxDyn=useCombo?refVertical*sfX/Math.max(sfZ,1e-9)/inp.L_m:0;
-  for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
-    addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
+  if(inp.physicsFidelity){
+    const qPa=0.5*inp.rhoAir*windSpeed*windSpeed*inp.windExposure;
+    for(const el of model.elements){
+      if(el.tr||el.sec.truss) continue;
+      const a=model.nodes[el.i], b=model.nodes[el.j];
+      const L_m=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+      const width_m=memberWidthMm(el.sn, OD)/1000;
+      const Fdrag=qPa*inp.Cd*width_m*L_m*windMultX;
+      addLoad(el.i, Fdrag/2, 0, 0);
+      addLoad(el.j, Fdrag/2, 0, 0);
+    }
+    const Fdyn=fxDyn*inp.L_m;
+    for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
+      addLoad(model.nk(si,c), Fdyn*model.dy/inp.L_m/4, 0, 0);
+    }
+  } else {
+    for(let si=0;si<PDF_N_BAYS;si++) for(let c=0;c<4;c++){
+      addLoad(model.nk(si,c),(wWind*windMultX+fxDyn)*model.dy/4,0,0);
+    }
   }
   applyHeelLoad(addLoad, model.nk(PDF_N_BAYS,2), Ptip, heel);
   if(inp.extraLoad_kg>0){
@@ -348,7 +576,7 @@ function memberEndForces(meta, u){
     if(m.el.tr||sec.truss){
       const du=(ug[6]-ug[0])*R[0]+(ug[7]-ug[1])*R[1]+(ug[8]-ug[2])*R[2];
       const N=sec.E*sec.A/m.Lmm*du;
-      members.push({id:m.el.id,sn:m.el.sn,N,My:0,Mz:0,V:0,truss:true});
+      members.push({id:m.el.id,sn:m.el.sn,N,Nsigned:N,My:0,Mz:0,V:0,truss:true});
     } else {
       const fg=new Float64Array(12);
       for(let i=0;i<12;i++){ let s=0; for(let k=0;k<12;k++) s+=m.kG[i*12+k]*ug[k]; fg[i]=s; }
@@ -377,7 +605,8 @@ function memberEndForces(meta, u){
         My=MyA; Mz=MzA;
       }
       const Vy=Math.max(Math.hypot(fg[1],fg[2]),Math.hypot(fg[7],fg[8]));
-      members.push({id:m.el.id,sn:m.el.sn,N,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
+      const Nsigned=0.5*(Ni-Nj);
+      members.push({id:m.el.id,sn:m.el.sn,N,Nsigned,My,Mz,V:Vy,mx:Math.abs(mx),truss:false,solved:true});
     }
   }
   return members;
@@ -451,6 +680,9 @@ function memberUnityFromModel(members, model, Mbase, Nax, Fy, SF){
     const cat=memberCategory(m.id);
     if(m.truss){
       const tAllow=(sec.allow||120)*1000;
+      if(m.slack){
+        return {...m,cat,util:0,pass:true,slack:true,N:0,Nsigned:0,sigma:0,allow:tAllow/1000,solved:true,bendingFrom:'slack'};
+      }
       const util=Math.max(0,Math.abs(m.N))/tAllow;
       return {...m,cat,util,pass:util<=1,sigma:Math.max(0,Math.abs(m.N))/1000,allow:tAllow/1000,solved:true};
     }
@@ -490,8 +722,30 @@ function computeSpaceFrameCore(inp, combo){
   const loadInfo=computeSpaceFrameLoads(inp, combo, model);
   const {loads}=loadInfo;
   const supports=buildSupports3d(model, combo, inp);
-  const sol=solve3d(model, loads, supports);
-  const members=memberEndForces(sol.meta, sol.u);
+  let sol, physics=null;
+  if(inp.physicsFidelity){
+    const pack=solve3dPhysics(model, loads, supports);
+    sol=pack.sol;
+    physics=pack.physics;
+  } else {
+    sol=solve3d(model, loads, supports);
+  }
+  let members=memberEndForces(sol.meta, sol.u);
+  if(physics){
+    for(const id of physics.slackGuys){
+      const existing=members.find(m=>m.id===id);
+      if(existing){ existing.slack=true; existing.N=0; existing.Nsigned=0; existing.util=0; }
+      else {
+        const el=model.elements.find(e=>e.id===id);
+        members.push({id,sn:el?.sn||'rope',N:0,Nsigned:0,My:0,Mz:0,V:0,truss:true,slack:true});
+      }
+    }
+    physics.rayleigh=rayleighPeriod(model, sol, inp);
+    physics.dafPhysics=sdofDaf(physics.rayleigh.Tn, inp.vesselPeriod_s||8, inp.dampingZeta||0.02);
+    physics.chordBuckling=chordBayBuckling(members, model, inp);
+    physics.pipeLocal=pipeLocalBuckling(inp);
+    physics.userDaf=inp.DAF||1;
+  }
   const tempFactor=(combo && combo.condition==='operating')?0.9:1;
   let Mbase=0, Vres=0, Nax=0;
   for(let c=0;c<4;c++){ Mbase+=Math.hypot(sol.R[6*c+4], sol.R[6*c+5]); Vres+=Math.hypot(sol.R[6*c], sol.R[6*c+1]); Nax+=Math.abs(sol.R[6*c+2]); }
@@ -507,11 +761,12 @@ function computeSpaceFrameCore(inp, combo){
   const sigmaEq=governing.sigma||unity.worst.sigma||0;
   const allow=inp.Fy_MPa/inp.SF;
   const actualSF=sigmaEq>0?inp.Fy_MPa/sigmaEq:Infinity;
-  const stayM=members.find(m=>m.id==='Stay30');
+  const stayM=members.find(m=>m.id==='Stay30' && !m.slack);
   const { kingpostR, boomrestR } = supportReactions3d(model, sol, combo, inp);
-  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.abs(m.N));
+  const guyNs=members.filter(m=>/^Guy/.test(m.id)).map(m=>Math.max(0, m.Nsigned!=null?m.Nsigned:m.N));
   const guyT=guyNs.length?Math.max(...guyNs)/1000/Math.max(1, inp.nGuysEffective||1):0;
   const stayR=stayM?Math.abs(stayM.N)/1000:0;
+  const chordOk=!physics||!physics.chordBuckling||physics.chordBuckling.ok;
   const supportsOut={
     turntable:{M_kNm:Mbase/1e6,V_kN:Vres/1000,N_kN:Nax/1000},
     kingpost:{R_kN:kingpostR/1000,ok:!comboActive(combo,'kingpost')||kingpostR/1000<=inp.kingpostRated_kN},
@@ -521,11 +776,12 @@ function computeSpaceFrameCore(inp, combo){
   };
   const memberPass=governing.util<=1;
   const pass=memberPass && actualSF>=inp.SF && supportsOut.kingpost.ok && supportsOut.windstay.ok && supportsOut.boomrest.ok && supportsOut.guys.ok
-    && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN;
-  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id};
+    && supportsOut.turntable.M_kNm<=inp.ratedMoment_kNm && Math.hypot(supportsOut.turntable.V_kN,supportsOut.turntable.N_kN)<=inp.ratedLoad_kN
+    && chordOk;
+  return {model, sol, members, unity, governing, Mbase, Vres, Nax, dRes, sigmaEq, allow, actualSF, supportsOut, pass, A, I, Z, OD, t, tipN, frameWeightN: loadInfo.frameWeightN, comboId: combo?.id, physics};
 }
 
-module.exports = { buildModel, solve3d, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, bm119OrientationReliable, supportReactions3d, comboActive, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
+module.exports = { buildModel, solve3d, solve3dPhysics, buildSupports3d, computeSpaceFrameLoads, memberEndForces, memberUnityFromModel, pickGoverningUnity, bm119BendingMoment, bm119OrientationReliable, supportReactions3d, comboActive, computeSpaceFrameCore, memberCategory, isUnityTableMember, dryFractionAtY, ropeAnchorNodes, rayleighPeriod, sdofDaf, chordBayBuckling, pipeLocalBuckling, PDF_SECTIONS, PDF_ANCHORS_90, PDF_L_DESIGN_M, PDF_L_PDF90_M, PDF_L_REF_M, PDF_N_BAYS, PDF_DY_M, PDF_E, PDF_G, PDF_E_ROPE, PDF_SW_FACTOR, pdfGeomScale };
 
 if (require.main === module) {
   const inp = {

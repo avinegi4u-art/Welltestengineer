@@ -35,6 +35,7 @@ const REFERENCE_INPUTS = {
   nGuysEffective: 1,
   ratedMoment_kNm: 60,
   ratedLoad_kN: 30,
+  physicsFidelity: false,
 };
 
 const PDF_BENCHMARKS = {
