@@ -1,0 +1,47 @@
+name: Burner boom regression
+
+on:
+  pull_request:
+    paths:
+      - 'Burner_boom_load_calculator.html'
+      - 'tools/space_frame_3d.js'
+      - 'tools/pdf_benchmarks.js'
+      - 'tools/pdf_digitized_tables.js'
+      - 'tools/rao_presets.js'
+      - 'tools/space_frame_regression.js'
+      - 'tools/space_frame_physics.js'
+      - '.github/workflows/burner-boom-regression.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'Burner_boom_load_calculator.html'
+      - 'tools/space_frame_3d.js'
+      - 'tools/pdf_benchmarks.js'
+      - 'tools/pdf_digitized_tables.js'
+      - 'tools/rao_presets.js'
+      - 'tools/space_frame_regression.js'
+      - 'tools/space_frame_physics.js'
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 3D module self-test
+        run: node tools/space_frame_3d.js
+      - name: PDF calibration benchmarks
+        run: node tools/pdf_benchmarks.js
+      - name: PDF digitized member tables
+        run: node tools/pdf_digitized_tables.js
+      - name: RAO preset merge
+        run: node tools/rao_presets.js
+      - name: Physics fidelity (tension-only, P-Δ, Rayleigh)
+        run: node tools/space_frame_physics.js
+      - name: 60 ft regression suite
+        run: node tools/space_frame_regression.js
+      - name: Validate embedded calculator script
+        run: node -e "new Function(require('fs').readFileSync('Burner_boom_load_calculator.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/)[1])"
