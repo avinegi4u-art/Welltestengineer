@@ -6,6 +6,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbonate Acid Job Calculator</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -607,7 +608,7 @@ footer a:hover { color: var(--text-muted); }
     </svg>
     <div>
       <h1>Carbonate Acid Job Calculator</h1>
-      <p>HCl dilution, job design, rock chemistry, limestone vs dolomite</p>
+      <p>HCl dilution, job design, rock chemistry, PVBT, productivity, and compatibility</p>
     </div>
   </header>
 
@@ -950,6 +951,102 @@ footer a:hover { color: var(--text-muted); }
         </tbody>
       </table>
     </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+        Productivity Gain from Skin
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Radial-flow screening of the productivity-index change when skin changes and permeability, pay, and drainage radius stay fixed.
+        The ratio is (ln(re/rw) + S) / (ln(re/rw) + S<sub>t</sub>).
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pi-skin-current">Current Skin</label>
+          <input type="number" id="pi-skin-current" value="10" step="0.5">
+        </div>
+        <div class="form-group">
+          <label for="pi-skin-target">Target Skin</label>
+          <input type="number" id="pi-skin-target" value="0" step="0.5">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pi-re-ft">Drainage Radius (ft)</label>
+          <input type="number" id="pi-re-ft" value="660" step="10" min="1">
+        </div>
+        <div class="form-group">
+          <label for="pi-rw-in">Wellbore Radius (in.)</label>
+          <input type="number" id="pi-rw-in" value="4.25" step="0.25" min="0.1">
+        </div>
+      </div>
+      <button class="btn" id="btn-calc-pi" type="button" data-testid="btn-calc-pi">Estimate PI Gain</button>
+      <div class="summary-bar" id="pi-summary"></div>
+      <table class="results-table" id="pi-results">
+        <thead>
+          <tr>
+            <th>Result</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19h16"/><path d="M6 16l4-5 3 3 5-7"/></svg>
+        Lab PVBT and Rate Window
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Enter coreflood rate and pore volumes to breakthrough in one rate unit. The lowest PVBT is the lab optimum.
+        Enter the planned field rate in that same unit. A gal/min value cannot be divided by an mL/min value.
+      </p>
+      <table class="results-table" id="pvbt-inputs">
+        <thead>
+          <tr>
+            <th>Lab rate (same unit)</th>
+            <th>PVBT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="number" id="pvbt-rate-1" value="0.5" step="0.1" min="0"></td>
+            <td><input type="number" id="pvbt-pv-1" value="1.8" step="0.1" min="0"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="pvbt-rate-2" value="1" step="0.1" min="0"></td>
+            <td><input type="number" id="pvbt-pv-2" value="1.1" step="0.1" min="0"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="pvbt-rate-3" value="2" step="0.1" min="0"></td>
+            <td><input type="number" id="pvbt-pv-3" value="1.6" step="0.1" min="0"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="form-row" style="margin-top:var(--sp-4);">
+        <div class="form-group">
+          <label for="pvbt-planned-rate">Planned rate (same unit as lab rate)</label>
+          <input type="number" id="pvbt-planned-rate" value="1" step="0.1" min="0">
+        </div>
+        <div class="form-group">
+          <label for="pvbt-interval">Perforated Interval (ft)</label>
+          <input type="number" id="pvbt-interval" value="20" step="1" min="1">
+        </div>
+      </div>
+      <button class="btn" id="btn-calc-pvbt" type="button" data-testid="btn-calc-pvbt">Evaluate Rate Window</button>
+      <div class="summary-bar" id="pvbt-summary"></div>
+      <table class="results-table" id="pvbt-results">
+        <thead>
+          <tr>
+            <th>Rate Window</th>
+            <th>Screening Result</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ════════════════════════════════════════════ -->
@@ -1063,7 +1160,7 @@ footer a:hover { color: var(--text-muted); }
         <div class="compare-col">
           <h4><span class="limestone-label">Limestone (CaCO₃)</span></h4>
           <div class="compare-item"><span class="label">Reaction</span><span class="value val-accent">2HCl + CaCO₃ → CaCl₂ + H₂O + CO₂</span></div>
-          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.37 lbm CaCO₃ / gal 15% HCl</span></div>
+          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.84 lb/gal at 15% HCl; 3.65 lb/gal at 28% HCl</span></div>
           <div class="compare-item"><span class="label">Reaction Rate</span><span class="value">Very fast</span></div>
           <div class="compare-item"><span class="label">Spending Time (BHT 200°F)</span><span class="value">~5–15 min</span></div>
           <div class="compare-item"><span class="label">Wormhole Formation</span><span class="value">Favorable at optimal rate</span></div>
@@ -1075,7 +1172,7 @@ footer a:hover { color: var(--text-muted); }
         <div class="compare-col dolomite">
           <h4><span class="dolomite-label">Dolomite (CaMg(CO₃)₂)</span></h4>
           <div class="compare-item"><span class="label">Reaction</span><span class="value val-blue">4HCl + CaMg(CO₃)₂ → CaCl₂ + MgCl₂ + 2H₂O + 2CO₂</span></div>
-          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.27 lbm dolomite / gal 15% HCl</span></div>
+          <div class="compare-item"><span class="label">Dissolving Power</span><span class="value">1.70 lb/gal at 15% HCl; 3.36 lb/gal at 28% HCl</span></div>
           <div class="compare-item"><span class="label">Reaction Rate</span><span class="value">Slower than limestone</span></div>
           <div class="compare-item"><span class="label">Spending Time (BHT 200°F)</span><span class="value">~15–45 min</span></div>
           <div class="compare-item"><span class="label">Wormhole Formation</span><span class="value">More uniform dissolution</span></div>
@@ -1093,6 +1190,7 @@ footer a:hover { color: var(--text-muted); }
           <li>In mixed lithology zones, design for the faster-reacting component (limestone) to avoid face dissolution and ensure deeper penetration.</li>
           <li>Bottomhole temperature is the strongest control on reaction rate. Above 250°F, consider retarded acid systems or organic acids for both lithologies.</li>
           <li>CO₂ evolution: dolomite produces 2 mol CO₂ per mol mineral dissolved vs. 1 for limestone; both shown reactions produce 0.5 mol CO₂ per mol HCl spent.</li>
+          <li>Dissolving power is pounds of mineral per gallon of diluted acid: pure-acid stoichiometry times acid mass fraction times specific gravity times 8.34 lb/gal.</li>
         </ul>
       </div>
     </div>
@@ -1178,6 +1276,64 @@ footer a:hover { color: var(--text-muted); }
         </select>
         <button class="btn btn-sm" id="btn-add-item" data-testid="btn-add-item">Add</button>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3h6"/><path d="M10 3v4l-5 9a4 4 0 0 0 3.5 6h7a4 4 0 0 0 3.5-6l-5-9V3"/></svg>
+        Additive Family Suggestions
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:var(--sp-4);">
+        Select the conditions that apply. This builds an additive-family list for the pre-job review. It does not replace the compatibility checklist above.
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="add-h2s">Sour component (H₂S) expected?</label>
+          <select id="add-h2s">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="add-cra">CRA / high-Cr tubing present?</label>
+          <select id="add-cra">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="add-temp">Bottomhole Temp. (°F)</label>
+          <input type="number" id="add-temp" value="240" step="5" min="40">
+        </div>
+        <div class="form-group">
+          <label for="add-emulsion">Oil prone to emulsion / sludge?</label>
+          <select id="add-emulsion">
+            <option value="unknown">Unknown</option>
+            <option value="low">Low</option>
+            <option value="high">High / asphaltenic</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="add-fines">Non-carbonate streaks / fines sensitive?</label>
+          <select id="add-fines">
+            <option value="no">No</option>
+            <option value="yes">Yes / suspected</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="add-retarder">Need slower reaction / deeper penetration?</label>
+          <select id="add-retarder">
+            <option value="no">No</option>
+            <option value="yes">Yes (high temperature / short contact)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" id="btn-additives" type="button" data-testid="btn-additives">Build Additive Checklist</button>
+      <div class="note-block info" id="additive-suggestions" style="margin-top:var(--sp-5);"></div>
     </div>
   </div>
 
@@ -1315,11 +1471,20 @@ function calcDilution() {
 document.getElementById('btn-calc-dilution').addEventListener('click', calcDilution);
 calcDilution(); // initial
 
-const DISSOLVING_POWER = {
-  limestone: { 15: 1.37, 23: 2.10, 28: 2.56 },
-  dolomite: { 15: 1.27, 23: 1.95, 28: 2.37 },
-  otherCarbonate: { 15: 1.32, 23: 2.02, 28: 2.46 }
+const MINERAL_BETA_100 = {
+  limestone: 100.09 / (2 * 36.46),
+  dolomite: 184.40 / (4 * 36.46)
 };
+MINERAL_BETA_100.otherCarbonate = (MINERAL_BETA_100.limestone + MINERAL_BETA_100.dolomite) / 2;
+const ACID_STRENGTHS = new Set([15, 23, 28]);
+const WATER_LB_PER_GAL = 8.34;
+
+function dissolvingPowerLbPerGal(mineralKey, conc) {
+  const beta = MINERAL_BETA_100[mineralKey];
+  const sg = estimateHclSg(conc);
+  if (!ACID_STRENGTHS.has(conc) || !Number.isFinite(beta) || !Number.isFinite(sg)) return NaN;
+  return beta * (conc / 100) * sg * WATER_LB_PER_GAL;
+}
 
 function formatNumber(value, maxFractionDigits = 0) {
   return value.toLocaleString(undefined, { maximumFractionDigits: maxFractionDigits });
@@ -1365,7 +1530,7 @@ function calcGalFt() {
   const totalMid = midGalFt * interval;
 
   // Dissolving power (lbs rock / gal acid) — simplified values
-  const dp = DISSOLVING_POWER[formation][conc] || DISSOLVING_POWER.limestone[15];
+  const dp = dissolvingPowerLbPerGal(formation, conc);
   const rockDissolved = (totalMid * dp).toFixed(0);
 
   // Summary bar
@@ -1406,7 +1571,7 @@ function calcGalFt() {
     <tr><td>Total Volume (low)</td><td>${totalLow.toLocaleString()} gal (${(totalLow/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Total Volume (mid)</td><td class="val-accent">${totalMid.toLocaleString()} gal (${(totalMid/42).toFixed(1)} bbl)</td></tr>
     <tr><td>Total Volume (high)</td><td>${totalHigh.toLocaleString()} gal (${(totalHigh/42).toFixed(1)} bbl)</td></tr>
-    <tr><td>Dissolving Power (${conc}% HCl)</td><td>${dp} lbm ${formation === 'limestone' ? 'CaCO₃' : 'dolomite'} / gal</td></tr>
+    <tr><td>Dissolving Power (${conc}% HCl)</td><td>${dp.toFixed(2)} lbm ${formation === 'limestone' ? 'CaCO₃' : 'dolomite'} / gal</td></tr>
     <tr><td>Theoretical Rock Dissolved (mid vol)</td><td>${parseInt(rockDissolved).toLocaleString()} lbs</td></tr>
   `;
 }
@@ -1564,7 +1729,7 @@ function calcJobDesign() {
   if (
     !JOB_OBJECTIVES[objective]
     || !ACID_TYPE_LABELS[acidType]
-    || !DISSOLVING_POWER.limestone[conc]
+    || !Number.isFinite(dissolvingPowerLbPerGal('limestone', conc))
     || values.some(value => !Number.isFinite(value) || value < 0)
     || interval <= 0
     || bht <= 0
@@ -1606,9 +1771,9 @@ function calcJobDesign() {
   const totalMid = midGalFt * interval;
   const capacityFactor = ACID_CAPACITY_FACTOR[acidType];
   const effectiveDp = (
-    (mineralogy.calcite / mineralogy.reactive) * DISSOLVING_POWER.limestone[conc]
-    + (mineralogy.dolomite / mineralogy.reactive) * DISSOLVING_POWER.dolomite[conc]
-    + (mineralogy.otherCarbonate / mineralogy.reactive) * DISSOLVING_POWER.otherCarbonate[conc]
+    (mineralogy.calcite / mineralogy.reactive) * dissolvingPowerLbPerGal('limestone', conc)
+    + (mineralogy.dolomite / mineralogy.reactive) * dissolvingPowerLbPerGal('dolomite', conc)
+    + (mineralogy.otherCarbonate / mineralogy.reactive) * dissolvingPowerLbPerGal('otherCarbonate', conc)
   ) * capacityFactor;
   const weightedSg = (
     (mineralogy.calcite / mineralogy.reactive) * 2.71
@@ -1967,7 +2132,7 @@ function calcRockChem() {
   if (
     !Number.isFinite(acidVol)
     || acidVol <= 0
-    || !DISSOLVING_POWER.limestone[conc]
+    || !Number.isFinite(dissolvingPowerLbPerGal('limestone', conc))
     || allValues.some(value => !Number.isFinite(value) || value < 0)
     || totalInput <= 0
     || totalInput > 100
@@ -1984,7 +2149,7 @@ function calcRockChem() {
   const dominant = getDominantReaction(minerals, reactivePct);
   const rows = minerals.map(mineral => {
     const acidAllocated = acidVol * (mineral.pct / reactivePct);
-    const dissolvedMass = acidAllocated * DISSOLVING_POWER[mineral.dpKey][conc];
+    const dissolvedMass = acidAllocated * dissolvingPowerLbPerGal(mineral.dpKey, conc);
     const dissolvedFt3 = dissolvedMass / (mineral.densitySg * 62.4);
     return {
       ...mineral,
@@ -2052,6 +2217,189 @@ document.getElementById('rock-acid-conc').addEventListener('change', calcRockChe
 document.getElementById('rock-source').addEventListener('change', calcRockChem);
 calcRockChem();
 
+function calcProductivityGain() {
+  const sCur = parseFloat(document.getElementById('pi-skin-current').value);
+  const sTar = parseFloat(document.getElementById('pi-skin-target').value);
+  const reFt = parseFloat(document.getElementById('pi-re-ft').value);
+  const rwIn = parseFloat(document.getElementById('pi-rw-in').value);
+  const summary = document.getElementById('pi-summary');
+  const tbody = document.querySelector('#pi-results tbody');
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  const rwFt = rwIn / 12;
+  if (![sCur, sTar, reFt, rwIn].every(Number.isFinite) || rwFt <= 0 || reFt <= rwFt) {
+    appendTableMessage(tbody, 'Enter skins and a drainage radius greater than the wellbore radius.', 2);
+    return;
+  }
+
+  const geom = Math.log(reFt / rwFt);
+  const denomCur = geom + sCur;
+  const denomTar = geom + sTar;
+  if (denomCur <= 0 || denomTar <= 0) {
+    appendTableMessage(tbody, 'ln(re/rw) + skin must stay positive for both the current and target skin.', 2);
+    return;
+  }
+
+  const ratio = denomCur / denomTar;
+  const pct = (ratio - 1) * 100;
+  let state = 'Significant PI gain if fluid compatibility and placement are right.';
+  if (pct <= 0) state = 'No PI uplift from this skin change.';
+  else if (pct < 50) state = 'Modest uplift. Placement and diversion still decide whether acid is justified.';
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">PI Ratio</div>
+      <div class="value">${ratio.toFixed(2)}</div>
+      <div class="unit">target / current</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">PI Change</div>
+      <div class="value">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</div>
+      <div class="unit">skin ${sCur.toFixed(1)} → ${sTar.toFixed(1)}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Geometry Term</div>
+      <div class="value">${geom.toFixed(2)}</div>
+      <div class="unit">ln(re/rw)</div>
+    </div>
+  `;
+  appendRow(tbody, [
+    { text: 'Productivity change' },
+    { text: `Skin ${sCur.toFixed(1)} to ${sTar.toFixed(1)} at re ${formatNumber(reFt)} ft changes PI by ${pct.toFixed(0)}%. ${state}` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Model limit' },
+    { text: 'Steady radial comparison only. It holds permeability, net pay, viscosity, and drainage radius fixed.' }
+  ]);
+}
+
+function calcPvbtWindow() {
+  const summary = document.getElementById('pvbt-summary');
+  const tbody = document.querySelector('#pvbt-results tbody');
+  summary.textContent = '';
+  tbody.textContent = '';
+
+  const points = [1, 2, 3].map(index => ({
+    rate: parseFloat(document.getElementById(`pvbt-rate-${index}`).value),
+    pvbt: parseFloat(document.getElementById(`pvbt-pv-${index}`).value)
+  })).filter(point => Number.isFinite(point.rate) && point.rate > 0 && Number.isFinite(point.pvbt) && point.pvbt > 0);
+  const planned = parseFloat(document.getElementById('pvbt-planned-rate').value);
+  const interval = parseFloat(document.getElementById('pvbt-interval').value);
+
+  if (points.length === 0 || !Number.isFinite(planned) || planned <= 0 || !Number.isFinite(interval) || interval <= 0) {
+    appendTableMessage(tbody, 'Enter at least one lab rate and PVBT, plus a planned rate and interval in the same rate unit.', 2);
+    return;
+  }
+
+  const best = points.reduce((lowest, point) => point.pvbt < lowest.pvbt ? point : lowest);
+  const ratio = planned / best.rate;
+  let regime = 'Near the lab wormholing window around the minimum PVBT.';
+  if (ratio < 0.5) regime = 'Compact or face-dissolution bias. The planned rate is well below the lab PVBT minimum.';
+  else if (ratio > 2) regime = 'Channeling risk. The planned rate is well above the lab PVBT minimum.';
+
+  summary.innerHTML = `
+    <div class="summary-item">
+      <div class="label">Lab Optimum</div>
+      <div class="value">${best.rate.toFixed(2)}</div>
+      <div class="unit">PVBT ${best.pvbt.toFixed(2)}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Planned / Lab</div>
+      <div class="value">${ratio.toFixed(2)}×</div>
+      <div class="unit">same rate unit</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Rate × Interval</div>
+      <div class="value">${formatNumber(planned * interval, 1)}</div>
+      <div class="unit">planned unit × ft</div>
+    </div>
+  `;
+  appendRow(tbody, [
+    { text: 'Lab minimum' },
+    { text: `Lowest PVBT is ${best.pvbt.toFixed(2)} at lab rate ${best.rate.toFixed(2)}.` }
+  ]);
+  appendRow(tbody, [
+    { text: 'Regime' },
+    { text: regime }
+  ]);
+  appendRow(tbody, [
+    { text: 'Field use' },
+    { text: 'Convert the coreflood rate to the field unit before entering it. This screen only compares numbers that share a unit.' }
+  ]);
+}
+
+document.getElementById('btn-calc-pi').addEventListener('click', calcProductivityGain);
+['pi-skin-current', 'pi-skin-target', 'pi-re-ft', 'pi-rw-in'].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('input', calcProductivityGain);
+});
+calcProductivityGain();
+
+document.getElementById('btn-calc-pvbt').addEventListener('click', calcPvbtWindow);
+['pvbt-rate-1', 'pvbt-pv-1', 'pvbt-rate-2', 'pvbt-pv-2', 'pvbt-rate-3', 'pvbt-pv-3', 'pvbt-planned-rate', 'pvbt-interval'].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('input', calcPvbtWindow);
+});
+calcPvbtWindow();
+
+function suggestAdditives() {
+  const h2s = document.getElementById('add-h2s').value === 'yes';
+  const cra = document.getElementById('add-cra').value === 'yes';
+  const temp = parseFloat(document.getElementById('add-temp').value);
+  const emulsion = document.getElementById('add-emulsion').value;
+  const fines = document.getElementById('add-fines').value === 'yes';
+  const needsRetarder = document.getElementById('add-retarder').value === 'yes';
+  const container = document.getElementById('additive-suggestions');
+  container.textContent = '';
+
+  if (!Number.isFinite(temp)) {
+    const note = document.createElement('p');
+    note.textContent = 'Enter a bottomhole temperature.';
+    container.appendChild(note);
+    return;
+  }
+
+  const items = [];
+  if (temp <= 212) {
+    items.push('Corrosion inhibitor for HCl at this temperature. A base package is required on every job.');
+  } else {
+    items.push('High-temperature corrosion inhibitor plus intensifier for service above 212°F.');
+  }
+  if (cra) {
+    items.push('Use a CRA-compatible inhibitor package. Strong HCl systems can attack high-chrome and CRA strings.');
+  }
+  items.push('Iron control: reducing agent and/or chelant so dissolved iron does not return as hydroxide, sulfide, or sludge.');
+  if (h2s) {
+    items.push('H₂S scavenger and FeS control. Plan for sulfide dissolution and re-precipitation.');
+  }
+  if (emulsion === 'high') {
+    items.push('Non-emulsifier screened on reservoir crude, plus mutual solvent, for asphaltic sludge and emulsion risk.');
+  } else {
+    items.push('Basic non-emulsifier screened on crude and brine, including when emulsion risk is low or unknown.');
+  }
+  if (needsRetarder || temp >= 250) {
+    items.push('Retarded, emulsified, gelled, or organic acid when live-acid penetration has to extend past the face.');
+  }
+  if (fines) {
+    items.push('Clay or fines stabiliser, or a preflush, for non-carbonate streaks at the perforations.');
+  }
+  items.push('Diversion aid where coverage matters: foam, viscoelastic surfactant, gelled acid, or a particulate diverter.');
+
+  const list = document.createElement('ul');
+  items.forEach(text => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    list.appendChild(item);
+  });
+  container.appendChild(list);
+}
+
+document.getElementById('btn-additives').addEventListener('click', suggestAdditives);
+['add-h2s', 'add-cra', 'add-emulsion', 'add-fines', 'add-retarder'].forEach(inputId => {
+  document.getElementById(inputId).addEventListener('change', suggestAdditives);
+});
+document.getElementById('add-temp').addEventListener('input', suggestAdditives);
+suggestAdditives();
+
 // ═══ TAB 6: COMPATIBILITY CHECKLIST ═══
 const defaultChecklist = [
   // Brine compatibility
@@ -2083,6 +2431,11 @@ const defaultChecklist = [
   { cat: 'safety', text: 'Emergency shutdown procedure reviewed with crew', sub: 'Include iron sulfide screening and H₂S contingency plan' },
   { cat: 'safety', text: 'PPE requirements confirmed (acid-resistant suit, face shield, gloves)', sub: 'NFPA 30 / local HSE requirements' },
   { cat: 'safety', text: 'Flowback plan established — neutralization / disposal of spent acid', sub: 'Spent acid pH, chloride content, and heavy metals must meet disposal criteria' },
+  { cat: 'additives', text: 'Diversion aid selected when coverage across a heterogeneous interval matters', sub: 'Foam, viscoelastic surfactant, gelled acid, or particulate diverter' },
+  { cat: 'safety', text: 'Final acid recipe (HCl strength and additives) checked against the program', sub: 'Confirm the mixed percentage before the main stage' },
+  { cat: 'safety', text: 'Iron and solids flushed from treating lines before main acid', sub: 'Displace rusty or dirty fluid so it is not injected ahead of acid' },
+  { cat: 'safety', text: 'Density and rate trended against the design during the job', sub: 'Adjust rate or diversion if the pressure response leaves the plan' },
+  { cat: 'safety', text: 'Post-job PI, drawdown, and skin estimate planned', sub: 'Build-up or injection test after flowback' },
 ];
 
 const CHECKLIST_CATEGORIES = {
